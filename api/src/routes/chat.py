@@ -265,46 +265,58 @@ def chat(req: ChatRequest):
         resp = client.chat.completions.create(
             model=MODEL, messages=messages, tools=TOOLS, temperature=0.3, max_tokens=4000,
         )
+
+        if not resp.choices:
+            raise ValueError("Empty response from LLM")
+
         msg = resp.choices[0].message
 
         # If the model wants to call tools
         if msg.tool_calls:
-            messages.append(msg)
+            tool_results = []
 
             for call in msg.tool_calls:
                 fn_name = call.function.name
-                fn_args = json.loads(call.function.arguments) if call.function.arguments else {}
+                try:
+                    fn_args = json.loads(call.function.arguments) if call.function.arguments else {}
+                except json.JSONDecodeError:
+                    fn_args = {}
 
                 tool_fn = TOOL_MAP.get(fn_name)
-                if tool_fn:
-                    result = tool_fn(fn_args)
-                    # Extract sources from results
-                    try:
-                        parsed = json.loads(result)
-                        for item in (parsed.get("results") or parsed.get("votaciones") or [])[:5]:
-                            if isinstance(item, dict) and item.get("municipio"):
-                                src = {"municipio": item["municipio"], "fecha": str(item.get("fecha", "")),
-                                       "tema": item.get("tema"), "titulo": item.get("titulo")}
-                                if src not in sources:
-                                    sources.append(src)
-                    except Exception:
-                        pass
-                else:
-                    result = json.dumps({"error": f"Tool {fn_name} not found"})
+                result = tool_fn(fn_args) if tool_fn else json.dumps({"error": f"Tool {fn_name} not found"})
 
-                messages.append({
-                    "role": "tool",
-                    "tool_call_id": call.id,
-                    "content": result,
-                })
+                tool_results.append({"name": fn_name, "result": result})
 
-            # Second call — LLM generates final answer with tool results
+                # Extract sources
+                try:
+                    parsed = json.loads(result)
+                    for item in (parsed.get("results") or parsed.get("votaciones") or [])[:5]:
+                        if isinstance(item, dict) and item.get("municipio"):
+                            src = {"municipio": item["municipio"], "fecha": str(item.get("fecha", "")),
+                                   "tema": item.get("tema"), "titulo": item.get("titulo")}
+                            if src not in sources:
+                                sources.append(src)
+                except Exception:
+                    pass
+
+            # Second call — inject tool results as assistant context
+            # Use simple message format instead of tool role (proxy compatibility)
+            tool_context = "\n\n".join([
+                f"[Resultat de {tr['name']}]:\n{tr['result'][:6000]}"
+                for tr in tool_results
+            ])
+
+            messages.append({"role": "assistant", "content": f"He consultat la base de dades. Resultats:\n\n{tool_context}"})
+            messages.append({"role": "user", "content": "Ara, amb aquesta informació, respon la pregunta original de l'usuari de forma clara i ben formatada en markdown."})
+
             resp2 = client.chat.completions.create(
                 model=MODEL, messages=messages, temperature=0.3, max_tokens=4000,
             )
-            answer = resp2.choices[0].message.content
+            if resp2.choices:
+                answer = resp2.choices[0].message.content
+            else:
+                answer = f"He trobat dades però no he pogut generar la resposta. Dades:\n\n{tool_context[:2000]}"
         else:
-            # No tool calls — direct answer
             answer = msg.content
 
     except Exception as e:
