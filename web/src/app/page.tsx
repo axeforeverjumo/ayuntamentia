@@ -14,6 +14,9 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { StatCard } from "@/components/ui/StatCard";
+import { MapaCatalunya } from "@/components/features/MapaCatalunya";
+import { PipelineDashboard } from "@/components/features/PipelineDashboard";
+import { GeneradorRRSS } from "@/components/features/GeneradorRRSS";
 import { formatDate } from "@/lib/utils";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "";
@@ -80,6 +83,15 @@ export default function DashboardPage() {
         <StatCard label="Alertes pendents" value={stats.alertas_pendientes || 0} icon={Bell} variant={stats.alertas_pendientes > 0 ? "red" : "default"} />
       </div>
 
+      {/* Map + Pipeline */}
+      <div className="grid grid-cols-3 gap-4">
+        <div className="col-span-2">
+          <MapaCatalunya />
+        </div>
+        <PipelineDashboard />
+      </div>
+
+      {/* Activity + RRSS */}
       <div className="grid grid-cols-3 gap-4">
         <div className="col-span-2 bg-[#161b22] border border-[#30363d] rounded-lg">
           <div className="flex items-center justify-between px-5 py-4 border-b border-[#30363d]">
@@ -126,72 +138,28 @@ export default function DashboardPage() {
         </div>
 
         <div className="space-y-4">
+          {/* Temas trending compact */}
           <div className="bg-[#161b22] border border-[#30363d] rounded-lg">
             <div className="flex items-center gap-2 px-5 py-4 border-b border-[#30363d]">
               <TrendingUp className="w-4 h-4 text-[#8b949e]" />
               <h2 className="text-sm font-semibold text-[#e6edf3]">Temes tendència</h2>
             </div>
-            <div className="px-5 py-4 space-y-3">
+            <div className="px-5 py-4 space-y-2">
               {temas.length === 0 ? (
-                <div className="text-center py-6">
-                  <BarChart2 className="w-6 h-6 text-[#6e7681] mx-auto mb-2" />
-                  <p className="text-xs text-[#8b949e]">Sense dades encara</p>
-                </div>
+                <p className="text-xs text-[#8b949e] text-center py-4">Processant actes...</p>
               ) : (
                 temas.slice(0, 7).map((tema: any) => (
-                  <div key={tema.tema || tema.nombre} className="space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-[#e6edf3] truncate mr-2">{tema.tema || tema.nombre}</span>
-                      <span className="text-xs text-[#6e7681] flex-shrink-0">{tema.count || tema.menciones}</span>
-                    </div>
-                    <div className="h-1.5 bg-[#1c2128] rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-[#2563eb] rounded-full transition-all"
-                        style={{ width: `${((tema.count || tema.menciones) / maxMenciones) * 100}%` }}
-                      />
-                    </div>
+                  <div key={tema.tema || tema.nombre} className="flex items-center justify-between">
+                    <span className="text-xs text-[#e6edf3]">{tema.tema || tema.nombre}</span>
+                    <span className="text-xs text-[#6e7681] bg-[#1c2128] px-2 py-0.5 rounded">{tema.count || tema.menciones}</span>
                   </div>
                 ))
               )}
             </div>
           </div>
 
-          <div className="bg-[#161b22] border border-[#30363d] rounded-lg">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-[#30363d]">
-              <div className="flex items-center gap-2">
-                <Users className="w-4 h-4 text-[#8b949e]" />
-                <h2 className="text-sm font-semibold text-[#e6edf3]">Coherència AC</h2>
-              </div>
-              <AlertCircle className="w-3.5 h-3.5 text-[#6e7681]" />
-            </div>
-            <div className="px-5 py-4 space-y-3">
-              {coherencia.length === 0 ? (
-                <div className="text-center py-6">
-                  <Users className="w-6 h-6 text-[#6e7681] mx-auto mb-2" />
-                  <p className="text-xs text-[#8b949e]">Sense dades encara</p>
-                </div>
-              ) : (
-                coherencia.slice(0, 6).map((c: any) => {
-                  const score = c.indice_coherencia ?? c.coherencia_score ?? 0;
-                  const scoreColor = score >= 80 ? "bg-[#16a34a]" : score >= 50 ? "bg-[#d97706]" : "bg-[#dc2626]";
-                  return (
-                    <div key={c.cargo_id || c.id} className="space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <div className="min-w-0">
-                          <p className="text-xs text-[#e6edf3] truncate font-medium">{c.nombre}</p>
-                          <p className="text-[10px] text-[#8b949e] truncate">{c.municipio}</p>
-                        </div>
-                        <span className="text-xs font-bold text-[#8b949e] ml-2 flex-shrink-0">{score}%</span>
-                      </div>
-                      <div className="h-1 bg-[#1c2128] rounded-full overflow-hidden">
-                        <div className={`h-full rounded-full transition-all ${scoreColor}`} style={{ width: `${score}%` }} />
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
+          {/* RRSS Generator */}
+          <GeneradorRRSS />
         </div>
       </div>
     </div>
