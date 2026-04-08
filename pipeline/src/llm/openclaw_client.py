@@ -1,77 +1,88 @@
-"""Cliente OpenAI SDK compatible para OpenClaw HTTP Bridge.
+"""Cliente LLM via openai-oauth proxy (puerto 10531).
 
-El bridge de OpenClaw (puerto 4200) acepta formato OpenAI pero:
-- El campo "model" es el ID del agente OpenClaw (ej: "main"), no un modelo real
-- No soporta response_format ni max_tokens
-- Puede tardar minutos (ejecuta CLI subprocess)
+El proxy reutiliza los tokens OAuth de Codex/OpenClaw.
+Acceso directo a GPT-5.4 y GPT-5.4-mini sin intermediarios.
 """
 
 import json
 import logging
 import re
 
-import httpx
+from openai import OpenAI
 
 from ..config import config
 
 logger = logging.getLogger(__name__)
 
-BRIDGE_URL = config.OPENCLAW_BASE_URL.replace("/v1", "")
-BRIDGE_TIMEOUT = 600
+_client = None
 
 
-def _call_bridge(agent: str, message: str) -> str:
-    """Llama al HTTP bridge de OpenClaw directamente con httpx."""
-    url = f"{BRIDGE_URL}/v1/chat/completions"
-    payload = {
-        "model": agent,
-        "messages": [{"role": "user", "content": message}],
-    }
-    try:
-        resp = httpx.post(url, json=payload, timeout=BRIDGE_TIMEOUT)
-        resp.raise_for_status()
-        data = resp.json()
-        return data["choices"][0]["message"]["content"]
-    except httpx.TimeoutException:
-        logger.error(f"OpenClaw bridge timeout after {BRIDGE_TIMEOUT}s")
-        raise
-    except Exception as e:
-        logger.error(f"OpenClaw bridge error: {e}")
-        raise
+def get_client() -> OpenAI:
+    global _client
+    if _client is None:
+        _client = OpenAI(
+            base_url=config.OPENCLAW_BASE_URL,
+            api_key="subscription",
+            timeout=120.0,
+        )
+    return _client
+
+
+def call_mini(system_prompt: str, user_message: str) -> str:
+    """Llama a GPT-5.4-mini para tareas de extracción."""
+    client = get_client()
+    resp = client.chat.completions.create(
+        model=config.OPENCLAW_MODEL_MINI,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_message},
+        ],
+        temperature=0.1,
+        max_tokens=8000,
+    )
+    return resp.choices[0].message.content
+
+
+def call_full(system_prompt: str, user_message: str) -> str:
+    """Llama a GPT-5.4 para análisis profundo."""
+    client = get_client()
+    resp = client.chat.completions.create(
+        model=config.OPENCLAW_MODEL_FULL,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_message},
+        ],
+        temperature=0.3,
+        max_tokens=4000,
+    )
+    return resp.choices[0].message.content
 
 
 def _extract_json(text: str) -> dict:
-    """Extrae JSON de una respuesta que puede contener markdown o texto extra."""
-    # Try direct parse
+    """Extrae JSON de una respuesta que puede contener markdown."""
     try:
         return json.loads(text)
     except json.JSONDecodeError:
         pass
-
-    # Try extracting from ```json ... ``` block
     match = re.search(r"```(?:json)?\s*\n?(.*?)\n?```", text, re.DOTALL)
     if match:
         try:
             return json.loads(match.group(1))
         except json.JSONDecodeError:
             pass
-
-    # Try finding first { ... } block
     match = re.search(r"\{[\s\S]*\}", text)
     if match:
         try:
             return json.loads(match.group())
         except json.JSONDecodeError:
             pass
-
     return {"error": "json_parse_failed", "raw": text[:1000]}
 
 
 def extract_structured(text: str) -> dict:
-    """Extrae datos estructurados de un acta usando OpenClaw."""
+    """Extrae datos estructurados de un acta usando GPT-5.4-mini."""
     from .prompts import EXTRACT_ACTA_PROMPT
-    prompt = f"{EXTRACT_ACTA_PROMPT}\n\n---\n\nTexto del acta:\n\n{text[:25000]}\n\nResponde SOLO con JSON válido, sin texto adicional."
-    result = _call_bridge("main", prompt)
+    result = call_mini(EXTRACT_ACTA_PROMPT, text[:25000] + "\n\nResponde SOLO con JSON válido.")
     return _extract_json(result)
 
 
@@ -79,8 +90,7 @@ def analyze_coherence(punto_a: dict, punto_b: dict) -> dict:
     """Analiza si dos puntos de pleno son comparables y coherentes."""
     from .prompts import COMPARE_POINTS_PROMPT
     user_msg = json.dumps({"punto_a": punto_a, "punto_b": punto_b}, ensure_ascii=False)
-    prompt = f"{COMPARE_POINTS_PROMPT}\n\n---\n\n{user_msg}\n\nResponde SOLO con JSON válido."
-    result = _call_bridge("main", prompt)
+    result = call_full(COMPARE_POINTS_PROMPT, user_msg + "\n\nResponde SOLO con JSON válido.")
     parsed = _extract_json(result)
     if "error" in parsed:
         return {"comparable": False, "error": parsed.get("error")}
@@ -92,19 +102,13 @@ def generate_chat_response(query: str, context: list[dict]) -> str:
     from .prompts import CHAT_SYSTEM_PROMPT
     context_text = "\n\n---\n\n".join([
         f"Municipio: {c.get('municipio', '?')} | Fecha: {c.get('fecha', '?')} | Tema: {c.get('tema', '?')}\n"
-        f"Título: {c.get('titulo', '?')}\n"
-        f"Resumen: {c.get('resumen', '?')}\n"
-        f"Resultado: {c.get('resultado', '?')}\n"
-        f"Votaciones: {c.get('votaciones', '?')}"
+        f"Título: {c.get('titulo', '?')}\nResumen: {c.get('resumen', '?')}\nResultado: {c.get('resultado', '?')}"
         for c in context
     ])
-    prompt = f"{CHAT_SYSTEM_PROMPT}\n\nContexto:\n{context_text}\n\nPregunta: {query}"
-    return _call_bridge("main", prompt)
+    return call_full(CHAT_SYSTEM_PROMPT, f"Contexto:\n{context_text}\n\nPregunta: {query}")
 
 
 def generate_weekly_report(data: dict) -> str:
     """Genera el informe semanal automático."""
     from .prompts import WEEKLY_REPORT_PROMPT
-    user_msg = json.dumps(data, ensure_ascii=False, default=str)
-    prompt = f"{WEEKLY_REPORT_PROMPT}\n\n---\n\nDatos:\n{user_msg}"
-    return _call_bridge("main", prompt)
+    return call_full(WEEKLY_REPORT_PROMPT, json.dumps(data, ensure_ascii=False, default=str))

@@ -1,12 +1,17 @@
 import os
-import httpx
+from openai import OpenAI
 from fastapi import APIRouter
 from pydantic import BaseModel
 from ..db import get_cursor
 
 router = APIRouter()
 
-OPENCLAW_URL = os.getenv("OPENCLAW_BASE_URL", "http://172.17.0.1:4200/v1").replace("/v1", "")
+PROXY_URL = os.getenv("OPENCLAW_BASE_URL", "http://172.17.0.1:10531/v1")
+MODEL = os.getenv("OPENCLAW_MODEL_FULL", "gpt-5.4")
+
+
+def get_llm():
+    return OpenAI(base_url=PROXY_URL, api_key="subscription")
 
 
 class ChatRequest(BaseModel):
@@ -16,19 +21,18 @@ class ChatRequest(BaseModel):
 
 @router.post("/")
 def chat(req: ChatRequest):
-    """Chat Q&A usando full-text search + OpenClaw LLM."""
+    """Chat Q&A usando full-text search + GPT-5.4."""
 
-    # 1. Search for relevant context using full-text search
     context_parts = []
     sources = []
 
     with get_cursor() as cur:
-        # Search in puntos_pleno (structured data)
         cur.execute("""
             SELECT p.titulo, p.tema, p.resumen, p.resultado, p.fecha,
                    m.nombre as municipio,
-                   json_agg(DISTINCT jsonb_build_object('partido', v.partido, 'sentido', v.sentido))
-                       FILTER (WHERE v.id IS NOT NULL) as votaciones
+                   json_agg(DISTINCT jsonb_build_object(
+                       'partido', v.partido, 'sentido', v.sentido
+                   )) FILTER (WHERE v.id IS NOT NULL) as votaciones
             FROM puntos_pleno p
             JOIN municipios m ON p.municipio_id = m.id
             LEFT JOIN votaciones v ON v.punto_id = p.id
@@ -43,23 +47,18 @@ def chat(req: ChatRequest):
         for p in puntos:
             vots = ""
             if p.get("votaciones"):
-                vots = " | Votaciones: " + ", ".join(
+                vots = " | Vots: " + ", ".join(
                     f"{v['partido']}:{v['sentido']}" for v in p["votaciones"] if isinstance(v, dict)
                 )
             context_parts.append(
                 f"[{p['municipio']} — {p['fecha']}] Tema: {p.get('tema', '?')}\n"
-                f"Título: {p['titulo']}\n"
-                f"Resumen: {p.get('resumen', 'N/A')}\n"
-                f"Resultado: {p.get('resultado', '?')}{vots}"
+                f"{p['titulo']}\n{p.get('resumen', '')}\nResultat: {p.get('resultado', '?')}{vots}"
             )
             sources.append({
-                "municipio": p["municipio"],
-                "fecha": str(p["fecha"]),
-                "tema": p.get("tema"),
-                "titulo": p["titulo"],
+                "municipio": p["municipio"], "fecha": str(p["fecha"]),
+                "tema": p.get("tema"), "titulo": p["titulo"],
             })
 
-        # Also search raw acta text
         if len(context_parts) < 5:
             cur.execute("""
                 SELECT a.fecha, m.nombre, LEFT(a.texto, 800) as snippet
@@ -75,38 +74,27 @@ def chat(req: ChatRequest):
 
     if not context_parts:
         return {
-            "answer": "No he trobat informació rellevant sobre aquest tema a les actes processades. "
-                      "El sistema encara està processant actes — prova de nou més tard o reformula la pregunta.",
+            "answer": "No he trobat informació rellevant a les actes processades. "
+                      "El sistema encara està processant actes — prova més tard o reformula la pregunta.",
             "sources": [],
         }
 
     context = "\n\n---\n\n".join(context_parts)
 
-    # 2. Build prompt
-    prompt = f"""Eres AyuntamentIA, un asistente de inteligencia política especializado en plenos municipales de Catalunya.
-Responde basándote SOLO en el contexto proporcionado. Cita siempre municipio y fecha.
-Si no tienes datos suficientes, dilo. Responde en el idioma de la pregunta (catalán o castellano).
-Usa markdown para formatear.
+    messages = [
+        {"role": "system", "content": "Eres AyuntamentIA, asistente de inteligencia política de Catalunya. "
+         "Responde basándote SOLO en el contexto. Cita municipio y fecha. Usa markdown. "
+         "Responde en el idioma de la pregunta."},
+    ]
+    for h in req.history[-6:]:
+        messages.append({"role": h.get("role", "user"), "content": h.get("content", "")})
+    messages.append({"role": "user", "content": f"Contexto:\n{context}\n\nPregunta: {req.message}"})
 
-Contexto de actas:
-
-{context}
-
-Pregunta del usuario: {req.message}"""
-
-    # 3. Call OpenClaw bridge
     try:
-        resp = httpx.post(
-            f"{OPENCLAW_URL}/v1/chat/completions",
-            json={"model": "main", "messages": [{"role": "user", "content": prompt}]},
-            timeout=600.0,
-        )
-        resp.raise_for_status()
-        answer = resp.json()["choices"][0]["message"]["content"]
+        client = get_llm()
+        resp = client.chat.completions.create(model=MODEL, messages=messages, max_tokens=4000, temperature=0.3)
+        answer = resp.choices[0].message.content
     except Exception as e:
-        answer = f"Error al generar resposta: {str(e)[:200]}. Les dades de context estan disponibles."
+        answer = f"Error al generar resposta: {str(e)[:300]}"
 
-    return {
-        "answer": answer,
-        "sources": sources[:5],
-    }
+    return {"answer": answer, "sources": sources[:5]}
