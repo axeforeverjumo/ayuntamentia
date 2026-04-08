@@ -15,19 +15,19 @@ app.conf.update(
     task_default_rate_limit=f"{config.BACKFILL_RATE_PER_MINUTE}/m",
     beat_schedule={
         "sync-ckan-catalog": {
-            "task": "pipeline.src.workers.tasks.sync_ckan_catalog",
+            "task": "src.workers.tasks.sync_ckan_catalog",
             "schedule": crontab(minute=0, hour="*/6"),  # Every 6 hours
         },
         "sync-municat": {
-            "task": "pipeline.src.workers.tasks.sync_municat_data",
+            "task": "src.workers.tasks.sync_municat_data",
             "schedule": crontab(minute=0, hour=3, day_of_week=1),  # Monday 3am
         },
         "process-backfill-batch": {
-            "task": "pipeline.src.workers.tasks.process_backfill_batch",
+            "task": "src.workers.tasks.process_backfill_batch",
             "schedule": 30.0,  # Every 30 seconds
         },
         "weekly-report": {
-            "task": "pipeline.src.workers.tasks.generate_weekly_report",
+            "task": "src.workers.tasks.generate_weekly_report",
             "schedule": crontab(minute=0, hour=8, day_of_week=1),  # Monday 8am
         },
     },

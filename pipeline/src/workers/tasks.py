@@ -7,21 +7,21 @@ from ..config import config
 logger = logging.getLogger(__name__)
 
 
-@app.task(name="pipeline.src.workers.tasks.sync_ckan_catalog")
+@app.task(name="src.workers.tasks.sync_ckan_catalog")
 def sync_ckan_catalog():
     """Sincroniza catálogo de actas desde CKAN."""
     from ..ingesta.ckan_client import sync_actas_catalog
     return sync_actas_catalog(years_back=config.BACKFILL_YEARS)
 
 
-@app.task(name="pipeline.src.workers.tasks.sync_municat_data")
+@app.task(name="src.workers.tasks.sync_municat_data")
 def sync_municat_data():
     """Sincroniza municipios y cargos desde Municat."""
     from ..ingesta.socrata_client import sync_all
     return sync_all()
 
 
-@app.task(name="pipeline.src.workers.tasks.download_acta", rate_limit="10/m")
+@app.task(name="src.workers.tasks.download_acta", rate_limit="10/m")
 def download_acta(acta_id: int):
     """Descarga un PDF de acta."""
     from ..descarga.downloader import process_download
@@ -31,7 +31,7 @@ def download_acta(acta_id: int):
     return success
 
 
-@app.task(name="pipeline.src.workers.tasks.extract_acta_text", rate_limit="30/m")
+@app.task(name="src.workers.tasks.extract_acta_text", rate_limit="30/m")
 def extract_acta_text(acta_id: int):
     """Extrae texto de un PDF descargado."""
     from ..extraccion.pdf_extractor import process_extraction
@@ -41,7 +41,7 @@ def extract_acta_text(acta_id: int):
     return success
 
 
-@app.task(name="pipeline.src.workers.tasks.structure_acta", rate_limit=f"{config.BACKFILL_RATE_PER_MINUTE}/m")
+@app.task(name="src.workers.tasks.structure_acta", rate_limit=f"{config.BACKFILL_RATE_PER_MINUTE}/m")
 def structure_acta(acta_id: int):
     """Estructura un acta con LLM."""
     from ..llm.structurer import process_structuring
@@ -51,7 +51,7 @@ def structure_acta(acta_id: int):
     return success
 
 
-@app.task(name="pipeline.src.workers.tasks.post_structure")
+@app.task(name="src.workers.tasks.post_structure")
 def post_structure(acta_id: int):
     """Post-procesamiento: embeddings + coherencia."""
     from ..db import get_db, get_cursor
@@ -75,7 +75,7 @@ def post_structure(acta_id: int):
             logger.error(f"Failed coherence check for punto {p['id']}: {e}")
 
 
-@app.task(name="pipeline.src.workers.tasks.process_backfill_batch")
+@app.task(name="src.workers.tasks.process_backfill_batch")
 def process_backfill_batch():
     """Procesa un batch del backfill: toma actas pendientes y las encola."""
     from ..descarga.downloader import get_next_batch
@@ -85,7 +85,7 @@ def process_backfill_batch():
     return len(batch)
 
 
-@app.task(name="pipeline.src.workers.tasks.generate_weekly_report")
+@app.task(name="src.workers.tasks.generate_weekly_report")
 def generate_weekly_report():
     """Genera el informe semanal automático."""
     from datetime import date, timedelta
