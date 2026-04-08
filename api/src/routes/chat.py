@@ -68,10 +68,10 @@ def chat(req: ChatRequest):
             ORDER BY ts_rank(a.tsv, plainto_tsquery('spanish', %s)) DESC
             LIMIT 8
         """, (req.message, req.message))
-            for r in cur.fetchall():
-                context_parts.append(f"[{r['nombre']} — {r['fecha']}]\n{r['snippet']}")
-                if not any(s["municipio"] == r["nombre"] for s in sources):
-                    sources.append({"municipio": r["nombre"], "fecha": str(r["fecha"]), "tema": None, "titulo": None})
+        for r in cur.fetchall():
+            context_parts.append(f"[{r['nombre']} — {r['fecha']}]\n{r['snippet']}")
+            if not any(s["municipio"] == r["nombre"] for s in sources):
+                sources.append({"municipio": r["nombre"], "fecha": str(r["fecha"]), "tema": None, "titulo": None})
 
     if not context_parts:
         return {
