@@ -1,0 +1,82 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: #0d1117;
+  --color-surface: #161b22;
+  --color-surface-elevated: #1c2128;
+  --color-border: #30363d;
+  --color-border-muted: #21262d;
+  --color-foreground: #e6edf3;
+  --color-foreground-muted: #8b949e;
+  --color-foreground-subtle: #6e7681;
+
+  --color-primary: #2563eb;
+  --color-primary-hover: #1d4ed8;
+  --color-primary-subtle: #1e3a8a;
+  --color-primary-foreground: #ffffff;
+
+  --color-amber: #d97706;
+  --color-amber-subtle: #451a03;
+  --color-amber-foreground: #fef3c7;
+
+  --color-green: #16a34a;
+  --color-green-subtle: #052e16;
+  --color-green-foreground: #dcfce7;
+
+  --color-red: #dc2626;
+  --color-red-subtle: #450a0a;
+  --color-red-foreground: #fee2e2;
+
+  --color-sidebar: #0d1117;
+  --color-sidebar-hover: #161b22;
+  --color-sidebar-active: #1c2128;
+
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+* {
+  border-color: var(--color-border);
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-surface);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-foreground-subtle);
+}
+
+/* Custom utility classes */
+.bg-background { background-color: var(--color-background); }
+.bg-surface { background-color: var(--color-surface); }
+.bg-surface-elevated { background-color: var(--color-surface-elevated); }
+.bg-sidebar { background-color: var(--color-sidebar); }
+.border-border { border-color: var(--color-border); }
+.border-border-muted { border-color: var(--color-border-muted); }
+.text-foreground { color: var(--color-foreground); }
+.text-muted { color: var(--color-foreground-muted); }
+.text-subtle { color: var(--color-foreground-subtle); }
+.text-primary { color: var(--color-primary); }
