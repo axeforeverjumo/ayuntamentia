@@ -1,4 +1,5 @@
-import type { Metadata } from 'next';
+"use client";
+
 import Link from 'next/link';
 import {
   Building2,
@@ -21,9 +22,7 @@ import type {
 } from '@/lib/types';
 import { formatDate } from '@/lib/utils';
 
-export const metadata: Metadata = {
-  title: 'Dashboard',
-};
+// Dashboard page
 
 // Fallback data for when the API is not available
 const fallbackStats: DashboardStats = {
@@ -235,7 +234,7 @@ export default async function DashboardPage() {
                   Coherència AC
                 </h2>
               </div>
-              <AlertCircle className="w-3.5 h-3.5 text-[#6e7681]" title="Puntuació de coherència del vot" />
+              <AlertCircle className="w-3.5 h-3.5 text-[#6e7681]" aria-label="Puntuació de coherència del vot" />
             </div>
             <div className="px-5 py-4 space-y-3">
               {concejales.length === 0 ? (
