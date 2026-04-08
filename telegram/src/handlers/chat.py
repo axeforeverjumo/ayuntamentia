@@ -5,26 +5,45 @@ from telegram.ext import ContextTypes
 
 API_URL = os.getenv("API_URL", "http://localhost:8050")
 
-GREETINGS = {"hola", "hey", "bon dia", "bona tarda", "bona nit", "hi", "hello", "buenas", "buenos dias", "que tal", "ey", "ei"}
+GREETINGS_CA = {"hola", "hey", "bon dia", "bona tarda", "bona nit", "ei", "ep"}
+GREETINGS_ES = {"hola", "hey", "buenas", "buenos dias", "buenos días", "que tal", "buenas tardes", "buenas noches"}
+ALL_GREETINGS = GREETINGS_CA | GREETINGS_ES | {"hi", "hello", "ey"}
 
 
 def _is_greeting(text: str) -> bool:
     clean = text.strip().lower().rstrip("!?.,:;")
-    return clean in GREETINGS or len(clean) < 6
+    return clean in ALL_GREETINGS or len(clean) < 6
 
 
-GREETING_RESPONSE = (
-    "Hola! 👋 Sóc l'assistent d'AyuntamentIA.\n\n"
-    "Puc ajudar-te amb:\n"
-    "• Buscar informació d'actes de plens municipals\n"
-    "• Consultar votacions i acords\n"
-    "• Analitzar l'activitat d'Aliança Catalana\n\n"
-    "Prova per exemple:\n"
-    "  _Què s'ha aprovat a Ripoll?_\n"
-    "  _Com vota AC sobre urbanisme?_\n"
-    "  _/buscar pressupost Ripoll_\n"
-    "  _/municipio Ripoll_"
-)
+def _is_catalan(text: str) -> bool:
+    cat_words = {"bon", "bona", "dia", "tarda", "nit", "ei", "ep", "què", "com"}
+    return bool(set(text.lower().split()) & cat_words)
+
+
+def _greeting_response(catalan: bool) -> str:
+    if catalan:
+        return (
+            "Hola! 👋 Sóc l'assistent d'AyuntamentIA.\n\n"
+            "Puc ajudar-te amb:\n"
+            "• Buscar informació d'actes de plens municipals\n"
+            "• Consultar votacions i acords\n"
+            "• Analitzar l'activitat d'Aliança Catalana\n\n"
+            "Prova per exemple:\n"
+            "  _Què s'ha aprovat a Ripoll?_\n"
+            "  _Com vota AC sobre urbanisme?_\n"
+            "  _/buscar pressupost Ripoll_"
+        )
+    return (
+        "Hola! 👋 Soy el asistente de AyuntamentIA.\n\n"
+        "Puedo ayudarte con:\n"
+        "• Buscar información de actas de plenos municipales\n"
+        "• Consultar votaciones y acuerdos\n"
+        "• Analizar la actividad de Aliança Catalana\n\n"
+        "Prueba por ejemplo:\n"
+        "  _¿Qué se ha aprobado en Ripoll?_\n"
+        "  _¿Cómo vota AC sobre urbanismo?_\n"
+        "  _/buscar presupuesto Ripoll_"
+    )
 
 
 async def handle_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -33,9 +52,12 @@ async def handle_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not message:
         return
 
-    # Greeting detection
+    # Greeting detection - respond in same language
     if _is_greeting(message):
-        await update.message.reply_text(GREETING_RESPONSE, parse_mode="Markdown")
+        await update.message.reply_text(
+            _greeting_response(_is_catalan(message)),
+            parse_mode="Markdown",
+        )
         return
 
     thinking = await update.message.reply_text("🔍 Buscant informació als plens municipals...")
