@@ -37,10 +37,10 @@ export default function AlertasPage() {
     setError(null);
     try {
       const [alertasData, statsData] = await Promise.all([
-        apiClient.get<Alerta[]>('/api/alertas/'),
+        apiClient.get<any>('/api/alertas/'),
         apiClient.get<AlertasStats>('/api/alertas/stats/resumen'),
       ]);
-      setAlertas(alertasData);
+      setAlertas(Array.isArray(alertasData) ? alertasData : alertasData.results || []);
       setStats(statsData);
     } catch {
       setError('No s\'ha pogut carregar les alertes.');

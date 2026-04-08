@@ -36,10 +36,10 @@ export default function MunicipiosPage() {
         if (provincia !== 'Totes') params.set('provincia', provincia);
         if (tieneAC !== null) params.set('tiene_ac', String(tieneAC));
 
-        const data = await apiClient.get<Municipio[]>(
-          `/api/municipios/?${params.toString()}`,
+        const data = await apiClient.get<any>(
+          `/api/municipios/?${params.toString()}&limit=200`,
         );
-        setMunicipios(data);
+        setMunicipios(Array.isArray(data) ? data : data.results || []);
       } catch {
         setError('No s\'ha pogut carregar la llista de municipis.');
       } finally {
@@ -214,7 +214,7 @@ function MunicipioCard({ municipio }: { municipio: Municipio }) {
         <div className="flex items-center gap-1.5 text-[#8b949e]">
           <MapPin className="w-3.5 h-3.5 text-[#6e7681]" />
           <span>
-            {municipio.poblacion.toLocaleString('ca-ES')} hab.
+            {(municipio.poblacion || 0).toLocaleString('ca-ES')} hab.
           </span>
         </div>
         <div className="flex items-center gap-1.5">
