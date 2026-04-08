@@ -73,7 +73,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
               {message.sources.map((source, i) => (
                 <a
                   key={`${source.municipio}-${source.fecha}-${i}`}
-                  href={`/buscar?q=${encodeURIComponent(source.titulo || source.municipio || '')}`}
+                  href={`/buscar?q=${encodeURIComponent(source.municipio || source.titulo || '')}`}
                   className={cn(
                     'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs',
                     'bg-[#1c2128] border border-[#30363d] text-[#8b949e]',

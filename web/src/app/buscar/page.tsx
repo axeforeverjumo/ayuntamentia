@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useCallback, useTransition } from 'react';
+import { useState, useCallback, useTransition, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   Search,
@@ -53,7 +54,9 @@ function buildQueryString(
 }
 
 export default function BuscarPage() {
-  const [query, setQuery] = useState('');
+  const searchParams = useSearchParams();
+  const initialQ = searchParams.get('q') || '';
+  const [query, setQuery] = useState(initialQ);
   const [filters, setFilters] = useState<Filters>(emptyFilters);
   const [showFilters, setShowFilters] = useState(false);
   const [page, setPage] = useState(1);
@@ -87,6 +90,13 @@ export default function BuscarPage() {
     },
     [],
   );
+
+  // Auto-search if ?q= is in URL
+  useEffect(() => {
+    if (initialQ) {
+      performSearch(initialQ, emptyFilters, 1);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSearch = () => {
     setPage(1);

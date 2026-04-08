@@ -21,9 +21,15 @@ def search(
     conditions = []
     params = []
 
-    # Full-text search
-    conditions.append("a.tsv @@ plainto_tsquery('spanish', %s)")
-    params.append(q)
+    # Full-text search (use OR for multi-word queries for broader matching)
+    words = [w for w in q.split() if len(w) >= 3]
+    if words:
+        or_query = " | ".join(words)  # OR-based tsquery
+        conditions.append("a.tsv @@ to_tsquery('spanish', %s)")
+        params.append(or_query)
+    else:
+        conditions.append("a.tsv @@ plainto_tsquery('spanish', %s)")
+        params.append(q)
 
     if municipio:
         conditions.append("m.nombre ILIKE %s")
@@ -64,7 +70,7 @@ def search(
                        'StartSel=<mark>, StopSel=</mark>, MaxWords=60, MinWords=30') as snippet
             FROM actas a
             LEFT JOIN municipios m ON a.municipio_id = m.id
-            WHERE {where}
+            WHERE {where} AND a.texto IS NOT NULL
             ORDER BY relevance DESC, a.fecha DESC
             LIMIT %s OFFSET %s
         """, [q, q] + params + [limit, offset])
