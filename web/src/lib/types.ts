@@ -74,7 +74,7 @@ export interface ChatRequest {
 }
 
 export interface ChatResponse {
-  message: string;
+  answer: string;
   sources?: Source[];
 }
 

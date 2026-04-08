@@ -84,7 +84,7 @@ export default function ChatPage() {
       const assistantMessage: ChatMessageType = {
         id: generateId(),
         role: 'assistant',
-        content: response.message,
+        content: response.answer,
         sources: response.sources,
         timestamp: new Date().toISOString(),
       };
