@@ -18,7 +18,7 @@ services:
     network_mode: host
     environment:
       - OPENCLAW_BASE_URL=http://localhost:10531/v1
-      - DATABASE_URL=postgresql://postgres:PrLaCXPsZIAIkX25ZXQAC5E54LRo90uU@localhost:5432/postgres
+      - DATABASE_URL=postgresql://postgres:PrLaCXPsZIAIkX25ZXQAC5E54LRo90uU@172.19.0.4:5432/postgres
       - REDIS_URL=redis://localhost:6380/0
     volumes:
       - pdf-storage:/data/pdfs
@@ -44,7 +44,7 @@ services:
     network_mode: host
     environment:
       - OPENCLAW_BASE_URL=http://localhost:10531/v1
-      - DATABASE_URL=postgresql://postgres:PrLaCXPsZIAIkX25ZXQAC5E54LRo90uU@localhost:5432/postgres
+      - DATABASE_URL=postgresql://postgres:PrLaCXPsZIAIkX25ZXQAC5E54LRo90uU@172.19.0.4:5432/postgres
       - REDIS_URL=redis://localhost:6380/0
 
   # === Telegram Bot ===
