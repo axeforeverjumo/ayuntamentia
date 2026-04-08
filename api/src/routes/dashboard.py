@@ -24,10 +24,11 @@ def get_pipeline_status():
 @router.get("/temas")
 def get_temas_trending():
     with get_cursor() as cur:
+        # Show all temas from processed actas (not just last 30 days)
         cur.execute("""
             SELECT tema, COUNT(*) as count
             FROM puntos_pleno
-            WHERE fecha >= CURRENT_DATE - INTERVAL '30 days' AND tema IS NOT NULL
+            WHERE tema IS NOT NULL AND tema != 'procedimiento'
             GROUP BY tema ORDER BY count DESC LIMIT 10
         """)
         return cur.fetchall()
@@ -36,8 +37,24 @@ def get_temas_trending():
 @router.get("/coherencia")
 def get_coherencia_overview():
     with get_cursor() as cur:
-        cur.execute("SELECT * FROM coherencia_concejales ORDER BY indice_coherencia ASC LIMIT 20")
-        return cur.fetchall()
+        # Only show AC concejales or those with actual votaciones
+        cur.execute("""
+            SELECT * FROM coherencia_concejales
+            WHERE UPPER(partido) LIKE '%ALIAN%' OR UPPER(partido) LIKE '%AC%'
+            ORDER BY indice_coherencia ASC
+            LIMIT 20
+        """)
+        result = cur.fetchall()
+        if not result:
+            # Fallback: show concejales with most votaciones
+            cur.execute("""
+                SELECT * FROM coherencia_concejales
+                WHERE total_votaciones > 0
+                ORDER BY total_votaciones DESC
+                LIMIT 10
+            """)
+            result = cur.fetchall()
+        return result
 
 
 @router.get("/actividad-reciente")
@@ -45,6 +62,7 @@ def get_actividad_reciente():
     with get_cursor() as cur:
         cur.execute("""
             SELECT a.id, a.fecha, a.tipo, m.nombre as municipio,
+                   a.quality_score,
                    COUNT(DISTINCT p.id) as num_puntos,
                    COUNT(DISTINCT al.id) as num_alertas
             FROM actas a
@@ -52,7 +70,7 @@ def get_actividad_reciente():
             LEFT JOIN puntos_pleno p ON p.acta_id = a.id
             LEFT JOIN alertas al ON al.punto_id = p.id AND al.estado = 'nueva'
             WHERE a.status = 'structured'
-            GROUP BY a.id, a.fecha, a.tipo, m.nombre
-            ORDER BY a.fecha DESC LIMIT 20
+            GROUP BY a.id, a.fecha, a.tipo, m.nombre, a.quality_score
+            ORDER BY a.structured_at DESC LIMIT 20
         """)
         return cur.fetchall()

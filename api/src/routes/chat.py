@@ -150,7 +150,18 @@ def _search_context(message: str) -> tuple[list[str], list[dict]]:
 def chat(req: ChatRequest):
     """Chat Q&A usando multi-strategy search + GPT-5.4."""
 
-    context_parts, sources = _search_context(req.message)
+    # Enrich search with context from conversation history
+    search_query = req.message
+    if req.history:
+        # Extract key terms from last 2 user messages for better search
+        prev_terms = " ".join(
+            h.get("content", "")[:100] for h in req.history[-4:]
+            if h.get("role") == "user"
+        )
+        if prev_terms and len(req.message.split()) < 5:
+            search_query = f"{prev_terms} {req.message}"
+
+    context_parts, sources = _search_context(search_query)
 
     if not context_parts:
         return {
