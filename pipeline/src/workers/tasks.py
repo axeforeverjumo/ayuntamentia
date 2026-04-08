@@ -53,23 +53,20 @@ def structure_acta(acta_id: int):
 
 @app.task(name="src.workers.tasks.post_structure")
 def post_structure(acta_id: int):
-    """Post-procesamiento: embeddings + coherencia."""
+    """Post-procesamiento: coherencia (embeddings desactivados hasta configurar endpoint)."""
     from ..db import get_db, get_cursor
-    from ..embeddings.generator import index_punto
-    from ..coherencia.detector import check_coherence_for_punto
 
     with get_db() as conn:
         with get_cursor(conn) as cur:
             cur.execute("SELECT id FROM puntos_pleno WHERE acta_id = %s", (acta_id,))
             puntos = cur.fetchall()
 
+    # Embeddings disabled for now — bridge doesn't support embeddings endpoint
+    # TODO: enable when embeddings API is configured
+
     for p in puntos:
         try:
-            index_punto(p["id"])
-        except Exception as e:
-            logger.error(f"Failed to index punto {p['id']}: {e}")
-
-        try:
+            from ..coherencia.detector import check_coherence_for_punto
             check_coherence_for_punto(p["id"])
         except Exception as e:
             logger.error(f"Failed coherence check for punto {p['id']}: {e}")
