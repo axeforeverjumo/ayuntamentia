@@ -2,7 +2,12 @@ from celery import Celery
 from celery.schedules import crontab
 from ..config import config
 
-app = Celery("ayuntamentia", broker=config.REDIS_URL, backend=config.REDIS_URL)
+app = Celery(
+    "ayuntamentia",
+    broker=config.REDIS_URL,
+    backend=config.REDIS_URL,
+    include=["src.workers.tasks"],
+)
 
 app.conf.update(
     task_serializer="json",
