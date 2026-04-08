@@ -17,27 +17,34 @@ ROUTER_PROMPT = """Eres un router. El usuario pregunta sobre política municipal
 Decide qué herramientas usar. Responde SOLO con JSON.
 
 Herramientas:
-1. buscar_actas(query) — busca texto libre en actas de plenos. Usa keywords en catalán si puedes.
-2. buscar_votaciones(partido) — historial de votaciones de un partido. Valores: AC, ERC, PSC, CUP, JxCat, PP, VOX, Cs
-3. info_municipio(nombre) — composición del pleno, concejales, últimos plenos, temas de un municipio
-4. estadisticas() — stats generales: total actas, municipios, pipeline, temas trending
-5. buscar_argumentos(query) — busca intervenciones y argumentos de concejales en los debates
-6. buscar_por_tema(tema) — busca puntos del pleno por tema. Valores: urbanismo, hacienda, seguridad, medio_ambiente, cultura, transporte, servicios_sociales, vivienda, educacion, salud, comercio, mociones
-7. comparar_partidos(partido1, partido2) — compara votaciones de dos partidos en los mismos temas
+1. buscar_actas(query) — busca texto libre en actas de plenos municipales
+2. buscar_votaciones(partido) — historial de votaciones. Valores: AC, ERC, PSC, CUP, JxCat, PP, VOX, Cs
+3. info_municipio(nombre) — composición pleno, concejales, plenos, temas
+4. estadisticas() — stats generales del sistema
+5. buscar_argumentos(query) — intervenciones y argumentos en debates
+6. buscar_por_tema(tema) — puntos por tema: urbanismo, hacienda, seguridad, medio_ambiente, cultura, transporte, servicios_sociales, vivienda, educacion, salud, comercio, mociones
+7. comparar_partidos(partido1, partido2) — compara votaciones de 2 partidos
+8. elecciones_municipio(nombre) — resultados electorales históricos (desde 1979) de un municipio
+9. historial_alcaldes(nombre) — todos los alcaldes de un municipio desde 1979
+10. mociones_govern(query) — mociones municipales dirigidas al Govern de la Generalitat
+11. presupuesto_municipio(nombre) — presupuestos por año de un municipio
+12. poblacion_municipio(nombre) — evolución demográfica histórica
+13. iniciativas_parlament(query) — iniciativas parlamentarias (propuestas, mociones, interpelaciones)
 
-Puedes pedir VARIAS herramientas si la pregunta lo requiere.
+Puedes pedir VARIAS herramientas.
 
 Ejemplos:
 - "que hablan de aliança catalana?" → {"tools": [{"name": "buscar_votaciones", "args": {"partido": "AC"}}, {"name": "buscar_actas", "args": {"query": "Aliança Catalana"}}]}
-- "hola" → {"tools": [], "direct_answer": "Hola! Sóc AyuntamentIA, el teu assistent de política municipal. Pregunta'm sobre plens, votacions o municipis de Catalunya!"}
+- "hola" → {"tools": [], "direct_answer": "Hola! Sóc AyuntamentIA, el teu assistent de política municipal. Pregunta'm sobre plens, votacions, eleccions o qualsevol cosa de Catalunya!"}
+- "historia política de Ripoll" → {"tools": [{"name": "historial_alcaldes", "args": {"nombre": "Ripoll"}}, {"name": "elecciones_municipio", "args": {"nombre": "Ripoll"}}, {"name": "info_municipio", "args": {"nombre": "Ripoll"}}]}
+- "presupuesto de Girona" → {"tools": [{"name": "presupuesto_municipio", "args": {"nombre": "Girona"}}]}
+- "mociones sobre inmigración" → {"tools": [{"name": "mociones_govern", "args": {"query": "immigració immigracion"}}]}
 - "que se debate sobre urbanismo?" → {"tools": [{"name": "buscar_por_tema", "args": {"tema": "urbanismo"}}]}
-- "como vota ERC comparado con AC?" → {"tools": [{"name": "comparar_partidos", "args": {"partido1": "ERC", "partido2": "AC"}}]}
-- "que argumentos usan sobre seguridad?" → {"tools": [{"name": "buscar_argumentos", "args": {"query": "seguridad seguretat"}}]}
-- "info de Ripoll" → {"tools": [{"name": "info_municipio", "args": {"nombre": "Ripoll"}}]}
-- "cuantas actas hay procesadas?" → {"tools": [{"name": "estadisticas", "args": {}}]}
+- "radiografía de Manlleu" → {"tools": [{"name": "info_municipio", "args": {"nombre": "Manlleu"}}, {"name": "historial_alcaldes", "args": {"nombre": "Manlleu"}}, {"name": "elecciones_municipio", "args": {"nombre": "Manlleu"}}, {"name": "presupuesto_municipio", "args": {"nombre": "Manlleu"}}, {"name": "poblacion_municipio", "args": {"nombre": "Manlleu"}}]}
+- "que pasa en el parlament sobre vivienda?" → {"tools": [{"name": "iniciativas_parlament", "args": {"query": "habitatge vivienda"}}]}
 - "gracias" → {"tools": [], "direct_answer": "De res! Si tens més preguntes, aquí estic."}
 
-Responde SOLO JSON, nada más."""
+Responde SOLO JSON."""
 
 ANSWER_PROMPT = """Eres AyuntamentIA, un asistente experto en política municipal de Catalunya.
 Tu trabajo es analizar datos de plenos municipales y dar respuestas claras y útiles.
@@ -190,6 +197,75 @@ def tool_comparar_partidos(partido1: str, partido2: str) -> str:
     return json.dumps({"partido1": json.loads(r1), "partido2": json.loads(r2)}, ensure_ascii=False)
 
 
+def tool_elecciones_municipio(nombre: str) -> str:
+    with get_cursor() as cur:
+        cur.execute("""
+            SELECT anyo, partido, votos, porcentaje, concejales
+            FROM elecciones WHERE municipio ILIKE %s
+            ORDER BY anyo DESC, votos DESC
+        """, (f"%{nombre}%",))
+        rows = cur.fetchall()
+    return json.dumps([dict(r) for r in rows], default=str, ensure_ascii=False)
+
+
+def tool_historial_alcaldes(nombre: str) -> str:
+    with get_cursor() as cur:
+        cur.execute("""
+            SELECT nombre, partido, legislatura, fecha_posesion
+            FROM alcaldes WHERE municipio ILIKE %s
+            ORDER BY legislatura DESC
+        """, (f"%{nombre}%",))
+        return json.dumps([dict(r) for r in cur.fetchall()], default=str, ensure_ascii=False)
+
+
+def tool_mociones_govern(query: str) -> str:
+    words = re.findall(r'\w{3,}', query)
+    if not words:
+        return "[]"
+    like_clauses = " OR ".join(["titulo ILIKE %s"] * min(4, len(words)))
+    params = [f"%{w}%" for w in words[:4]]
+    with get_cursor() as cur:
+        cur.execute(f"""
+            SELECT titulo, municipio, vegueria, fecha, tema
+            FROM mociones WHERE {like_clauses}
+            ORDER BY fecha DESC LIMIT 20
+        """, params)
+        return json.dumps([dict(r) for r in cur.fetchall()], default=str, ensure_ascii=False)
+
+
+def tool_presupuesto_municipio(nombre: str) -> str:
+    with get_cursor() as cur:
+        cur.execute("""
+            SELECT anyo, tipo, total FROM presupuestos
+            WHERE municipio ILIKE %s ORDER BY anyo DESC, tipo
+        """, (f"%{nombre}%",))
+        return json.dumps([dict(r) for r in cur.fetchall()], default=str, ensure_ascii=False)
+
+
+def tool_poblacion_municipio(nombre: str) -> str:
+    with get_cursor() as cur:
+        cur.execute("""
+            SELECT anyo, total, hombres, mujeres FROM poblacion
+            WHERE municipio ILIKE %s ORDER BY anyo DESC
+        """, (f"%{nombre}%",))
+        return json.dumps([dict(r) for r in cur.fetchall()], default=str, ensure_ascii=False)
+
+
+def tool_iniciativas_parlament(query: str) -> str:
+    words = re.findall(r'\w{3,}', query)
+    if not words:
+        return "[]"
+    like_clauses = " OR ".join(["titulo ILIKE %s"] * min(4, len(words)))
+    params = [f"%{w}%" for w in words[:4]]
+    with get_cursor() as cur:
+        cur.execute(f"""
+            SELECT tipo, numero, titulo, proponentes, grupo, fecha
+            FROM iniciativas_parlament WHERE {like_clauses}
+            ORDER BY fecha DESC LIMIT 15
+        """, params)
+        return json.dumps([dict(r) for r in cur.fetchall()], default=str, ensure_ascii=False)
+
+
 TOOL_MAP = {
     "buscar_actas": lambda a: tool_buscar_actas(a.get("query", "")),
     "buscar_votaciones": lambda a: tool_buscar_votaciones(a.get("partido", "")),
@@ -198,6 +274,12 @@ TOOL_MAP = {
     "buscar_argumentos": lambda a: tool_buscar_argumentos(a.get("query", "")),
     "buscar_por_tema": lambda a: tool_buscar_por_tema(a.get("tema", "")),
     "comparar_partidos": lambda a: tool_comparar_partidos(a.get("partido1", ""), a.get("partido2", "")),
+    "elecciones_municipio": lambda a: tool_elecciones_municipio(a.get("nombre", "")),
+    "historial_alcaldes": lambda a: tool_historial_alcaldes(a.get("nombre", "")),
+    "mociones_govern": lambda a: tool_mociones_govern(a.get("query", "")),
+    "presupuesto_municipio": lambda a: tool_presupuesto_municipio(a.get("nombre", "")),
+    "poblacion_municipio": lambda a: tool_poblacion_municipio(a.get("nombre", "")),
+    "iniciativas_parlament": lambda a: tool_iniciativas_parlament(a.get("query", "")),
 }
 
 
