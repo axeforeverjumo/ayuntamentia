@@ -1,4 +1,7 @@
+"""Chat con function calling — el LLM decide qué buscar."""
+
 import os
+import json
 import re
 from openai import OpenAI
 from fastapi import APIRouter
@@ -10,17 +13,77 @@ router = APIRouter()
 PROXY_URL = os.getenv("OPENCLAW_BASE_URL", "http://localhost:10531/v1")
 MODEL = os.getenv("OPENCLAW_MODEL_FULL", "gpt-5.4")
 
-# Map common Spanish terms to their Catalan equivalents for search
-PARTY_ALIASES = {
-    "alianza catalana": ["ALIANÇA", "AC", "ALIANÇA.CAT"],
-    "aliança catalana": ["ALIANÇA", "AC", "ALIANÇA.CAT"],
-    "erc": ["ERC", "Esquerra"],
-    "junts": ["JxCat", "Junts"],
-    "psc": ["PSC", "Socialista"],
-    "cup": ["CUP"],
-    "pp": ["PP", "Popular"],
-    "vox": ["VOX"],
-}
+TOOLS = [
+    {
+        "type": "function",
+        "function": {
+            "name": "buscar_actas",
+            "description": "Busca en el texto completo de las actas de plenos municipales. Usa palabras clave relevantes.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "description": "Palabras clave para buscar en las actas (ej: 'pressupost urbanisme Ripoll')"},
+                    "limit": {"type": "integer", "description": "Número máximo de resultados", "default": 10},
+                },
+                "required": ["query"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "buscar_votaciones_partido",
+            "description": "Busca todas las votaciones de un partido político en los plenos municipales. Devuelve qué votaron, en qué temas y en qué municipios.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "partido": {"type": "string", "description": "Nombre o siglas del partido (ej: 'AC', 'ERC', 'PSC', 'CUP', 'JxCat')"},
+                    "tema": {"type": "string", "description": "Filtrar por tema (ej: 'urbanismo', 'hacienda', 'seguridad'). Opcional."},
+                    "municipio": {"type": "string", "description": "Filtrar por municipio. Opcional."},
+                },
+                "required": ["partido"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "info_municipio",
+            "description": "Obtiene información completa de un municipio: composición del pleno, concejales, últimos plenos, temas frecuentes.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "nombre": {"type": "string", "description": "Nombre del municipio (ej: 'Ripoll', 'Vila-seca', 'Lleida')"},
+                },
+                "required": ["nombre"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "estadisticas_generales",
+            "description": "Obtiene estadísticas generales del sistema: total municipios, actas procesadas, votaciones, temas trending, estado del pipeline.",
+            "parameters": {"type": "object", "properties": {}},
+        },
+    },
+]
+
+SYSTEM_PROMPT = """Eres AyuntamentIA, un asistente experto en política municipal de Catalunya.
+
+Tienes acceso a una base de datos con actas de plenos municipales de los 947 municipios de Catalunya.
+El sistema está procesando ~42.000 actas, y ya tiene centenares procesadas con votaciones, temas y argumentos extraídos.
+
+INSTRUCCIONES:
+- Usa las herramientas disponibles para buscar información antes de responder.
+- Si te preguntan sobre un partido, usa buscar_votaciones_partido.
+- Si te preguntan sobre un municipio, usa info_municipio.
+- Si te preguntan algo general, usa buscar_actas con keywords relevantes.
+- Puedes llamar a varias herramientas si necesitas cruzar información.
+- Cita siempre municipio y fecha en tus respuestas.
+- Responde en el idioma de la pregunta (catalán o castellano).
+- Usa markdown para formatear.
+- Si no hay datos suficientes, dilo honestamente y sugiere qué preguntar."""
 
 
 def get_llm():
@@ -32,45 +95,15 @@ class ChatRequest(BaseModel):
     history: list[dict] = []
 
 
-def _search_context(message: str) -> tuple[list[str], list[dict]]:
-    """Multi-strategy search: full-text + ILIKE + party matching."""
-    context_parts = []
-    sources = []
-    msg_lower = message.lower()
+# === Tool implementations ===
 
+def _tool_buscar_actas(query: str, limit: int = 10) -> str:
+    words = re.findall(r'\w{3,}', query)
+    if not words:
+        return json.dumps({"results": [], "total": 0})
+
+    tsquery = " | ".join(words[:8])
     with get_cursor() as cur:
-        # Strategy 1: Search by party name in votaciones
-        party_matches = []
-        for alias_key, aliases in PARTY_ALIASES.items():
-            if alias_key in msg_lower:
-                party_matches.extend(aliases)
-
-        if party_matches:
-            like_conditions = " OR ".join(["v.partido ILIKE %s"] * len(party_matches))
-            params = [f"%{a}%" for a in party_matches]
-            cur.execute(f"""
-                SELECT p.titulo, p.tema, p.resumen, p.resultado, p.fecha,
-                       m.nombre as municipio, v.partido, v.sentido
-                FROM puntos_pleno p
-                JOIN municipios m ON p.municipio_id = m.id
-                JOIN votaciones v ON v.punto_id = p.id
-                WHERE ({like_conditions})
-                ORDER BY p.fecha DESC
-                LIMIT 20
-            """, params)
-            for p in cur.fetchall():
-                context_parts.append(
-                    f"[{p['municipio']} — {p['fecha']}] Tema: {p.get('tema', '?')}\n"
-                    f"{p['titulo']}\n{p.get('resumen', '')}\n"
-                    f"Vot {p['partido']}: {p['sentido']} | Resultat: {p.get('resultado', '?')}"
-                )
-                if not any(s.get("titulo") == p["titulo"] and s.get("fecha") == str(p["fecha"]) for s in sources):
-                    sources.append({
-                        "municipio": p["municipio"], "fecha": str(p["fecha"]),
-                        "tema": p.get("tema"), "titulo": p["titulo"],
-                    })
-
-        # Strategy 2: Full-text search on structured puntos
         cur.execute("""
             SELECT p.titulo, p.tema, p.resumen, p.resultado, p.fecha,
                    m.nombre as municipio,
@@ -81,112 +114,200 @@ def _search_context(message: str) -> tuple[list[str], list[dict]]:
             JOIN municipios m ON p.municipio_id = m.id
             LEFT JOIN votaciones v ON v.punto_id = p.id
             JOIN actas a ON p.acta_id = a.id
-            WHERE a.tsv @@ plainto_tsquery('spanish', %s)
+            WHERE a.tsv @@ to_tsquery('spanish', %s)
             GROUP BY p.id, p.titulo, p.tema, p.resumen, p.resultado, p.fecha, m.nombre
             ORDER BY p.fecha DESC
-            LIMIT 10
-        """, (message,))
-        for p in cur.fetchall():
-            vots = ""
-            if p.get("votaciones"):
-                vots = " | Vots: " + ", ".join(
-                    f"{v['partido']}:{v['sentido']}" for v in p["votaciones"] if isinstance(v, dict)
-                )
-            entry = (
-                f"[{p['municipio']} — {p['fecha']}] Tema: {p.get('tema', '?')}\n"
-                f"{p['titulo']}\n{p.get('resumen', '')}\nResultat: {p.get('resultado', '?')}{vots}"
-            )
-            if entry not in context_parts:
-                context_parts.append(entry)
-                sources.append({
-                    "municipio": p["municipio"], "fecha": str(p["fecha"]),
-                    "tema": p.get("tema"), "titulo": p["titulo"],
-                })
+            LIMIT %s
+        """, (tsquery, limit))
+        rows = cur.fetchall()
 
-        # Strategy 3: ILIKE search on raw text for key terms
-        keywords = re.findall(r'\b\w{4,}\b', message)
-        if keywords and len(context_parts) < 5:
-            like_clause = " AND ".join(["a.texto ILIKE %s"] * min(3, len(keywords)))
-            like_params = [f"%{kw}%" for kw in keywords[:3]]
+        # Also try raw text if few results
+        if len(rows) < 3:
+            like_params = [f"%{w}%" for w in words[:3]]
+            like_clause = " OR ".join(["a.texto ILIKE %s"] * len(like_params))
             cur.execute(f"""
-                SELECT a.fecha, m.nombre, LEFT(a.texto, 1000) as snippet
+                SELECT a.fecha, m.nombre as municipio, LEFT(a.texto, 600) as extracto
                 FROM actas a JOIN municipios m ON a.municipio_id = m.id
                 WHERE ({like_clause}) AND a.texto IS NOT NULL
-                ORDER BY a.fecha DESC
-                LIMIT 5
+                ORDER BY a.fecha DESC LIMIT 5
             """, like_params)
-            for r in cur.fetchall():
-                context_parts.append(f"[{r['nombre']} — {r['fecha']}]\n{r['snippet']}")
-                if not any(s["municipio"] == r["nombre"] for s in sources):
-                    sources.append({"municipio": r["nombre"], "fecha": str(r["fecha"]), "tema": None, "titulo": None})
+            extra = cur.fetchall()
+            for e in extra:
+                rows.append({"municipio": e["municipio"], "fecha": e["fecha"],
+                             "titulo": "Extracto d'acta", "resumen": e["extracto"][:400],
+                             "tema": None, "resultado": None, "votaciones": None})
 
-        # Strategy 4: If still empty, get latest AC activity as fallback
-        if not context_parts and any(k in msg_lower for k in ["alianza", "aliança", "partido", "partit", "ac "]):
-            cur.execute("""
-                SELECT p.titulo, p.tema, p.resumen, p.resultado, p.fecha,
-                       m.nombre as municipio, v.partido, v.sentido
-                FROM puntos_pleno p
-                JOIN municipios m ON p.municipio_id = m.id
-                JOIN votaciones v ON v.punto_id = p.id
-                JOIN municipios mac ON mac.tiene_ac = TRUE AND m.id = mac.id
-                ORDER BY p.fecha DESC
-                LIMIT 20
-            """)
-            for p in cur.fetchall():
-                context_parts.append(
-                    f"[{p['municipio']} — {p['fecha']}] {p['titulo']}\n"
-                    f"{p.get('resumen', '')} | {p['partido']}: {p['sentido']}"
-                )
-                if not any(s.get("titulo") == p["titulo"] for s in sources):
-                    sources.append({
-                        "municipio": p["municipio"], "fecha": str(p["fecha"]),
-                        "tema": p.get("tema"), "titulo": p["titulo"],
-                    })
+    return json.dumps({"total": len(rows), "results": [dict(r) for r in rows]}, default=str, ensure_ascii=False)
 
-    return context_parts, sources
+
+def _tool_buscar_votaciones_partido(partido: str, tema: str = None, municipio: str = None) -> str:
+    # Map common names to SQL
+    partido_upper = partido.upper().strip()
+    if partido_upper in ("AC", "ALIANÇA", "ALIANÇA CATALANA", "ALIANZA CATALANA", "ALIANÇA.CAT"):
+        where = "(v.partido = 'AC' OR v.partido = 'ALIANÇA.CAT' OR v.partido LIKE 'AC-%' OR v.partido = 'ERC-AC')"
+    else:
+        where = f"v.partido ILIKE '%{partido}%'"
+
+    extra = ""
+    params = []
+    if tema:
+        extra += " AND p.tema = %s"
+        params.append(tema)
+    if municipio:
+        extra += " AND m.nombre ILIKE %s"
+        params.append(f"%{municipio}%")
+
+    with get_cursor() as cur:
+        cur.execute(f"""
+            SELECT v.partido, v.sentido, p.titulo, p.tema, p.resultado, p.fecha,
+                   m.nombre as municipio, p.resumen
+            FROM votaciones v
+            JOIN puntos_pleno p ON v.punto_id = p.id
+            JOIN municipios m ON p.municipio_id = m.id
+            WHERE {where} {extra}
+            ORDER BY p.fecha DESC LIMIT 30
+        """, params)
+        rows = cur.fetchall()
+
+        # Summary stats
+        cur.execute(f"""
+            SELECT v.sentido, COUNT(*) as n
+            FROM votaciones v
+            JOIN puntos_pleno p ON v.punto_id = p.id
+            JOIN municipios m ON p.municipio_id = m.id
+            WHERE {where} {extra}
+            GROUP BY v.sentido
+        """, params)
+        stats = cur.fetchall()
+
+        cur.execute(f"""
+            SELECT DISTINCT m.nombre, COUNT(v.id) as votos
+            FROM votaciones v
+            JOIN puntos_pleno p ON v.punto_id = p.id
+            JOIN municipios m ON p.municipio_id = m.id
+            WHERE {where} {extra}
+            GROUP BY m.nombre ORDER BY votos DESC
+        """, params)
+        municipios = cur.fetchall()
+
+    return json.dumps({
+        "partido": partido,
+        "total_votaciones": sum(s["n"] for s in stats),
+        "resumen_votos": {s["sentido"]: s["n"] for s in stats},
+        "municipios": [dict(m) for m in municipios],
+        "votaciones": [dict(r) for r in rows],
+    }, default=str, ensure_ascii=False)
+
+
+def _tool_info_municipio(nombre: str) -> str:
+    with get_cursor() as cur:
+        cur.execute("SELECT * FROM municipios WHERE nombre ILIKE %s LIMIT 1", (f"%{nombre}%",))
+        mun = cur.fetchone()
+        if not mun:
+            return json.dumps({"error": f"Municipio '{nombre}' no encontrado"})
+
+        mid = mun["id"]
+        cur.execute("SELECT partido, COUNT(*) as n FROM cargos_electos WHERE municipio_id=%s AND activo GROUP BY partido ORDER BY n DESC", (mid,))
+        comp = cur.fetchall()
+
+        cur.execute("SELECT a.fecha, a.tipo, (SELECT COUNT(*) FROM puntos_pleno p WHERE p.acta_id=a.id) as puntos FROM actas a WHERE a.municipio_id=%s AND a.status='structured' ORDER BY a.fecha DESC LIMIT 5", (mid,))
+        plenos = cur.fetchall()
+
+        cur.execute("SELECT tema, COUNT(*) as n FROM puntos_pleno WHERE municipio_id=%s AND tema IS NOT NULL GROUP BY tema ORDER BY n DESC LIMIT 8", (mid,))
+        temas = cur.fetchall()
+
+    return json.dumps({
+        "nombre": mun["nombre"], "comarca": mun["comarca"], "provincia": mun["provincia"],
+        "poblacion": mun["poblacion"], "tiene_ac": mun["tiene_ac"],
+        "composicion": [dict(c) for c in comp],
+        "ultimos_plenos": [dict(p) for p in plenos],
+        "temas_frecuentes": [dict(t) for t in temas],
+    }, default=str, ensure_ascii=False)
+
+
+def _tool_estadisticas_generales() -> str:
+    with get_cursor() as cur:
+        cur.execute("SELECT * FROM dashboard_stats")
+        stats = cur.fetchone()
+        cur.execute("SELECT status, COUNT(*) as n FROM actas GROUP BY status ORDER BY n DESC")
+        pipeline = cur.fetchall()
+        cur.execute("SELECT tema, COUNT(*) as n FROM puntos_pleno WHERE tema IS NOT NULL AND tema != 'procedimiento' GROUP BY tema ORDER BY n DESC LIMIT 10")
+        temas = cur.fetchall()
+    return json.dumps({
+        "stats": dict(stats) if stats else {},
+        "pipeline": [dict(p) for p in pipeline],
+        "temas_top": [dict(t) for t in temas],
+    }, default=str, ensure_ascii=False)
+
+
+TOOL_MAP = {
+    "buscar_actas": lambda args: _tool_buscar_actas(args.get("query", ""), args.get("limit", 10)),
+    "buscar_votaciones_partido": lambda args: _tool_buscar_votaciones_partido(args.get("partido", ""), args.get("tema"), args.get("municipio")),
+    "info_municipio": lambda args: _tool_info_municipio(args.get("nombre", "")),
+    "estadisticas_generales": lambda args: _tool_estadisticas_generales(),
+}
 
 
 @router.post("/")
 def chat(req: ChatRequest):
-    """Chat Q&A usando multi-strategy search + GPT-5.4."""
+    """Chat con function calling — el LLM decide qué herramientas usar."""
+    client = get_llm()
 
-    # Enrich search with context from conversation history
-    search_query = req.message
-    if req.history:
-        # Extract key terms from last 2 user messages for better search
-        prev_terms = " ".join(
-            h.get("content", "")[:100] for h in req.history[-4:]
-            if h.get("role") == "user"
-        )
-        if prev_terms and len(req.message.split()) < 5:
-            search_query = f"{prev_terms} {req.message}"
-
-    context_parts, sources = _search_context(search_query)
-
-    if not context_parts:
-        return {
-            "answer": "No he trobat informació rellevant a les actes processades. "
-                      "El sistema encara està processant actes — prova més tard o reformula la pregunta.",
-            "sources": [],
-        }
-
-    context = "\n\n---\n\n".join(context_parts[:20])
-
-    messages = [
-        {"role": "system", "content":
-         "Eres AyuntamentIA, asistente de inteligencia política de Catalunya. "
-         "Responde basándote SOLO en el contexto proporcionado. Cita siempre municipio y fecha. "
-         "Usa markdown para formatear. Responde en el idioma de la pregunta."},
-    ]
-    for h in req.history[-6:]:
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    for h in req.history[-8:]:
         messages.append({"role": h.get("role", "user"), "content": h.get("content", "")})
-    messages.append({"role": "user", "content": f"Contexto de actas municipales:\n\n{context}\n\nPregunta: {req.message}"})
+    messages.append({"role": "user", "content": req.message})
+
+    sources = []
 
     try:
-        client = get_llm()
-        resp = client.chat.completions.create(model=MODEL, messages=messages, max_tokens=4000, temperature=0.3)
-        answer = resp.choices[0].message.content
-    except Exception as e:
-        answer = f"Error al generar resposta: {str(e)[:300]}"
+        # First call — LLM may request tool calls
+        resp = client.chat.completions.create(
+            model=MODEL, messages=messages, tools=TOOLS, temperature=0.3, max_tokens=4000,
+        )
+        msg = resp.choices[0].message
 
-    return {"answer": answer, "sources": sources[:5]}
+        # If the model wants to call tools
+        if msg.tool_calls:
+            messages.append(msg)
+
+            for call in msg.tool_calls:
+                fn_name = call.function.name
+                fn_args = json.loads(call.function.arguments) if call.function.arguments else {}
+
+                tool_fn = TOOL_MAP.get(fn_name)
+                if tool_fn:
+                    result = tool_fn(fn_args)
+                    # Extract sources from results
+                    try:
+                        parsed = json.loads(result)
+                        for item in (parsed.get("results") or parsed.get("votaciones") or [])[:5]:
+                            if isinstance(item, dict) and item.get("municipio"):
+                                src = {"municipio": item["municipio"], "fecha": str(item.get("fecha", "")),
+                                       "tema": item.get("tema"), "titulo": item.get("titulo")}
+                                if src not in sources:
+                                    sources.append(src)
+                    except Exception:
+                        pass
+                else:
+                    result = json.dumps({"error": f"Tool {fn_name} not found"})
+
+                messages.append({
+                    "role": "tool",
+                    "tool_call_id": call.id,
+                    "content": result,
+                })
+
+            # Second call — LLM generates final answer with tool results
+            resp2 = client.chat.completions.create(
+                model=MODEL, messages=messages, temperature=0.3, max_tokens=4000,
+            )
+            answer = resp2.choices[0].message.content
+        else:
+            # No tool calls — direct answer
+            answer = msg.content
+
+    except Exception as e:
+        answer = f"Error: {str(e)[:400]}"
+
+    return {"answer": answer or "No he pogut generar resposta.", "sources": sources[:5]}
