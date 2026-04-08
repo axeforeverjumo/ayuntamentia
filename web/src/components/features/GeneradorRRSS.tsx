@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Share2, Copy, Check, Loader2, Twitter, MessageCircle } from "lucide-react";
+import { Share2, Copy, Check, Loader2, AtSign, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "";
 
 const TEMPLATES = [
-  { id: "tweet", label: "Tweet / X", icon: Twitter, prompt: "Genera un tweet (max 280 caràcters) impactant sobre un fet rellevant dels plens municipals recents. Ha de ser informatiu, citar el municipi i la data. En català." },
+  { id: "tweet", label: "Tweet / X", icon: AtSign, prompt: "Genera un tweet (max 280 caràcters) impactant sobre un fet rellevant dels plens municipals recents. Ha de ser informatiu, citar el municipi i la data. En català." },
   { id: "post", label: "Post LinkedIn", icon: Share2, prompt: "Genera un post professional per LinkedIn sobre l'activitat municipal recent a Catalunya. 3-4 paràgrafs, to informatiu i analític. Cita dades concretes de municipis i dates. En català." },
   { id: "telegram", label: "Missatge Telegram", icon: MessageCircle, prompt: "Genera un missatge curt per un canal de Telegram d'actualitat política municipal. Directe, amb emojis, cita municipis i dades. En català." },
 ];
@@ -93,7 +93,7 @@ export function GeneradorRRSS() {
             </button>
             <p className="text-[10px] text-[#6e7681] mt-1 text-right">
               {content.length} caràcters
-              {selected.id === "tweet" && content.length > 280 && " ⚠️ massa llarg per a Twitter"}
+              {selected.id === "tweet" && content.length > 280 && " ⚠️ massa llarg per a AtSign"}
             </p>
           </div>
         )}
