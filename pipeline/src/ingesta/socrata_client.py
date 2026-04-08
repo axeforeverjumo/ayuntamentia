@@ -4,6 +4,7 @@ import json
 import logging
 
 import httpx
+from psycopg2.extras import Json
 
 from ..config import config
 from ..db import get_db, get_cursor
@@ -72,9 +73,9 @@ def sync_municipios():
                     rec.get("nom_curt", nombre),
                     rec.get("comarca", ""),
                     rec.get("provincia", ""),
-                    int(rec.get("cens", 0)) if rec.get("cens") else None,
+                    int(rec["cens"]) if rec.get("cens") and str(rec["cens"]).isdigit() else None,
                     rec.get("municat", ""),
-                    json.dumps(rec, ensure_ascii=False, default=str),
+                    Json(rec),
                 ))
                 if cur.rowcount > 0:
                     inserted += 1
