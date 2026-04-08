@@ -52,10 +52,9 @@ services:
     build: ./telegram
     restart: unless-stopped
     env_file: .env
+    network_mode: host
     environment:
-      - API_URL=http://api:8050
-    depends_on:
-      - api
+      - API_URL=http://localhost:8050
 
   # === Web (Next.js) ===
   web:
