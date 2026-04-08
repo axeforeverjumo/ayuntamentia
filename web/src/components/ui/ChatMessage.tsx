@@ -70,12 +70,10 @@ export function ChatMessage({ message }: ChatMessageProps) {
               Fonts consultades:
             </p>
             <div className="flex flex-wrap gap-2">
-              {message.sources.map((source) => (
+              {message.sources.map((source, i) => (
                 <a
-                  key={source.id}
-                  href={source.url ?? '#'}
-                  target={source.url ? '_blank' : undefined}
-                  rel="noopener noreferrer"
+                  key={`${source.municipio}-${source.fecha}-${i}`}
+                  href={`/buscar?q=${encodeURIComponent(source.titulo || source.municipio || '')}`}
                   className={cn(
                     'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs',
                     'bg-[#1c2128] border border-[#30363d] text-[#8b949e]',
@@ -84,8 +82,9 @@ export function ChatMessage({ message }: ChatMessageProps) {
                 >
                   <ExternalLink className="w-3 h-3 flex-shrink-0" />
                   <span className="truncate max-w-[200px]">
-                    {source.titulo}
+                    {source.titulo || source.tema || 'Acta'}
                     {source.municipio && ` · ${source.municipio}`}
+                    {source.fecha && ` (${source.fecha})`}
                   </span>
                 </a>
               ))}
