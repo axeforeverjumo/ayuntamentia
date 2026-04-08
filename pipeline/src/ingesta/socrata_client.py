@@ -1,5 +1,6 @@
 """Cliente para la API Socrata de Municat — cargos electos y datos de entes."""
 
+import json
 import logging
 
 import httpx
@@ -73,7 +74,7 @@ def sync_municipios():
                     rec.get("provincia", ""),
                     int(rec.get("cens", 0)) if rec.get("cens") else None,
                     rec.get("municat", ""),
-                    None,
+                    json.dumps(rec, ensure_ascii=False, default=str),
                 ))
                 if cur.rowcount > 0:
                     inserted += 1
