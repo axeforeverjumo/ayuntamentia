@@ -27,6 +27,7 @@ def chat(req: ChatRequest):
     sources = []
 
     with get_cursor() as cur:
+        # Search in structured puntos first
         cur.execute("""
             SELECT p.titulo, p.tema, p.resumen, p.resultado, p.fecha,
                    m.nombre as municipio,
@@ -38,10 +39,12 @@ def chat(req: ChatRequest):
             LEFT JOIN votaciones v ON v.punto_id = p.id
             JOIN actas a ON p.acta_id = a.id
             WHERE a.tsv @@ plainto_tsquery('spanish', %s)
+               OR m.nombre ILIKE %s
+               OR p.titulo ILIKE %s
             GROUP BY p.id, p.titulo, p.tema, p.resumen, p.resultado, p.fecha, m.nombre
             ORDER BY p.fecha DESC
             LIMIT 15
-        """, (req.message,))
+        """, (req.message, f"%{req.message}%", f"%{req.message}%"))
         puntos = cur.fetchall()
 
         for p in puntos:
