@@ -39,12 +39,10 @@ def chat(req: ChatRequest):
             LEFT JOIN votaciones v ON v.punto_id = p.id
             JOIN actas a ON p.acta_id = a.id
             WHERE a.tsv @@ plainto_tsquery('spanish', %s)
-               OR m.nombre ILIKE %s
-               OR p.titulo ILIKE %s
             GROUP BY p.id, p.titulo, p.tema, p.resumen, p.resultado, p.fecha, m.nombre
             ORDER BY p.fecha DESC
             LIMIT 15
-        """, (req.message, f"%{req.message}%", f"%{req.message}%"))
+        """, (req.message,))
         puntos = cur.fetchall()
 
         for p in puntos:
@@ -62,14 +60,14 @@ def chat(req: ChatRequest):
                 "tema": p.get("tema"), "titulo": p["titulo"],
             })
 
-        if len(context_parts) < 5:
-            cur.execute("""
-                SELECT a.fecha, m.nombre, LEFT(a.texto, 800) as snippet
-                FROM actas a JOIN municipios m ON a.municipio_id = m.id
-                WHERE a.tsv @@ plainto_tsquery('spanish', %s) AND a.status = 'structured'
-                ORDER BY ts_rank(a.tsv, plainto_tsquery('spanish', %s)) DESC
-                LIMIT 5
-            """, (req.message, req.message))
+        # Also search in raw acta text (catches more results)
+        cur.execute("""
+            SELECT a.fecha, m.nombre, LEFT(a.texto, 1000) as snippet
+            FROM actas a JOIN municipios m ON a.municipio_id = m.id
+            WHERE a.tsv @@ plainto_tsquery('spanish', %s) AND a.texto IS NOT NULL
+            ORDER BY ts_rank(a.tsv, plainto_tsquery('spanish', %s)) DESC
+            LIMIT 8
+        """, (req.message, req.message))
             for r in cur.fetchall():
                 context_parts.append(f"[{r['nombre']} — {r['fecha']}]\n{r['snippet']}")
                 if not any(s["municipio"] == r["nombre"] for s in sources):
