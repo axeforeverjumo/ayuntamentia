@@ -18,6 +18,7 @@ def get_client() -> OpenAI:
         _client = OpenAI(
             base_url=config.OPENCLAW_BASE_URL,
             api_key="openclaw-local",
+            timeout=600.0,  # OpenClaw bridge can be slow (CLI subprocess)
         )
     return _client
 
