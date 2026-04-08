@@ -15,8 +15,11 @@ services:
     depends_on:
       - redis
     env_file: .env
+    network_mode: host
     environment:
-      - REDIS_URL=redis://redis:6379/0
+      - OPENCLAW_BASE_URL=http://localhost:10531/v1
+      - DATABASE_URL=postgresql://postgres:PrLaCXPsZIAIkX25ZXQAC5E54LRo90uU@localhost:5432/postgres
+      - REDIS_URL=redis://localhost:6380/0
     volumes:
       - pdf-storage:/data/pdfs
     command: celery -A src.workers.celery_app worker --loglevel=info --concurrency=4
@@ -28,8 +31,9 @@ services:
     depends_on:
       - redis
     env_file: .env
+    network_mode: host
     environment:
-      - REDIS_URL=redis://redis:6379/0
+      - REDIS_URL=redis://localhost:6380/0
     command: celery -A src.workers.celery_app beat --loglevel=info
 
   # === API (FastAPI) ===
@@ -37,10 +41,11 @@ services:
     build: ./api
     restart: unless-stopped
     env_file: .env
-    ports:
-      - "8050:8050"
-    depends_on:
-      - redis
+    network_mode: host
+    environment:
+      - OPENCLAW_BASE_URL=http://localhost:10531/v1
+      - DATABASE_URL=postgresql://postgres:PrLaCXPsZIAIkX25ZXQAC5E54LRo90uU@localhost:5432/postgres
+      - REDIS_URL=redis://localhost:6380/0
 
   # === Telegram Bot ===
   telegram:
