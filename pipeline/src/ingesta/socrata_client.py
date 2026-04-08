@@ -58,6 +58,22 @@ def sync_municipios():
                 if not codi or not nombre:
                     continue
 
+                def _str(v):
+                    """Safely convert any value to str."""
+                    if v is None:
+                        return ""
+                    if isinstance(v, dict):
+                        return str(v.get("url", v.get("value", str(v))))
+                    return str(v)
+
+                pob = rec.get("cens")
+                pob_int = None
+                if pob and not isinstance(pob, dict):
+                    try:
+                        pob_int = int(pob)
+                    except (ValueError, TypeError):
+                        pass
+
                 cur.execute("""
                     INSERT INTO municipios (codi_ens, nombre, nombre_oficial, comarca, provincia, poblacion, url_sede, external_data)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
@@ -69,12 +85,12 @@ def sync_municipios():
                         updated_at = NOW()
                 """, (
                     str(codi),
-                    nombre,
-                    rec.get("nom_curt", nombre),
-                    rec.get("comarca", ""),
-                    rec.get("provincia", ""),
-                    int(rec["cens"]) if rec.get("cens") and str(rec["cens"]).isdigit() else None,
-                    rec.get("municat", ""),
+                    _str(nombre),
+                    _str(rec.get("nom_curt", nombre)),
+                    _str(rec.get("comarca", "")),
+                    _str(rec.get("provincia", "")),
+                    pob_int,
+                    _str(rec.get("municat", "")),
                     Json(rec),
                 ))
                 if cur.rowcount > 0:
