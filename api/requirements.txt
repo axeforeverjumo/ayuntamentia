@@ -1,0 +1,9 @@
+fastapi==0.115.*
+uvicorn[standard]==0.34.*
+psycopg2-binary==2.9.*
+python-dotenv==1.1.*
+httpx==0.28.*
+openai==1.82.*
+qdrant-client==1.13.*
+python-jose[cryptography]==3.3.*
+pydantic==2.11.*
