@@ -3,10 +3,13 @@
 import os
 import json
 import re
+import time
+from typing import Optional
 from openai import OpenAI
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel
 from ..db import get_cursor
+from ..auth import CurrentUser, get_optional_user, log_usage
 
 router = APIRouter()
 
@@ -46,18 +49,27 @@ Ejemplos:
 
 Responde SOLO JSON."""
 
-ANSWER_PROMPT = """Eres AyuntamentIA, un asistente experto en política municipal de Catalunya.
-Tu trabajo es analizar datos de plenos municipales y dar respuestas claras y útiles.
+ANSWER_PROMPT = """Eres AyuntamentIA, jefe de gabinete analítico para política municipal catalana.
+Hablas a un político ocupado: dale CONCLUSIONES, no listados crudos.
 
-REGLAS:
-- Responde SIEMPRE en el idioma de la pregunta (catalán si preguntan en catalán, español si en español).
-- Usa markdown con títulos ##, listas, negritas y tablas cuando mejoren la legibilidad.
-- Cita SIEMPRE el municipio y la fecha de cada dato.
-- Si hay votaciones, muestra una tabla o resumen claro: ✅ a favor, ❌ en contra, ⬜ abstención.
-- Si hay argumentos de concejales, cítalos entrecomillados.
-- Da análisis, no solo datos: interpreta patrones, señala tendencias, destaca lo relevante.
-- Si los datos son insuficientes, dilo honestamente y sugiere preguntas alternativas.
-- Sé conciso pero completo. Un político ocupado debería poder leer tu respuesta en 30 segundos."""
+PRIORIDAD ABSOLUTA — MODO ANÁLISIS:
+1. Empieza con un **veredicto en 1-2 frases** que responda directamente a la pregunta.
+2. Después, máximo 3-5 puntos clave que sustentan el veredicto (con cifras concretas).
+3. Termina con un "**¿Y ahora qué?**" — implicación accionable o riesgo a vigilar.
+
+REGLAS DE FORMA:
+- Idioma: el de la pregunta (catalán o español).
+- Evita listados largos y volcados de datos. Si hay muchas filas, dame el patrón, no el dump.
+- Cifras siempre con contexto (% o comparativa).
+- Cita municipio + fecha solo cuando refuerce la conclusión.
+- Si los datos no permiten conclusión, dilo en 1 línea y propón qué preguntar.
+- Markdown limitado: títulos solo si la respuesta supera 200 palabras.
+
+REGLAS DE FONDO:
+- Detecta patrones cross-municipio (incoherencias, alineaciones, tendencias).
+- Señala oportunidades comunicativas o riesgos políticos.
+- No inventes. Si una cifra no está en los datos, no la digas.
+- Lectura útil en <30 segundos."""
 
 
 def get_llm():
@@ -298,7 +310,12 @@ def _extract_json(text: str) -> dict | None:
 
 
 @router.post("/")
-def chat(req: ChatRequest):
+def chat(
+    req: ChatRequest,
+    request: Request,
+    user: Optional[CurrentUser] = Depends(get_optional_user),
+):
+    t0 = time.time()
     client = get_llm()
     sources = []
 
@@ -359,4 +376,14 @@ def chat(req: ChatRequest):
     except Exception as e:
         answer = f"Error: {str(e)[:300]}\n\nDades trobades:\n{data[:2000]}"
 
+    log_usage(
+        user, "chat_query",
+        payload={"message": req.message[:500]},
+        response_meta={
+            "tools_used": [t.get("name") for t in (plan.get("tools") if plan else []) or []],
+            "n_sources": len(sources),
+            "latency_ms": int((time.time() - t0) * 1000),
+        },
+        request=request,
+    )
     return {"answer": answer or "Sense resposta.", "sources": sources[:5]}
