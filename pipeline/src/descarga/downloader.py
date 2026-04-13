@@ -44,7 +44,7 @@ def process_download(acta_id: int):
     with get_db() as conn:
         with get_cursor(conn) as cur:
             cur.execute(
-                "SELECT id, url_pdf, codi_ens, fecha FROM actas WHERE id = %s AND status = 'discovered'",
+                "SELECT id, url_pdf, codi_ens, fecha FROM actas WHERE id = %s AND status IN ('discovered','queued')",
                 (acta_id,)
             )
             acta = cur.fetchone()
@@ -98,10 +98,15 @@ def get_next_batch(batch_size: int = 10) -> list[int]:
     with get_db() as conn:
         with get_cursor(conn) as cur:
             cur.execute("""
-                SELECT id FROM actas
-                WHERE status = 'discovered'
-                AND retry_count < %s
-                ORDER BY priority DESC, fecha DESC
-                LIMIT %s
+                UPDATE actas SET status = 'queued'
+                WHERE id IN (
+                    SELECT id FROM actas
+                    WHERE status = 'discovered'
+                    AND retry_count < %s
+                    ORDER BY priority DESC, fecha DESC
+                    LIMIT %s
+                    FOR UPDATE SKIP LOCKED
+                )
+                RETURNING id
             """, (config.MAX_RETRIES, batch_size))
             return [row["id"] for row in cur.fetchall()]
