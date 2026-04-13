@@ -193,13 +193,64 @@ Leyenda: 🔒 bloqueante · 🚀 valor cliente alto · 🧪 requiere validación
 
 ---
 
-## Estado de la sesión actual (Día 1)
+## Estado de la sesión actual
 
-✅ Migration auth/RBAC/audit/subscripciones/social/vistas
-✅ Auth backend FastAPI con JWT Supabase
-✅ Endpoints admin (CRUD users, audit, summary, /me)
-✅ Audit log integrado en chat
-✅ Prompt chat reescrito a modo análisis directo
-✅ Plan ejecución día a día (este documento)
+### Días 1-4 (Fase 1) ✅
+- Migration auth/RBAC/audit, prompt análisis directo, JWT en chat
+- Web: `/login`, `proxy.ts`, ApiClient con Bearer, Sidebar con user/logout/admin
+- `/admin` con tabs Resum/Usuaris/Audit log
+- Script `scripts/create_admin.sh`
 
-⏭️ Próximo: aplicar migration en servidor + crear primer admin + Día 2 (web auth)
+### Días 5-7 (Fase 2 — Informes temáticos) ✅
+- API CRUD `/api/subscripciones` + preview
+- `services/thematic_brief.py` con prompt ejecutivo
+- `scheduler_dynamic.py` (croniter) → beat cada 60s evalúa subs activas
+- Envío email (Resend) + Telegram
+- Web `/suscripciones` con multi-tema + cron + canal
+
+### Días 8-12 (Fase 3 — Recepción social) ✅
+- `ingesta/social.py`: RSS prensa catalana (5 medios) + Bluesky API pública
+- `ingesta/social_classifier.py`: tema/sentiment/municipio via LLM mini
+- Beat: ingesta cada 15min, clasificación cada 90s
+- Tool chat `recepcion_social`
+
+### Días 13-15 (Fase 4 — Anticipación) ✅
+- Vista `v_tendencias_emergentes` + detector geo-difusión
+- Job `detect_emerging` cada 4h → genera alertas
+- Tool chat `tendencias_emergentes`
+
+### Días 16-20 (Fase 5 — Parlament) 🟡 PARCIAL
+- Migration 004: tabla `sesiones_parlament`, `puntos_pleno.nivel`, vista `v_contradicciones_rival`
+- `ingesta/parlament.py` scraper DSPC inicial (regex; necesita BeautifulSoup para producción)
+- Job descubrimiento diario 2am
+- ❌ Pendiente: pipeline DSPC completo (descarga PDF, extracción, structuring) — reusa flow `actas` con adapter
+- ❌ Pendiente: Whisper para grabaciones
+- ❌ Pendiente: UI `/parlament`
+
+### Días 21-22 (Fase 6) ❌ Pendiente
+- Manual usuario, manual admin, runbook ops, vídeo demo
+
+## Lo que falta para producción real
+
+1. **Crear primer admin** en servidor (`scripts/create_admin.sh`)
+2. **RESEND_API_KEY** real para emails (sin esto, briefs solo funcionan vía Telegram)
+3. **Probar login E2E** en `http://85.215.105.45:3100/login`
+4. **Pipeline Parlament completo** — ahora solo descubre URLs DSPC
+5. **UI /parlament + /recepcion** — pendientes
+6. **Refinar GeneradorRRSS** con templates
+7. **Cache Redis** en endpoints pesados
+8. **Manuales y vídeo**
+
+## Tasks beat activas
+
+| Task | Frecuencia |
+|---|---|
+| `process-backfill-batch` | 30s |
+| `dispatch-subscripciones` | 60s |
+| `classify-social-batch` | 90s |
+| `ingest-social` | 15min |
+| `detect-emerging` | 4h |
+| `discover-parlament` | diario 2am |
+| `weekly-report` | lunes 8am |
+| `sync-ckan-catalog` | 6h |
+| `sync-municat` | lunes 3am |
