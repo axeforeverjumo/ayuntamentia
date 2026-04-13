@@ -20,19 +20,33 @@ const TEMAS = [
   'educacion', 'salud', 'transporte', 'cultura', 'mociones',
 ];
 
+type Me = { telegram_chat_id: number | null };
+
 export default function SuscripcionesPage() {
   const [subs, setSubs] = useState<Sub[]>([]);
+  const [me, setMe] = useState<Me | null>(null);
+  const [linkCode, setLinkCode] = useState<{ code: string; instructions: string } | null>(null);
   const [nombre, setNombre] = useState('');
   const [temas, setTemas] = useState<string[]>([]);
-  const [canal, setCanal] = useState<'email' | 'telegram' | 'both'>('email');
+  const [canal, setCanal] = useState<'email' | 'telegram' | 'both'>('telegram');
   const [cron, setCron] = useState('0 8 * * 5');
   const [preview, setPreview] = useState<string | null>(null);
 
   async function load() {
     const data = await apiClient.get<Sub[]>('/api/subscripciones');
     setSubs(data);
+    apiClient.get<Me>('/api/admin/me').then(setMe).catch(() => {});
   }
   useEffect(() => { load(); }, []);
+
+  async function generateLink() {
+    const r = await apiClient.post<{ code: string; instructions: string }>('/api/admin/me/telegram-link-code', {});
+    setLinkCode(r);
+  }
+  async function unlinkTelegram() {
+    await apiClient.delete('/api/admin/me/telegram');
+    setMe({ telegram_chat_id: null });
+  }
 
   async function create() {
     await apiClient.post('/api/subscripciones', {
@@ -58,6 +72,33 @@ export default function SuscripcionesPage() {
       <p className="text-sm text-[#8b949e] mb-6">
         Rep un brief automàtic per email o Telegram amb els temes que t&apos;interessen.
       </p>
+
+      <div className="bg-[#161b22] border border-[#30363d] rounded-lg p-4 mb-6 flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium">Telegram</p>
+          <p className="text-xs text-[#8b949e]">
+            {me?.telegram_chat_id
+              ? `Vinculat (chat ${me.telegram_chat_id})`
+              : 'No vinculat — vincula per rebre briefs i alertes'}
+          </p>
+        </div>
+        {me?.telegram_chat_id ? (
+          <button onClick={unlinkTelegram} className="text-xs text-red-400 hover:underline">Desvincular</button>
+        ) : (
+          <button onClick={generateLink}
+                  className="bg-[#2563eb] hover:bg-[#1e50d2] text-white px-3 py-1.5 rounded text-xs">
+            Vincular Telegram
+          </button>
+        )}
+      </div>
+
+      {linkCode && (
+        <div className="bg-amber-950/40 border border-amber-700 rounded-lg p-4 mb-6 text-sm">
+          <p className="font-medium mb-1">Codi: <code className="text-lg">{linkCode.code}</code></p>
+          <p className="text-[#e6edf3]">{linkCode.instructions}</p>
+          <p className="text-xs text-amber-300 mt-1">Caduca en 15 minuts.</p>
+        </div>
+      )}
 
       <div className="bg-[#161b22] border border-[#30363d] rounded-lg p-6 mb-8">
         <h2 className="text-sm font-semibold mb-4">Nova subscripció</h2>

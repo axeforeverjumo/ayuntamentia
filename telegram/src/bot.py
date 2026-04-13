@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 from telegram import Update, BotCommand
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
-from .handlers import search, alertas, chat, informes
+from .handlers import search, alertas, chat, informes, vincular
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
@@ -33,6 +33,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def set_commands(app: Application):
     await app.bot.set_my_commands([
         BotCommand("start", "Iniciar el bot"),
+        BotCommand("vincular", "Vincular el compte amb la web"),
         BotCommand("buscar", "Buscar en actas de plenos"),
         BotCommand("municipio", "Info de un municipio"),
         BotCommand("alertas", "Ver alertas pendientes"),
@@ -48,6 +49,7 @@ def main():
     app = Application.builder().token(TOKEN).post_init(set_commands).build()
 
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("vincular", vincular.handle_vincular))
     app.add_handler(CommandHandler("buscar", search.handle_search))
     app.add_handler(CommandHandler("municipio", search.handle_municipio))
     app.add_handler(CommandHandler("alertas", alertas.handle_alertas))

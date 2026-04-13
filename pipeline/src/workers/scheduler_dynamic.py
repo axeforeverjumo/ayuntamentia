@@ -54,7 +54,7 @@ def send_brief(sub_id: int) -> bool:
     with get_db() as conn:
         cur = conn.cursor(cursor_factory=RealDictCursor)
         cur.execute(
-            """SELECT s.*, p.nombre, u.email
+            """SELECT s.*, p.nombre, p.telegram_chat_id, u.email
                FROM subscripciones s
                JOIN user_profiles p ON p.user_id = s.user_id
                JOIN auth.users u ON u.id = s.user_id
@@ -69,7 +69,11 @@ def send_brief(sub_id: int) -> bool:
     if sub["canal"] in ("email", "both"):
         sent_any |= _send_email(sub["email"], f"Brief setmanal — {sub['nombre']}", brief)
     if sub["canal"] in ("telegram", "both"):
-        sent_any |= _send_telegram(brief)
+        chat_id = sub["telegram_chat_id"] or os.getenv("TELEGRAM_CHAT_ID")
+        if chat_id:
+            sent_any |= _send_telegram(brief, chat_id)
+        else:
+            logger.warning(f"Sub {sub_id}: usuari sense Telegram vinculat")
     return sent_any
 
 
@@ -94,10 +98,9 @@ def _send_email(to: str, subject: str, body_md: str) -> bool:
         return False
 
 
-def _send_telegram(body_md: str) -> bool:
+def _send_telegram(body_md: str, chat_id) -> bool:
     import os, httpx
     token = os.getenv("TELEGRAM_BOT_TOKEN")
-    chat_id = os.getenv("TELEGRAM_CHAT_ID")
     if not token or not chat_id:
         return False
     try:

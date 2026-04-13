@@ -123,6 +123,10 @@ def usage_summary(_: CurrentUser = Depends(require_admin)):
 # ----- Self -----
 @router.get("/me")
 def me(user: CurrentUser = Depends(get_current_user)):
+    with get_db() as conn:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("SELECT telegram_chat_id FROM user_profiles WHERE user_id=%s", (user.user_id,))
+        row = cur.fetchone()
     return {
         "user_id": user.user_id,
         "email": user.email,
@@ -131,4 +135,30 @@ def me(user: CurrentUser = Depends(get_current_user)):
         "areas": user.areas,
         "municipio_ids": user.municipio_ids,
         "anonimizar_nombres": user.anonimizar_nombres,
+        "telegram_chat_id": row["telegram_chat_id"] if row else None,
     }
+
+
+@router.post("/me/telegram-link-code")
+def generate_link_code(user: CurrentUser = Depends(get_current_user)):
+    """Genera un codi d'una sola sola vegada per vincular el bot Telegram amb el compte."""
+    import secrets, string
+    code = "".join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(6))
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            """INSERT INTO telegram_link_codes (code, user_id, expires_at)
+               VALUES (%s, %s, NOW() + INTERVAL '15 minutes')
+               ON CONFLICT (code) DO NOTHING""",
+            (code, user.user_id),
+        )
+    return {"code": code, "expires_in_minutes": 15,
+            "instructions": "Obre el bot @AyuntamentIABot a Telegram i envia: /vincular " + code}
+
+
+@router.delete("/me/telegram")
+def unlink_telegram(user: CurrentUser = Depends(get_current_user)):
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("UPDATE user_profiles SET telegram_chat_id=NULL WHERE user_id=%s", (user.user_id,))
+    return {"ok": True}
