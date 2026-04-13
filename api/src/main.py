@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .routes import search, chat, dashboard, alertas, actas, municipios, informes, admin, subscripciones, parlament, recepcion
+from .routes import search, chat, dashboard, alertas, actas, municipios, informes, admin, subscripciones, parlament, recepcion, intel
 
 app = FastAPI(
     title="AyuntamentIA API",
@@ -28,6 +28,7 @@ app.include_router(admin.router, prefix="/api/admin", tags=["admin"])
 app.include_router(subscripciones.router, prefix="/api/subscripciones", tags=["subscripciones"])
 app.include_router(parlament.router, prefix="/api/parlament", tags=["parlament"])
 app.include_router(recepcion.router, prefix="/api/recepcion", tags=["recepcion"])
+app.include_router(intel.router, prefix="/api/intel", tags=["intel"])
 
 
 @app.get("/api/health")

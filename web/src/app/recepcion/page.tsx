@@ -102,7 +102,7 @@ export default function RecepcionPage() {
                 {m.sentiment ?? '—'} {m.tema && `· ${m.tema}`}
               </span>
             </div>
-            <p className="text-sm">{m.texto.slice(0, 280)}</p>
+            <p className="text-sm">{m.texto.replace(/<[^>]+>/g, '').slice(0, 280)}</p>
           </a>
         ))}
         {menciones.length === 0 && <p className="text-[#8b949e] text-sm">Sense mencions encara — la ingesta corre cada 15 min.</p>}

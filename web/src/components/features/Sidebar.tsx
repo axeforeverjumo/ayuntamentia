@@ -33,6 +33,7 @@ const navItems: NavItem[] = [
   { href: '/alertas', label: 'Alertes', icon: Bell },
   { href: '/municipios', label: 'Municipis', icon: MapPin },
   { href: '/informes', label: 'Informes', icon: FileText },
+  { href: '/intel', label: 'Intel·ligència', icon: ShieldCheck },
   { href: '/parlament', label: 'Parlament', icon: Building2 },
   { href: '/recepcion', label: 'Recepció social', icon: Bell },
   { href: '/suscripciones', label: 'Subscripcions', icon: Mail },

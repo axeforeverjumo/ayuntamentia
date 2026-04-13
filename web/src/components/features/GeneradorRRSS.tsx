@@ -7,9 +7,30 @@ import { cn } from "@/lib/utils";
 const API = process.env.NEXT_PUBLIC_API_URL || "";
 
 const TEMPLATES = [
-  { id: "tweet", label: "Tweet / X", icon: AtSign, prompt: "Genera un tweet (max 280 caràcters) impactant sobre un fet rellevant dels plens municipals recents. Ha de ser informatiu, citar el municipi i la data. En català." },
-  { id: "post", label: "Post LinkedIn", icon: Share2, prompt: "Genera un post professional per LinkedIn sobre l'activitat municipal recent a Catalunya. 3-4 paràgrafs, to informatiu i analític. Cita dades concretes de municipis i dates. En català." },
-  { id: "telegram", label: "Missatge Telegram", icon: MessageCircle, prompt: "Genera un missatge curt per un canal de Telegram d'actualitat política municipal. Directe, amb emojis, cita municipis i dades. En català." },
+  {
+    id: "tweet",
+    label: "Tweet / X",
+    icon: AtSign,
+    prompt: "Genera UN tweet (<=260 caràcters, no més) amb aquesta estructura: 1) gancho de una frase amb xifra o contrast, 2) dada concreta amb municipi i data, 3) call-to-action curt. Sense hashtags a l'inici. Inclou 1-2 hashtags al final (#Catalunya i un de temàtic). Català.",
+  },
+  {
+    id: "post",
+    label: "Post LinkedIn",
+    icon: Share2,
+    prompt: "Genera un post per LinkedIn amb aquesta estructura: 1) hook de dos frases, 2) 3-4 bullets amb dades concretes (municipi, data, resultat), 3) tesi en una frase, 4) pregunta oberta al lector. Professional, sense emojis excessius. Català.",
+  },
+  {
+    id: "telegram",
+    label: "Missatge Telegram",
+    icon: MessageCircle,
+    prompt: "Genera un missatge per canal Telegram en aquest format: línia 1 *TÍTOL EN NEGRETA*, línia 2 blanc, línies 3-5 3 bullets '▪️ dada concreta (municipi, data, xifra)', línia blanca, línia final un CTA curt. Català.",
+  },
+  {
+    id: "localizado",
+    label: "Contingut localitzat",
+    icon: Share2,
+    prompt: "Genera un missatge 'En el teu municipi votaren X': 1) titular amb el nom del municipi i el tema, 2) què es va votar i com, 3) contraposa-ho amb un municipi proper on va ser diferent. Conclou amb una implicació política concreta. Català, 120-160 paraules.",
+  },
 ];
 
 export function GeneradorRRSS() {

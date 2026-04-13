@@ -77,10 +77,10 @@ export default function AdminPage() {
             <tr>
               <th className="text-left py-2">Usuari</th>
               <th className="text-left">Rol</th>
-              <th className="text-right">Total 30d</th>
-              <th className="text-right">Chat</th>
-              <th className="text-right">Search</th>
-              <th className="text-left">Última activitat</th>
+              <th className="text-right px-3">Total 30d</th>
+              <th className="text-right px-3">Chat</th>
+              <th className="text-right px-3">Cerca</th>
+              <th className="text-left pl-6">Última activitat</th>
             </tr>
           </thead>
           <tbody>
@@ -88,10 +88,10 @@ export default function AdminPage() {
               <tr key={s.user_id} className="border-t border-[#21262d]">
                 <td className="py-2">{s.nombre}</td>
                 <td>{s.rol}</td>
-                <td className="text-right">{s.total}</td>
-                <td className="text-right">{s.queries_chat}</td>
-                <td className="text-right">{s.queries_search}</td>
-                <td className="text-[#8b949e]">{s.last_activity?.slice(0, 16) ?? '—'}</td>
+                <td className="text-right px-3">{s.total}</td>
+                <td className="text-right px-3">{s.queries_chat}</td>
+                <td className="text-right px-3">{s.queries_search}</td>
+                <td className="text-[#8b949e] pl-6">{s.last_activity?.slice(0, 16) ?? '—'}</td>
               </tr>
             ))}
           </tbody>

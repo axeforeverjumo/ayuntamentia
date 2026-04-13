@@ -21,7 +21,8 @@ USER_ID=$(echo "$USER_JSON" | python3 -c "import sys, json; print(json.load(sys.
 echo "User ID: $USER_ID"
 
 echo "Insertando perfil admin..."
-PGPASSWORD="${PG_PASSWORD:?PG_PASSWORD requerida}" psql -h "${PG_HOST:-localhost}" -U postgres -d postgres -c \
+docker run --rm --network host -e PGPASSWORD="${PG_PASSWORD:?PG_PASSWORD requerida}" postgres:15 \
+  psql -h "${PG_HOST:-localhost}" -U postgres -d postgres -c \
   "INSERT INTO user_profiles (user_id, nombre, rol, activo) VALUES ('$USER_ID', '$NOMBRE', 'admin', TRUE)
    ON CONFLICT (user_id) DO UPDATE SET nombre=EXCLUDED.nombre, rol='admin', activo=TRUE;"
 

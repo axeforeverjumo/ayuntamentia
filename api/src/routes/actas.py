@@ -1,6 +1,8 @@
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 from typing import Optional
 from ..db import get_cursor
+from ..auth import CurrentUser, get_optional_user
+from ..anonymize import _iniciales
 
 router = APIRouter()
 
@@ -51,7 +53,7 @@ def list_actas(
 
 
 @router.get("/{acta_id}")
-def get_acta(acta_id: int):
+def get_acta(acta_id: int, user: Optional[CurrentUser] = Depends(get_optional_user)):
     with get_cursor() as cur:
         cur.execute("""
             SELECT a.*, m.nombre as municipio, m.comarca, m.provincia
@@ -85,5 +87,9 @@ def get_acta(acta_id: int):
         asistentes = []
         if analisis and analisis.get("datos_completos"):
             asistentes = analisis["datos_completos"].get("asistentes", [])
+
+        # RGPD: si el usuario tiene anonimizar_nombres, ofusca asistentes
+        if user and user.anonimizar_nombres and not user.has_full_access:
+            asistentes = [_iniciales(a) if isinstance(a, str) else a for a in asistentes]
 
         return {**acta, "puntos": puntos, "asistentes": asistentes}
