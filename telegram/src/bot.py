@@ -18,6 +18,11 @@ TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    args = context.args or []
+    if args and args[0].startswith("vincular_"):
+        context.args = [args[0].replace("vincular_", "", 1)]
+        await vincular.handle_vincular(update, context)
+        return
     await update.message.reply_text(
         "👋 *AyuntamentIA* — Inteligencia política de Catalunya\n\n"
         "Comandos disponibles:\n"

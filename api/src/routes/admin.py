@@ -152,8 +152,14 @@ def generate_link_code(user: CurrentUser = Depends(get_current_user)):
                ON CONFLICT (code) DO NOTHING""",
             (code, user.user_id),
         )
-    return {"code": code, "expires_in_minutes": 15,
-            "instructions": "Obre el bot @AyuntamentIABot a Telegram i envia: /vincular " + code}
+    import os
+    bot_username = os.getenv("TELEGRAM_BOT_USERNAME", "alianza_catalana_bot")
+    return {
+        "code": code,
+        "expires_in_minutes": 15,
+        "bot_url": f"https://t.me/{bot_username}?start=vincular_{code}",
+        "instructions": f"Obre @{bot_username} a Telegram i envia: /vincular {code}",
+    }
 
 
 @router.delete("/me/telegram")

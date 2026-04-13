@@ -25,7 +25,7 @@ type Me = { telegram_chat_id: number | null };
 export default function SuscripcionesPage() {
   const [subs, setSubs] = useState<Sub[]>([]);
   const [me, setMe] = useState<Me | null>(null);
-  const [linkCode, setLinkCode] = useState<{ code: string; instructions: string } | null>(null);
+  const [linkCode, setLinkCode] = useState<{ code: string; instructions: string; bot_url?: string } | null>(null);
   const [nombre, setNombre] = useState('');
   const [temas, setTemas] = useState<string[]>([]);
   const [canal, setCanal] = useState<'email' | 'telegram' | 'both'>('telegram');
@@ -40,8 +40,9 @@ export default function SuscripcionesPage() {
   useEffect(() => { load(); }, []);
 
   async function generateLink() {
-    const r = await apiClient.post<{ code: string; instructions: string }>('/api/admin/me/telegram-link-code', {});
+    const r = await apiClient.post<{ code: string; instructions: string; bot_url?: string }>('/api/admin/me/telegram-link-code', {});
     setLinkCode(r);
+    if (r.bot_url) window.open(r.bot_url, '_blank');
   }
   async function unlinkTelegram() {
     await apiClient.delete('/api/admin/me/telegram');
