@@ -119,6 +119,20 @@ def discover_parlament():
     return {"discovered": n}
 
 
+@app.task(name="src.workers.tasks.process_parlament_batch")
+def process_parlament_batch():
+    """Avanza el pipeline DSPC: download → extract → structure."""
+    from ..ingesta.parlament_pipeline import (
+        get_next_batch, download_sesion, extract_sesion, structure_sesion,
+    )
+    batch = get_next_batch(batch_size=2)
+    for sid in batch:
+        if download_sesion(sid):
+            if extract_sesion(sid):
+                structure_sesion(sid)
+    return len(batch)
+
+
 @app.task(name="src.workers.tasks.detect_emerging")
 def detect_emerging():
     """Genera alertas de tendencias emergentes (plenos + social)."""

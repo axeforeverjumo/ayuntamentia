@@ -51,6 +51,10 @@ app.conf.update(
             "task": "src.workers.tasks.discover_parlament",
             "schedule": crontab(minute=0, hour=2),  # 2am diario
         },
+        "process-parlament-batch": {
+            "task": "src.workers.tasks.process_parlament_batch",
+            "schedule": 120.0,  # cada 2 min
+        },
         "weekly-report": {
             "task": "src.workers.tasks.generate_weekly_report",
             "schedule": crontab(minute=0, hour=8, day_of_week=1),  # Monday 8am
