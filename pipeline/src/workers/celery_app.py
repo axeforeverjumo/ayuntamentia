@@ -31,6 +31,26 @@ app.conf.update(
             "task": "src.workers.tasks.process_backfill_batch",
             "schedule": 30.0,  # Every 30 seconds
         },
+        "dispatch-subscripciones": {
+            "task": "src.workers.tasks.dispatch_subscripciones",
+            "schedule": 60.0,  # Cada minuto
+        },
+        "ingest-social": {
+            "task": "src.workers.tasks.ingest_social",
+            "schedule": crontab(minute="*/15"),  # Cada 15 min
+        },
+        "classify-social-batch": {
+            "task": "src.workers.tasks.classify_social_batch",
+            "schedule": 90.0,  # Cada 90s
+        },
+        "detect-emerging": {
+            "task": "src.workers.tasks.detect_emerging",
+            "schedule": crontab(minute=0, hour="*/4"),  # Cada 4h
+        },
+        "discover-parlament": {
+            "task": "src.workers.tasks.discover_parlament",
+            "schedule": crontab(minute=0, hour=2),  # 2am diario
+        },
         "weekly-report": {
             "task": "src.workers.tasks.generate_weekly_report",
             "schedule": crontab(minute=0, hour=8, day_of_week=1),  # Monday 8am

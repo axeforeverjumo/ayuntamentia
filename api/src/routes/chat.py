@@ -33,6 +33,9 @@ Herramientas:
 11. presupuesto_municipio(nombre) — presupuestos por año de un municipio
 12. poblacion_municipio(nombre) — evolución demográfica histórica
 13. iniciativas_parlament(query) — iniciativas parlamentarias (propuestas, mociones, interpelaciones)
+14. recepcion_social(tema?, municipio?, dias?) — eco social (RSS prensa, Bluesky) por tema/municipio
+15. tendencias_emergentes() — temas con mayor crecimiento en plenos últimos 30 días
+16. ranking_concejales(partido?, municipio?) — ranking de alineación de concejales con la línea del partido
 
 Puedes pedir VARIAS herramientas.
 
@@ -263,6 +266,45 @@ def tool_poblacion_municipio(nombre: str) -> str:
         return json.dumps([dict(r) for r in cur.fetchall()], default=str, ensure_ascii=False)
 
 
+def tool_recepcion_social(tema: str = "", municipio: str = "", dias: int = 14) -> str:
+    where, params = ["publicado_at >= NOW() - (%s || ' days')::interval"], [str(dias)]
+    if tema:
+        where.append("tema = %s")
+        params.append(tema)
+    if municipio:
+        where.append("municipio_id = (SELECT id FROM municipios WHERE LOWER(nombre)=LOWER(%s) LIMIT 1)")
+        params.append(municipio)
+    sql = f"""SELECT tema, sentiment, COUNT(*) AS n, SUM(engagement) AS engagement_total
+              FROM mencion_social WHERE {' AND '.join(where)}
+              GROUP BY tema, sentiment ORDER BY n DESC LIMIT 30"""
+    with get_cursor() as cur:
+        cur.execute(sql, params)
+        return json.dumps([dict(r) for r in cur.fetchall()], default=str, ensure_ascii=False)
+
+
+def tool_tendencias_emergentes() -> str:
+    with get_cursor() as cur:
+        cur.execute("SELECT * FROM v_tendencias_emergentes LIMIT 15")
+        return json.dumps([dict(r) for r in cur.fetchall()], default=str, ensure_ascii=False)
+
+
+def tool_ranking_concejales(partido: str = "", municipio: str = "", limit: int = 20) -> str:
+    where, params = ["votos_total >= 5"], []
+    if partido:
+        where.append("partido = %s")
+        params.append(partido)
+    if municipio:
+        where.append("LOWER(municipio) ILIKE LOWER(%s)")
+        params.append(f"%{municipio}%")
+    sql = f"""SELECT nombre, partido, municipio, votos_total, pct_alineacion, divergencias
+              FROM v_ranking_concejales WHERE {' AND '.join(where)}
+              ORDER BY pct_alineacion ASC LIMIT %s"""
+    params.append(limit)
+    with get_cursor() as cur:
+        cur.execute(sql, params)
+        return json.dumps([dict(r) for r in cur.fetchall()], default=str, ensure_ascii=False)
+
+
 def tool_iniciativas_parlament(query: str) -> str:
     words = re.findall(r'\w{3,}', query)
     if not words:
@@ -292,6 +334,9 @@ TOOL_MAP = {
     "presupuesto_municipio": lambda a: tool_presupuesto_municipio(a.get("nombre", "")),
     "poblacion_municipio": lambda a: tool_poblacion_municipio(a.get("nombre", "")),
     "iniciativas_parlament": lambda a: tool_iniciativas_parlament(a.get("query", "")),
+    "recepcion_social": lambda a: tool_recepcion_social(a.get("tema", ""), a.get("municipio", ""), int(a.get("dias", 14))),
+    "tendencias_emergentes": lambda a: tool_tendencias_emergentes(),
+    "ranking_concejales": lambda a: tool_ranking_concejales(a.get("partido", ""), a.get("municipio", ""), int(a.get("limit", 20))),
 }
 
 

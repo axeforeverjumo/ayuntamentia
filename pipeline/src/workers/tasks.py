@@ -82,6 +82,50 @@ def process_backfill_batch():
     return len(batch)
 
 
+@app.task(name="src.workers.tasks.dispatch_subscripciones")
+def dispatch_subscripciones():
+    """Dispara briefs temáticos de las subscripciones que toquen ahora."""
+    from .scheduler_dynamic import due_subscriptions, send_brief
+    ids = due_subscriptions()
+    sent = 0
+    for sid in ids:
+        try:
+            if send_brief(sid):
+                sent += 1
+        except Exception as e:
+            logger.error(f"Error enviando brief sub={sid}: {e}")
+    return {"due": len(ids), "sent": sent}
+
+
+@app.task(name="src.workers.tasks.ingest_social")
+def ingest_social():
+    """Ingesta menciones sociales desde fuentes públicas (Bluesky, RSS)."""
+    from ..ingesta.social import ingest_all
+    return ingest_all()
+
+
+@app.task(name="src.workers.tasks.classify_social_batch")
+def classify_social_batch():
+    """Clasifica menciones sociales sin clasificar (tema, sentiment, municipio)."""
+    from ..ingesta.social_classifier import classify_pending_batch
+    return classify_pending_batch(limit=20)
+
+
+@app.task(name="src.workers.tasks.discover_parlament")
+def discover_parlament():
+    """Descubre nuevas sesiones del Parlament (DSPC)."""
+    from ..ingesta.parlament import discover_sesiones
+    n = discover_sesiones()
+    return {"discovered": n}
+
+
+@app.task(name="src.workers.tasks.detect_emerging")
+def detect_emerging():
+    """Genera alertas de tendencias emergentes (plenos + social)."""
+    from ..coherencia.tendencias import detect_and_alert
+    return detect_and_alert()
+
+
 @app.task(name="src.workers.tasks.generate_weekly_report")
 def generate_weekly_report():
     """Genera el informe semanal automático."""
