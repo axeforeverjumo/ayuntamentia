@@ -8,11 +8,19 @@ type Sub = {
   nombre: string;
   temas: string[];
   municipios: number[];
+  prompt_libre: string | null;
   canal: 'email' | 'telegram' | 'both';
   cron_expr: string;
   activo: boolean;
   last_sent_at: string | null;
 };
+
+const EJEMPLOS_LIBRE = [
+  'Tot el que es parli d\'Aliança Catalana a plens i a premsa',
+  'Moviments del PP a municipis on governem',
+  'Contradiccions del PSC entre Parlament i municipis sobre habitatge',
+  'Propostes rebutjades sobre seguretat a l\'àrea metropolitana',
+];
 
 const TEMAS = [
   'medio_ambiente', 'comercio', 'pesca', 'agricultura', 'caza',
@@ -27,7 +35,9 @@ export default function SuscripcionesPage() {
   const [me, setMe] = useState<Me | null>(null);
   const [linkCode, setLinkCode] = useState<{ code: string; instructions: string; bot_url?: string } | null>(null);
   const [nombre, setNombre] = useState('');
+  const [modo, setModo] = useState<'temas' | 'libre'>('temas');
   const [temas, setTemas] = useState<string[]>([]);
+  const [promptLibre, setPromptLibre] = useState('');
   const [canal, setCanal] = useState<'email' | 'telegram' | 'both'>('telegram');
   const [cron, setCron] = useState('0 8 * * 5');
   const [preview, setPreview] = useState<string | null>(null);
@@ -51,11 +61,22 @@ export default function SuscripcionesPage() {
 
   async function create() {
     await apiClient.post('/api/subscripciones', {
-      nombre, temas, municipios: [], canal, cron_expr: cron, activo: true,
+      nombre,
+      temas: modo === 'temas' ? temas : [],
+      municipios: [],
+      prompt_libre: modo === 'libre' ? promptLibre.trim() : null,
+      canal,
+      cron_expr: cron,
+      activo: true,
     });
-    setNombre(''); setTemas([]);
+    setNombre(''); setTemas([]); setPromptLibre('');
     load();
   }
+
+  const canCreate = !!nombre && (
+    (modo === 'temas' && temas.length > 0) ||
+    (modo === 'libre' && promptLibre.trim().length >= 10)
+  );
 
   async function remove(id: number) {
     await apiClient.delete(`/api/subscripciones/${id}`);
@@ -109,25 +130,67 @@ export default function SuscripcionesPage() {
           onChange={(e) => setNombre(e.target.value)}
           className="w-full mb-3 px-3 py-2 rounded bg-[#0d1117] border border-[#30363d] text-sm"
         />
-        <div className="mb-3">
-          <p className="text-xs text-[#8b949e] mb-2">Temes</p>
-          <div className="flex flex-wrap gap-2">
-            {TEMAS.map((t) => (
-              <button
-                key={t}
-                onClick={() => setTemas(temas.includes(t) ? temas.filter((x) => x !== t) : [...temas, t])}
-                className={
-                  'px-3 py-1 rounded-full text-xs border ' +
-                  (temas.includes(t)
-                    ? 'bg-[#2563eb] border-[#2563eb] text-white'
-                    : 'border-[#30363d] text-[#8b949e]')
-                }
-              >
-                {t}
-              </button>
-            ))}
-          </div>
+        <div className="mb-3 flex gap-1 text-xs">
+          <button
+            onClick={() => setModo('temas')}
+            className={'px-3 py-1.5 rounded-l border ' + (modo === 'temas'
+              ? 'bg-[#2563eb] border-[#2563eb] text-white'
+              : 'border-[#30363d] text-[#8b949e]')}
+          >Temes predefinits</button>
+          <button
+            onClick={() => setModo('libre')}
+            className={'px-3 py-1.5 rounded-r border ' + (modo === 'libre'
+              ? 'bg-[#2563eb] border-[#2563eb] text-white'
+              : 'border-[#30363d] text-[#8b949e]')}
+          >Consulta lliure</button>
         </div>
+
+        {modo === 'temas' ? (
+          <div className="mb-3">
+            <p className="text-xs text-[#8b949e] mb-2">Temes</p>
+            <div className="flex flex-wrap gap-2">
+              {TEMAS.map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setTemas(temas.includes(t) ? temas.filter((x) => x !== t) : [...temas, t])}
+                  className={
+                    'px-3 py-1 rounded-full text-xs border ' +
+                    (temas.includes(t)
+                      ? 'bg-[#2563eb] border-[#2563eb] text-white'
+                      : 'border-[#30363d] text-[#8b949e]')
+                  }
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="mb-3">
+            <p className="text-xs text-[#8b949e] mb-2">
+              Descriu què vols vigilar en llenguatge natural. La IA traduirà la teva consulta
+              a cerques sobre actes, votacions, Parlament i xarxes socials.
+            </p>
+            <textarea
+              value={promptLibre}
+              onChange={(e) => setPromptLibre(e.target.value)}
+              rows={3}
+              placeholder="Ex: Tot el que es parli d'Aliança Catalana, o moviments del PP a municipis on governem..."
+              className="w-full px-3 py-2 rounded bg-[#0d1117] border border-[#30363d] text-sm resize-y"
+            />
+            <div className="mt-2 flex flex-wrap gap-1">
+              {EJEMPLOS_LIBRE.map((ej) => (
+                <button
+                  key={ej}
+                  onClick={() => setPromptLibre(ej)}
+                  className="text-[11px] text-[#8b949e] hover:text-[#2563eb] border border-[#30363d] hover:border-[#2563eb] rounded px-2 py-1"
+                >
+                  {ej.length > 50 ? ej.slice(0, 50) + '…' : ej}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         <div className="grid grid-cols-2 gap-3 mb-3">
           <select value={canal} onChange={(e) => setCanal(e.target.value as 'email' | 'telegram' | 'both')}
                   className="px-3 py-2 rounded bg-[#0d1117] border border-[#30363d] text-sm">
@@ -139,7 +202,7 @@ export default function SuscripcionesPage() {
                  placeholder="cron (ex: 0 8 * * 5 = divendres 8h)"
                  className="px-3 py-2 rounded bg-[#0d1117] border border-[#30363d] text-sm font-mono" />
         </div>
-        <button onClick={create} disabled={!nombre || temas.length === 0}
+        <button onClick={create} disabled={!canCreate}
                 className="bg-[#238636] hover:bg-[#2ea043] disabled:opacity-50 text-white px-4 py-2 rounded text-sm">
           Crear
         </button>
@@ -151,7 +214,10 @@ export default function SuscripcionesPage() {
             <div className="flex-1">
               <p className="font-medium">{s.nombre}</p>
               <p className="text-xs text-[#8b949e]">
-                {s.temas.join(', ')} · {s.canal} · <code>{s.cron_expr}</code>
+                {s.prompt_libre
+                  ? <span className="italic">&ldquo;{s.prompt_libre.slice(0, 90)}{s.prompt_libre.length > 90 ? '…' : ''}&rdquo;</span>
+                  : s.temas.join(', ')}
+                {' · '}{s.canal} · <code>{s.cron_expr}</code>
                 {s.last_sent_at && ` · últim enviament ${s.last_sent_at.slice(0, 16)}`}
               </p>
             </div>
