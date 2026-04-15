@@ -66,19 +66,19 @@ def _detect_incoherencia_sql() -> int:
                     FROM votaciones v
                     JOIN puntos_pleno p ON p.id = v.punto_id
                     WHERE p.fecha >= CURRENT_DATE - INTERVAL '90 days'
-                      AND v.sentido IN ('favor','contra')
+                      AND v.sentido IN ('a_favor','en_contra')
                       AND p.tema IS NOT NULL
                       AND p.tema NOT IN ('otros','procedimiento')
                 )
                 SELECT partido, tema,
-                       COUNT(DISTINCT CASE WHEN sentido='favor' THEN municipio_id END) AS muns_favor,
-                       COUNT(DISTINCT CASE WHEN sentido='contra' THEN municipio_id END) AS muns_contra
+                       COUNT(DISTINCT CASE WHEN sentido='a_favor' THEN municipio_id END) AS muns_favor,
+                       COUNT(DISTINCT CASE WHEN sentido='en_contra' THEN municipio_id END) AS muns_contra
                 FROM votos
                 GROUP BY partido, tema
-                HAVING COUNT(DISTINCT CASE WHEN sentido='favor' THEN municipio_id END) >= 1
-                   AND COUNT(DISTINCT CASE WHEN sentido='contra' THEN municipio_id END) >= 1
-                ORDER BY (COUNT(DISTINCT CASE WHEN sentido='favor' THEN municipio_id END)
-                        + COUNT(DISTINCT CASE WHEN sentido='contra' THEN municipio_id END)) DESC
+                HAVING COUNT(DISTINCT CASE WHEN sentido='a_favor' THEN municipio_id END) >= 1
+                   AND COUNT(DISTINCT CASE WHEN sentido='en_contra' THEN municipio_id END) >= 1
+                ORDER BY (COUNT(DISTINCT CASE WHEN sentido='a_favor' THEN municipio_id END)
+                        + COUNT(DISTINCT CASE WHEN sentido='en_contra' THEN municipio_id END)) DESC
                 LIMIT 10
             """)
             rows = cur.fetchall()
