@@ -832,28 +832,82 @@ def tool_dossier_adversario(partido: str, tema: str = "", **time_kw) -> str:
     }, default=str, ensure_ascii=False)
 
 
-def tool_monitoring_partido(partido: str, tema: str = "", **time_kw) -> str:
-    """Monitoreo completo de un partido en un periodo: qué dicen ELLOS + qué dicen DE ellos
-    + votaciones + menciones en prensa. Es el 'resumen ejecutivo' para el jefe de gabinete.
+_PARTY_ALIASES: dict[str, list[str]] = {
+    "AC": ["Aliança Catalana", "aliança catalana", "ALIANÇA", "Aliança.cat", "Alianza Catalana",
+           "extrema dreta", "extrema derecha", "ultradreta", "ultraderecha"],
+    "ERC": [" ERC ", "ERC-", "ERC,", "Esquerra Republicana", "esquerra republicana", "ERC/AM"],
+    "JXCAT": ["Junts ", " JUNTS", "JxCat", "JXCat", "Junts per ", "Convergència", "convergents", "ex-convergents", "juntaires"],
+    "CUP": [" CUP ", "CUP-", "CUP,", "Candidatura d'Unitat Popular", "candidatura d'unitat popular", "antisistema"],
+    "PSC": [" PSC", "PSC-", "PSC,", "PSOE", "socialistes", "socialistas", "socialista"],
+    "PP": [" PP ", "PP-", "PP,", "Partit Popular", "Partido Popular", "populars"],
+    "VOX": [" VOX", "Vox ", "Vox,"],
+    "CS": [" CS ", "C's", "Ciutadans", "Ciudadanos"],
+    "COMUNS": ["Comuns", "En Comú", "ECP", "Catalunya en Comú", "ICV"],
+}
 
-    Devuelve 5 bloques:
-      1. intervenciones_propias: lo que sus concejales dijeron en plenos
-      2. votaciones_periodo: cómo votaron (con desglose por tema)
-      3. menciones_rivales: argumentos de OTROS partidos donde mencionan a este partido
-      4. eco_social: menciones en prensa/Bluesky (si hay recepción social)
-      5. resumen_actividad: stats agregados del periodo
-    """
+
+def _party_key_for_mentions(partido: str) -> str:
+    """Devuelve la clave canónica de _PARTY_ALIASES para un partido."""
+    p = (partido or "").upper().strip()
+    if p in ("AC", "ALIANÇA", "ALIANÇA CATALANA", "ALIANCA", "ALIANCA CATALANA", "ALIANÇA.CAT"):
+        return "AC"
+    if p in ("JUNTS", "JXCAT", "JXC", "JUNTS PER CATALUNYA", "JUNTSXCAT", "CONVERGÈNCIA", "CONVERGENCIA", "CIU"):
+        return "JXCAT"
+    if p == "ERC":
+        return "ERC"
+    if p in ("PSC", "PSOE", "PSC-PSOE"):
+        return "PSC"
+    if p == "CUP":
+        return "CUP"
+    if p in ("PP", "PARTIT POPULAR", "PARTIDO POPULAR"):
+        return "PP"
+    if p == "VOX":
+        return "VOX"
+    if p in ("CS", "C'S", "CIUDADANOS", "CIUTADANS"):
+        return "CS"
+    if p in ("COMUNS", "COMÚ", "EN COMÚ PODEM", "ECP", "CATCOMU", "ICV"):
+        return "COMUNS"
+    return ""
+
+
+def _get_concejales_del_partido(cur, partido: str, limit: int = 30) -> list[dict]:
+    """Carga concejales activos del partido desde cargos_electos."""
+    part_where = _partido_where(partido).replace("v.partido", "partido")
+    cur.execute(f"""
+        SELECT ce.nombre, ce.cargo, ce.partido, m.nombre as municipio
+        FROM cargos_electos ce
+        LEFT JOIN municipios m ON ce.municipio_id = m.id
+        WHERE ce.activo AND {part_where.replace('partido', 'ce.partido')}
+        LIMIT %s
+    """, (limit,))
+    return [dict(r) for r in cur.fetchall()]
+
+
+def _extract_surnames(nombre: str) -> list[str]:
+    """Extrae apellidos (>=4 chars) excluyendo conectores. De 'SÍLVIA ORRIOLS SERRA' → ['ORRIOLS','SERRA']."""
+    SKIP = {"DE", "DEL", "LA", "LAS", "LOS", "EL", "I", "Y", "VAN", "VON", "SAN"}
+    parts = re.split(r'\s+', (nombre or "").strip())
+    # Apellidos = partes a partir del 2º, excluyendo conectores y con longitud mínima
+    surnames = []
+    for p in parts[1:]:
+        clean = p.strip(",.;")
+        if len(clean) >= 4 and clean.upper() not in SKIP:
+            surnames.append(clean)
+    return surnames[:2]  # máx 2 apellidos por concejal
+
+
+def tool_monitoring_partido(partido: str, tema: str = "", **time_kw) -> str:
+    """Monitoreo completo: qué dijo el partido + qué dijeron DE él (incluye menciones
+    por nombre del partido, alias, apellidos de sus concejales) + votos + prensa."""
     part_where_v = _partido_where(partido)
     part_where_a = part_where_v.replace("v.partido", "a.partido")
     tf, tp = _time_filter("p.fecha", **time_kw)
-    # Si no hay filtro explícito, por defecto últimos 30 días
     has_time = any(v for v in time_kw.values())
     if not has_time:
-        tf = "p.fecha >= CURRENT_DATE - INTERVAL '30 days'"
+        tf = "p.fecha >= CURRENT_DATE - INTERVAL '60 days'"
         tp = []
     time_extra = f"AND {tf}" if tf else ""
 
-    # Filtro de tema opcional
     tema_filter_a = ""
     tema_params: list = []
     if tema:
@@ -862,6 +916,19 @@ def tool_monitoring_partido(partido: str, tema: str = "", **time_kw) -> str:
             tema_filter_a = "AND (" + clause_tpl.format(col="a.argumento") + ")"
 
     with get_cursor() as cur:
+        # 0. Cargar concejales del partido (para buscar menciones por nombre propio)
+        concejales = _get_concejales_del_partido(cur, partido, limit=50)
+        apellidos = []
+        for c in concejales:
+            apellidos.extend(_extract_surnames(c.get("nombre", "")))
+        # dedup manteniendo orden
+        seen: set[str] = set()
+        apellidos_unicos = []
+        for a in apellidos:
+            if a.upper() not in seen:
+                seen.add(a.upper())
+                apellidos_unicos.append(a)
+
         # 1. Intervenciones propias
         cur.execute(f"""
             SELECT a.partido, a.posicion, a.argumento, p.titulo, p.tema, p.fecha,
@@ -901,7 +968,6 @@ def tool_monitoring_partido(partido: str, tema: str = "", **time_kw) -> str:
         """, tp)
         votos_por_tema = [dict(r) for r in cur.fetchall()]
 
-        # Votaciones destacadas (polémicas o unánimes con perfil)
         cur.execute(f"""
             SELECT v.partido, v.sentido, p.titulo, p.tema, p.resultado, p.fecha,
                    m.nombre as municipio, p.resumen
@@ -915,39 +981,29 @@ def tool_monitoring_partido(partido: str, tema: str = "", **time_kw) -> str:
         """, tp)
         votaciones_detalle = [dict(r) for r in cur.fetchall()]
 
-        # 3. Menciones de rivales — argumentos donde se NOMBRA al partido
-        # Busca el nombre del partido dentro del texto del argumento, pero EXCLUYE
-        # los argumentos del propio partido.
-        label = (partido or "").strip()
-        menciones_rivales: list = []
-        if label:
-            # Creamos varias variantes para buscar menciones
-            labels_search = []
-            lab_up = label.upper()
-            if lab_up in ("AC", "ALIANÇA", "ALIANÇA CATALANA", "ALIANCA", "ALIANCA CATALANA"):
-                labels_search = ["Aliança Catalana", "aliança catalana", "ALIANÇA", " AC "]
-            elif lab_up in ("JUNTS", "JXCAT", "JXC"):
-                labels_search = ["Junts", "JUNTS", "JxCat"]
-            elif lab_up == "ERC":
-                labels_search = [" ERC ", "ERC "]
-            elif lab_up in ("PSC", "PSOE"):
-                labels_search = [" PSC", "PSOE", "socialist"]
-            elif lab_up == "CUP":
-                labels_search = [" CUP ", "CUP-"]
-            elif lab_up == "PP":
-                labels_search = [" PP ", "Partit Popular", "Partido Popular"]
-            elif lab_up == "VOX":
-                labels_search = [" VOX", " Vox "]
-            else:
-                labels_search = [label]
+        # 3. Menciones — TRES fuentes:
+        #    a) argumentos de rivales que nombran al partido (o sus alias, o apellidos de concejales)
+        #    b) resúmenes de puntos donde aparezca el partido
+        #    c) títulos de puntos donde aparezca el partido
+        key = _party_key_for_mentions(partido)
+        labels_search: list[str] = list(_PARTY_ALIASES.get(key, [partido or ""]))
+        # Añadir apellidos de concejales (>=5 chars para evitar ruido)
+        for a in apellidos_unicos[:15]:
+            if len(a) >= 5:
+                labels_search.append(f" {a} ")  # rodeado de espacios para coincidir como palabra
+                labels_search.append(f" {a},")
+                labels_search.append(f" {a}.")
+        labels_search = [l for l in labels_search if l and len(l.strip()) >= 3]
 
+        # a) Argumentos externos que mencionan
+        menciones_rivales: list = []
+        if labels_search:
             like_clauses_arr = []
             like_params_arr: list = []
-            for lab in labels_search:
+            for lab in labels_search[:25]:
                 like_clauses_arr.append("a.argumento ILIKE %s")
                 like_params_arr.append(f"%{lab}%")
             like_clause = " OR ".join(like_clauses_arr)
-
             cur.execute(f"""
                 SELECT a.partido, a.posicion, a.argumento, p.titulo, p.tema, p.fecha,
                        m.nombre as municipio
@@ -958,9 +1014,29 @@ def tool_monitoring_partido(partido: str, tema: str = "", **time_kw) -> str:
                   AND NOT ({part_where_a})
                   AND LENGTH(a.argumento) >= 30
                   {time_extra}
-                ORDER BY p.fecha DESC LIMIT 12
+                ORDER BY p.fecha DESC LIMIT 15
             """, like_params_arr + tp)
             menciones_rivales = [dict(r) for r in cur.fetchall()]
+
+        # b) Resúmenes y títulos de puntos que mencionan — contexto ambiental
+        menciones_puntos: list = []
+        if labels_search:
+            like_clauses_p = []
+            like_params_p: list = []
+            for lab in labels_search[:20]:
+                like_clauses_p.append("(p.resumen ILIKE %s OR p.titulo ILIKE %s)")
+                like_params_p.extend([f"%{lab}%", f"%{lab}%"])
+            clause_p = " OR ".join(like_clauses_p)
+            cur.execute(f"""
+                SELECT p.titulo, p.tema, p.resumen, p.resultado, p.fecha,
+                       m.nombre as municipio
+                FROM puntos_pleno p
+                JOIN municipios m ON p.municipio_id = m.id
+                WHERE ({clause_p})
+                  {time_extra}
+                ORDER BY p.fecha DESC LIMIT 10
+            """, like_params_p + tp)
+            menciones_puntos = [dict(r) for r in cur.fetchall()]
 
         # 4. Eco social
         eco_social: list = []
@@ -1005,13 +1081,18 @@ def tool_monitoring_partido(partido: str, tema: str = "", **time_kw) -> str:
             "votos_a_favor": resumen_votos.get("a_favor", 0),
             "votos_en_contra": resumen_votos.get("en_contra", 0),
             "abstenciones": resumen_votos.get("abstencion", 0),
-            "total_intervenciones": len(intervenciones_propias),
-            "menciones_rivales": len(menciones_rivales),
+            "total_intervenciones_propias": len(intervenciones_propias),
+            "total_menciones_en_rivales": len(menciones_rivales),
+            "total_menciones_en_puntos": len(menciones_puntos),
+            "concejales_activos": len(concejales),
+            "apellidos_buscados": apellidos_unicos[:10],
         },
+        "concejales_del_partido": concejales[:20],
         "intervenciones_propias": intervenciones_propias,
         "votos_por_tema": votos_por_tema,
         "votaciones_detalle": votaciones_detalle,
         "menciones_rivales": menciones_rivales,
+        "menciones_en_puntos": menciones_puntos,
         "eco_social": eco_social,
     }, default=str, ensure_ascii=False)
 
@@ -1262,7 +1343,18 @@ def chat(
         "atacar": "INTENCIÓN DETECTADA: ATACAR. Objetivo: generar munición política contra el rival. La sección '¿Y ahora qué?' DEBE dar una frase atacable lista para tweet/rueda.",
         "defender": "INTENCIÓN DETECTADA: DEFENDER. Objetivo: argumentario defensivo. La sección '¿Y ahora qué?' DEBE dar la respuesta a dar si nos preguntan.",
         "comparar": "INTENCIÓN DETECTADA: COMPARAR. Objetivo: contraste entre partidos. La sección '¿Y ahora qué?' DEBE posicionar frente a los rivales con diferencia neta.",
-        "monitor": "INTENCIÓN DETECTADA: MONITOR. Objetivo: briefing ejecutivo de lo que se ha hablado DEL partido en el periodo. En Veredicto: resumen de temperatura política (calma/agitación/polémica). En Punts clau: desglose — 1) lo que ELLOS dijeron, 2) cómo VOTARON, 3) qué dijeron de ELLOS los rivales, 4) eco en prensa si hay. Cita literal obligatoria si hay citas_literales.",
+        "monitor": (
+            "INTENCIÓN DETECTADA: MONITOR. Objetivo: briefing ejecutivo sobre el partido en el periodo. "
+            "ESTRUCTURA OBLIGATORIA de Punts clau:\n"
+            "  1) 🗣️ Lo que ELLOS DIJERON (intervenciones_propias) — cita literal con blockquote si hay.\n"
+            "  2) 🗳️ Cómo VOTARON (resumen_ejecutivo + votos_por_tema) — cifras % favor/contra/abstención.\n"
+            "  3) 👥 Lo que DIJERON DE ELLOS los rivales (menciones_rivales) — OBLIGATORIO incluir al menos 1-2 citas literales textuales con formato `> \"cita\"` — partido y concejal que lo dijo. "
+            "Si NO hay menciones_rivales pero SÍ hay menciones_en_puntos (contexto en resumen de puntos), citar esos extractos como 'contexto institucional'.\n"
+            "  4) 📰 Eco en prensa (eco_social) si hay.\n"
+            "En '¿Y ahora qué?': `**Temperatura política:** [baja/media/alta]. Lo que merece atención: X. Lo que hay que seguir: Y`. "
+            "NUNCA digas 'nadie habla de ellos' sin verificar: el sistema buscó el nombre del partido, sus alias (ej: 'extrema dreta', 'convergents') Y los apellidos de sus concejales activos. "
+            "Si realmente hay 0 menciones en argumentos y 0 en resúmenes, el patrón es silencio institucional — explícalo así."
+        ),
         "oportunidad": "INTENCIÓN DETECTADA: OPORTUNIDAD. Objetivo: hueco comunicativo. La sección '¿Y ahora qué?' DEBE identificar el espacio concreto a ocupar.",
         "consulta": "INTENCIÓN: CONSULTA. Responde de forma útil e informada.",
     }.get(intent, "")
