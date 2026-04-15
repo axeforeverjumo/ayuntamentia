@@ -1,7 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { Loader2 } from 'lucide-react';
 import apiClient from '@/lib/ApiClient';
+import { CronPicker } from '@/components/ui/CronPicker';
 
 type Sub = {
   id: number;
@@ -9,6 +13,7 @@ type Sub = {
   temas: string[];
   municipios: number[];
   prompt_libre: string | null;
+  ventana_dias: number | null;
   canal: 'email' | 'telegram' | 'both';
   cron_expr: string;
   activo: boolean;
@@ -40,7 +45,10 @@ export default function SuscripcionesPage() {
   const [promptLibre, setPromptLibre] = useState('');
   const [canal, setCanal] = useState<'email' | 'telegram' | 'both'>('telegram');
   const [cron, setCron] = useState('0 8 * * 5');
-  const [preview, setPreview] = useState<string | null>(null);
+  const [ventanaDias, setVentanaDias] = useState(7);
+  const [preview, setPreview] = useState<{ open: boolean; loading: boolean; brief: string | null }>({
+    open: false, loading: false, brief: null,
+  });
 
   async function load() {
     const data = await apiClient.get<Sub[]>('/api/subscripciones');
@@ -65,6 +73,7 @@ export default function SuscripcionesPage() {
       temas: modo === 'temas' ? temas : [],
       municipios: [],
       prompt_libre: modo === 'libre' ? promptLibre.trim() : null,
+      ventana_dias: ventanaDias,
       canal,
       cron_expr: cron,
       activo: true,
@@ -84,8 +93,13 @@ export default function SuscripcionesPage() {
   }
 
   async function showPreview(id: number) {
-    const data = await apiClient.post<{ brief: string }>(`/api/subscripciones/${id}/preview`, {});
-    setPreview(data.brief);
+    setPreview({ open: true, loading: true, brief: null });
+    try {
+      const data = await apiClient.post<{ brief: string }>(`/api/subscripciones/${id}/preview`, {});
+      setPreview({ open: true, loading: false, brief: data.brief });
+    } catch (e) {
+      setPreview({ open: true, loading: false, brief: `Error generant el brief: ${String(e)}` });
+    }
   }
 
   return (
@@ -192,15 +206,29 @@ export default function SuscripcionesPage() {
           </div>
         )}
         <div className="grid grid-cols-2 gap-3 mb-3">
-          <select value={canal} onChange={(e) => setCanal(e.target.value as 'email' | 'telegram' | 'both')}
-                  className="px-3 py-2 rounded bg-[#0d1117] border border-[#30363d] text-sm">
-            <option value="email">Email</option>
-            <option value="telegram">Telegram</option>
-            <option value="both">Tots dos</option>
-          </select>
-          <input value={cron} onChange={(e) => setCron(e.target.value)}
-                 placeholder="cron (ex: 0 8 * * 5 = divendres 8h)"
-                 className="px-3 py-2 rounded bg-[#0d1117] border border-[#30363d] text-sm font-mono" />
+          <div>
+            <label className="block text-xs text-[#8b949e] mb-1">Canal</label>
+            <select value={canal} onChange={(e) => setCanal(e.target.value as 'email' | 'telegram' | 'both')}
+                    className="w-full px-3 py-2 rounded bg-[#0d1117] border border-[#30363d] text-sm">
+              <option value="email">Email</option>
+              <option value="telegram">Telegram</option>
+              <option value="both">Tots dos</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-[#8b949e] mb-1">Finestra temporal</label>
+            <select value={ventanaDias} onChange={(e) => setVentanaDias(Number(e.target.value))}
+                    className="w-full px-3 py-2 rounded bg-[#0d1117] border border-[#30363d] text-sm">
+              <option value={7}>Darrers 7 dies</option>
+              <option value={14}>Darrers 14 dies</option>
+              <option value={30}>Darrers 30 dies</option>
+              <option value={90}>Darrers 90 dies</option>
+            </select>
+          </div>
+        </div>
+        <div className="mb-3">
+          <label className="block text-xs text-[#8b949e] mb-1">Quan s&apos;enviarà</label>
+          <CronPicker value={cron} onChange={setCron} />
         </div>
         <button onClick={create} disabled={!canCreate}
                 className="bg-[#238636] hover:bg-[#2ea043] disabled:opacity-50 text-white px-4 py-2 rounded text-sm">
@@ -227,10 +255,40 @@ export default function SuscripcionesPage() {
         ))}
       </div>
 
-      {preview && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-6" onClick={() => setPreview(null)}>
-          <div className="bg-[#161b22] border border-[#30363d] rounded-lg p-6 max-w-2xl max-h-[80vh] overflow-y-auto whitespace-pre-wrap text-sm" onClick={(e) => e.stopPropagation()}>
-            {preview}
+      {preview.open && (
+        <div
+          className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-6"
+          onClick={() => !preview.loading && setPreview({ open: false, loading: false, brief: null })}
+        >
+          <div
+            className="bg-[#161b22] border border-[#30363d] rounded-lg p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-[#30363d]">
+              <h3 className="text-sm font-semibold text-[#e6edf3]">Previsualització del brief</h3>
+              {!preview.loading && (
+                <button
+                  onClick={() => setPreview({ open: false, loading: false, brief: null })}
+                  className="text-xs text-[#8b949e] hover:text-[#e6edf3]"
+                >Tancar</button>
+              )}
+            </div>
+
+            {preview.loading ? (
+              <div className="flex flex-col items-center justify-center py-12 gap-3">
+                <Loader2 className="w-8 h-8 text-[#2563eb] animate-spin" />
+                <p className="text-sm text-[#8b949e]">Generant brief...</p>
+                <p className="text-xs text-[#6e7681]">
+                  Recopilant dades, consultant la IA. Pot trigar 10-30 segons.
+                </p>
+              </div>
+            ) : (
+              <div className="markdown-body">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {preview.brief || ''}
+                </ReactMarkdown>
+              </div>
+            )}
           </div>
         </div>
       )}

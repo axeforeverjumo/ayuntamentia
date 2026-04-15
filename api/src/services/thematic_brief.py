@@ -11,21 +11,56 @@ PROXY_URL = os.getenv("OPENCLAW_BASE_URL", "http://localhost:10531/v1")
 MODEL = os.getenv("OPENCLAW_MODEL_FULL", "gpt-5.4")
 
 THEMATIC_BRIEF_PROMPT = """Eres jefe de gabinete analítico para un partido catalán.
-Genera un brief semanal sobre los temas indicados, dirigido a un cargo ocupado.
+Genera un brief sobre los temas indicados, dirigido a un cargo ocupado.
 
-ESTRUCTURA OBLIGATORIA:
-1. **Titular en 1 frase** (qué pasó esta semana en estos temas).
-2. **Movimientos clave** (3-5 bullets con: municipio, qué votaron, resultado, cifra).
-3. **Eco social** (si hay datos, sentimiento agregado en redes; si no, omitir).
-4. **Riesgos / oportunidades** (1-3 lecturas accionables).
-5. **Qué vigilar la semana que viene** (1-2 puntos).
+FORMATO MARKDOWN OBLIGATORIO (usa estos títulos literales como H2):
+
+## Titular
+Una sola frase contundente que resuma lo relevante del período.
+
+## Moviments clau
+- Entre 3 y 5 bullets. CADA bullet debe contener: municipi · qué es votó · resultat · xifra o data.
+- Si el bloque de datos no tiene puntos reales, escribe EXACTAMENTE una única línea: *Sense activitat en aquest període.* (no repitas 3 veces "Sense activitat").
+
+## Eco social
+Agregado en redes/prensa: N mencions, % sentiment positiu/negatiu, temes dominants. Si no hay datos, una sola línea: *Sense mencions socials en aquest període.*
+
+## Riscos i oportunitats
+- 1-3 bullets amb lectures accionables per a la direcció.
+
+## Què vigilar la setmana vinent
+- 1-2 bullets concrets (tema + per què).
 
 REGLAS:
-- Idioma: catalán salvo que los datos estén mayoritariamente en español.
-- Tono: ejecutivo, conclusivo, sin paja.
-- Cifras siempre con contexto (vs semana anterior, vs media).
-- No inventes. Si no hay datos suficientes en un bloque, marca "Sense activitat".
-- Máximo 350 palabras.
+- Idioma: català salvo que los datos estén mayoritariamente en castellano.
+- Tono executiu, conclusiu. Sin paja ni frases vacías.
+- Xifres sempre amb context (vs mitjana, vs període anterior).
+- No inventis. Si no hi ha dades, marca una sola línia "Sense activitat" per bloc (mai repetida).
+- Máximo 350 paraules totals.
+- Usa **negreta** per destacar municipis i xifres clau.
+"""
+
+
+FREE_BRIEF_PROMPT = """Eres jefe de gabinete analítico para Aliança Catalana.
+El usuario configuró una CONSULTA LIBRE en lenguaje natural.
+Responde a esa consulta en formato markdown con esta estructura literal (usa H2):
+
+## Titular
+Una sola frase que resuma el hallazgo clave sobre la consulta del usuario.
+
+## Moviments clau
+- 3-5 bullets amb municipi/actor · què ha passat · xifra/data. Si no hi ha dades: una única línia *Sense activitat*.
+
+## Eco social
+Mencions agregades, sentiment, fonts. Si no hi ha dades: una única línia.
+
+## Riscos i oportunitats
+- 1-3 lectures accionables per AC.
+
+## Què vigilar la setmana vinent
+- 1-2 bullets concrets.
+
+REGLAS: català; executiu; sense paja; xifres amb context; no inventis; negreta per municipis/xifres; màx 350 paraules.
 """
 
 
@@ -71,25 +106,6 @@ def _gather_data(temas: list[str], municipios: list[int], days: int = 7) -> dict
         alertas = cur.fetchall()
 
     return {"puntos": puntos, "social": social, "alertas": alertas, "rango": [str(start), str(end)]}
-
-
-FREE_BRIEF_PROMPT = """Eres jefe de gabinete analítico para Aliança Catalana.
-El usuario ha configurado una subscripción con una CONSULTA LIBRE en lenguaje natural.
-Tu misión: generar un brief ejecutivo que responda a esa consulta con los datos recopilados.
-
-ESTRUCTURA OBLIGATORIA:
-1. **Titular en 1 frase** que resuma lo relevante de la semana sobre la consulta.
-2. **Moviments clau** (3-5 bullets con municipi + xifra + font).
-3. **Eco social** (sentiment agregado si hay; si no, "Sense activitat").
-4. **Riscos / oportunitats** (1-3 lectures accionables per AC).
-5. **Què vigilar la setmana que ve**.
-
-REGLAS:
-- Idioma: catalán salvo que los datos estén mayoritariamente en español.
-- Tono ejecutivo, conclusivo, sin paja. Máximo 350 palabras.
-- No inventes. Si los datos no cubren la consulta, dilo en 1 línea.
-- Cifras con contexto.
-"""
 
 
 def _gather_data_free(prompt: str, days: int = 7) -> dict:
@@ -148,10 +164,11 @@ def generate_brief_for_subscripcion(sub_id: int, dry_run: bool = False) -> str:
         return "Subscripción no encontrada."
 
     prompt_libre = (sub.get("prompt_libre") or "").strip()
+    ventana = int(sub.get("ventana_dias") or 7)
 
     if prompt_libre:
         import json
-        data = _gather_data_free(prompt_libre)
+        data = _gather_data_free(prompt_libre, days=ventana)
         if not data["tools"] and not data["alertas"]:
             return f"Sense activitat relacionada amb «{prompt_libre}» aquesta setmana."
         client = OpenAI(base_url=PROXY_URL, api_key="subscription", timeout=120.0)
@@ -177,9 +194,14 @@ def generate_brief_for_subscripcion(sub_id: int, dry_run: bool = False) -> str:
                 cur.execute("UPDATE subscripciones SET last_sent_at = NOW() WHERE id = %s", (sub_id,))
         return brief
 
-    data = _gather_data(sub["temas"] or [], sub["municipios"] or [])
+    data = _gather_data(sub["temas"] or [], sub["municipios"] or [], days=ventana)
     if not data["puntos"] and not data["social"]:
-        return f"Sense activitat als temes {sub['temas']} aquesta setmana."
+        return (f"## Titular\n*Sense activitat als temes {', '.join(sub['temas'] or [])} "
+                f"en els darrers {ventana} dies.*\n\n"
+                "## Moviments clau\n*Sense activitat en aquest període.*\n\n"
+                "## Eco social\n*Sense mencions socials en aquest període.*\n\n"
+                "## Riscos i oportunitats\n*Cap senyal detectat.*\n\n"
+                "## Què vigilar la setmana vinent\n*Ampliar temes o finestra temporal.*")
 
     client = OpenAI(base_url=PROXY_URL, api_key="subscription", timeout=120.0)
     payload = {
