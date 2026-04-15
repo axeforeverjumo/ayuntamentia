@@ -77,7 +77,8 @@ def _detect_incoherencia_sql() -> int:
                 GROUP BY partido, tema
                 HAVING COUNT(DISTINCT CASE WHEN sentido='favor' THEN municipio_id END) >= 1
                    AND COUNT(DISTINCT CASE WHEN sentido='contra' THEN municipio_id END) >= 1
-                ORDER BY (muns_favor + muns_contra) DESC
+                ORDER BY (COUNT(DISTINCT CASE WHEN sentido='favor' THEN municipio_id END)
+                        + COUNT(DISTINCT CASE WHEN sentido='contra' THEN municipio_id END)) DESC
                 LIMIT 10
             """)
             rows = cur.fetchall()
