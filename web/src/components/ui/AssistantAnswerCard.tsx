@@ -6,6 +6,8 @@ import remarkGfm from 'remark-gfm';
 import { CheckCircle2, AlertTriangle, XCircle, TrendingUp, Sparkles, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { PartidoChip, detectPartidos, normalizePartido } from './PartidoChip';
+import { INTENT_META } from './PoliticalModes';
+import type { ChatIntent } from '@/lib/types';
 
 type Verdict = 'positive' | 'neutral' | 'negative';
 
@@ -103,6 +105,7 @@ const TONE_STYLES: Record<Verdict, { bg: string; border: string; icon: typeof Ch
 
 interface Props {
   content: string;
+  intent?: ChatIntent;
 }
 
 /** Markdown components shared by todas las secciones. */
@@ -164,7 +167,8 @@ function useMarkdownComponents(): Components {
         </a>
       ),
       blockquote: ({ children }) => (
-        <blockquote className="border-l-2 border-[#7c3aed]/60 pl-3 my-2 italic text-[#a5b1c2]">
+        <blockquote className="relative my-2.5 px-3 py-2 rounded-lg bg-gradient-to-r from-[#1a0b2e]/40 to-[#0a1e26]/30 border-l-2 border-[#c4b5fd] text-[#e6edf3] text-[13px] italic font-medium shadow-[inset_0_0_20px_-10px_rgba(124,58,237,0.3)]">
+          <span className="absolute -top-1 -left-1 text-[#7c3aed] text-lg font-serif leading-none select-none">“</span>
           {children}
         </blockquote>
       ),
@@ -172,9 +176,11 @@ function useMarkdownComponents(): Components {
   }, []);
 }
 
-export function AssistantAnswerCard({ content }: Props) {
+export function AssistantAnswerCard({ content, intent }: Props) {
   const parsed = useMemo(() => splitSections(content), [content]);
   const mdComponents = useMarkdownComponents();
+  const intentMeta = intent && intent !== 'consulta' ? INTENT_META[intent] : null;
+  const IntentIcon = intentMeta?.icon;
 
   const hasSections = parsed.verdict || parsed.points || parsed.nextStep;
 
@@ -217,10 +223,19 @@ export function AssistantAnswerCard({ content }: Props) {
               <VerdictIcon className={cn('w-4 h-4', tone.iconClass)} />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1.5">
+              <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                 <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#8b949e]">
                   Veredicte
                 </span>
+                {intentMeta && IntentIcon && (
+                  <span className={cn(
+                    'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider border',
+                    intentMeta.bg, intentMeta.color, intentMeta.border,
+                  )}>
+                    <IntentIcon className="w-2.5 h-2.5" />
+                    Mode: {intentMeta.label}
+                  </span>
+                )}
                 {parsed.detectedPartidos.length > 0 && (
                   <div className="flex gap-1 flex-wrap">
                     {parsed.detectedPartidos.slice(0, 4).map((k) => (

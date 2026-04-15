@@ -7,18 +7,10 @@ import {
 } from "lucide-react";
 import { ChatMessage } from "@/components/ui/ChatMessage";
 import { ProgressiveLoader } from "@/components/ui/ProgressiveLoader";
+import { PoliticalModes } from "@/components/ui/PoliticalModes";
 import { apiClient } from "@/lib/ApiClient";
 import type { ChatMessage as ChatMessageType, ChatResponse } from "@/lib/types";
 import { cn } from "@/lib/utils";
-
-const SUGGESTION_CHIPS = [
-  { icon: "🏛", text: "Què s'ha aprovat recentment a Ripoll?" },
-  { icon: "🗳", text: "Com vota Aliança Catalana?" },
-  { icon: "🔥", text: "Quins temes es debaten més als plens?" },
-  { icon: "💶", text: "Pressupostos aprovats a Ripoll" },
-  { icon: "📰", text: "Resum de l'activitat municipal recent" },
-  { icon: "🏗", text: "Mocions sobre urbanisme" },
-];
 
 interface Conversation {
   id: string;
@@ -167,6 +159,7 @@ export default function ChatPage() {
         content: response.answer,
         sources: response.sources,
         followUps: response.follow_ups,
+        intent: response.intent,
         timestamp: new Date().toISOString(),
       };
 
@@ -283,32 +276,16 @@ export default function ChatPage() {
                 </div>
               </div>
               <h2 className="text-2xl font-bold bg-gradient-to-r from-[#c4b5fd] via-[#f3f6fa] to-[#67e8f9] bg-clip-text text-transparent mb-2">
-                Com puc ajudar-te avui?
+                L'arma política d'Aliança Catalana
               </h2>
-              <p className="text-sm text-[#8b949e] leading-relaxed mb-8 max-w-md">
-                Pregunta sobre actes, votacions, pressupostos o qualsevol aspecte
-                de la política municipal catalana.
+              <p className="text-sm text-[#8b949e] leading-relaxed mb-6 max-w-md">
+                Tria el mode. Pregunta com un polític: ataca rivals, defensa posicions,
+                compara partits o detecta oportunitats — sobre dades reals de 947 municipis.
               </p>
-              <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {SUGGESTION_CHIPS.map((chip) => (
-                  <button
-                    key={chip.text}
-                    onClick={() => sendMessage(chip.text)}
-                    className={cn(
-                      "group flex items-center gap-2.5 px-3 py-2.5 text-[12px] text-left rounded-xl",
-                      "bg-gradient-to-br from-[#0f141b] to-[#161b22]",
-                      "border border-[#21262d] text-[#c9d1d9]",
-                      "hover:border-[#7c3aed]/40 hover:from-[#1a0b2e]/40 hover:to-[#0a1e26]/40 hover:text-[#f3f6fa]",
-                      "transition-all duration-200",
-                    )}
-                  >
-                    <span className="text-base opacity-80 group-hover:opacity-100 transition-opacity">
-                      {chip.icon}
-                    </span>
-                    <span className="flex-1">{chip.text}</span>
-                  </button>
-                ))}
-              </div>
+              <PoliticalModes onAsk={sendMessage} disabled={isLoading} />
+              <p className="text-[10px] text-[#6e7681] mt-5">
+                O escriu la teva pregunta sota 👇
+              </p>
             </div>
           ) : (
             <div className="max-w-3xl mx-auto space-y-6">

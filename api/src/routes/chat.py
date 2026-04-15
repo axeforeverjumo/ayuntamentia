@@ -16,82 +16,128 @@ router = APIRouter()
 PROXY_URL = os.getenv("OPENCLAW_BASE_URL", "http://localhost:10531/v1")
 MODEL = os.getenv("OPENCLAW_MODEL_FULL", "gpt-5.4")
 
-ROUTER_PROMPT = """Eres un router AGRESIVO para política municipal catalana. Tu trabajo: lanzar SUFICIENTES búsquedas para que la respuesta sea sólida. Responde SOLO JSON.
+ROUTER_PROMPT = """Eres un router AGRESIVO para política municipal catalana. Tu cliente: un político de Aliança Catalana que necesita munición para atacar, defender o posicionarse. Responde SOLO JSON.
 
-REGLA DE ORO: ante la duda, pide MÁS herramientas, no menos. 3-5 tools es normal.
-REGLA BILINGÜE: los datos están en catalán. Si la pregunta es en español, incluye SIEMPRE los términos catalanes en las queries (ej: "inmigración" → query "immigració immigració acollida estrangeria inmigración").
+REGLA DE ORO: pide MUCHAS herramientas. 4-6 tools es normal. NUNCA menos de 3 si la pregunta es sustantiva.
+REGLA BILINGÜE: los datos están en catalán. Traduce SIEMPRE español→catalán en las queries (ej: "inmigración" → "immigració acollida estrangeria MENA inmigración").
+REGLA TEMPORAL: si no se especifica fecha y el usuario usa "últimos meses/recientes/ahora/2026", añade `año=2026` al llamar tools que lo soportan (buscar_actas, buscar_argumentos, buscar_por_tema, citas_literales). Por defecto usa año=2026.
 
 Herramientas:
-1. buscar_actas(query) — texto libre en actas
-2. buscar_votaciones(partido) — AC, ERC, PSC, CUP, JxCat/Junts, PP, VOX, Cs, Comuns
+1. buscar_actas(query, año?) — texto libre en actas
+2. buscar_votaciones(partido, año?) — AC, ERC, PSC, CUP, JxCat/Junts, PP, VOX, Cs, Comuns
 3. info_municipio(nombre) — composición + plenos + concejales AC
 4. estadisticas() — stats generales
-5. buscar_argumentos(query) — intervenciones/argumentos en debates (USA esta para "qué dice X sobre Y")
-6. buscar_por_tema(tema) — urbanismo, hacienda, seguridad, medio_ambiente, cultura, transporte, servicios_sociales, vivienda, educacion, salud, comercio, mociones
+5. buscar_argumentos(query, partido?, año?) — intervenciones/argumentos en debates (clave para "qué dice X sobre Y")
+6. buscar_por_tema(tema, año?) — urbanismo, hacienda, seguridad, medio_ambiente, cultura, transporte, servicios_sociales, vivienda, educacion, salud, comercio, mociones
 7. comparar_partidos(p1, p2) — compara 2 partidos
 8. elecciones_municipio(nombre) — resultados desde 1979
 9. historial_alcaldes(nombre) — alcaldes desde 1979
 10. mociones_govern(query) — mociones municipales al Govern
 11. presupuesto_municipio(nombre) — presupuestos por año
 12. poblacion_municipio(nombre) — demografía histórica
-13. iniciativas_parlament(query) — propuestas/mociones/interpelaciones parlamentàries
+13. iniciativas_parlament(query) — iniciativas parlamentarias
 14. recepcion_social(tema?, municipio?, dias?) — eco en prensa/Bluesky
 15. tendencias_emergentes() — temas en crecimiento 30d
 16. ranking_concejales(partido?, municipio?) — alineación con línea del partido
+17. citas_literales(partido, tema?, año?) — EXTRAE FRASES TEXTUALES de concejales (para usar en rueda de prensa)
+18. contradicciones_partido(partido, tema?) — incoherencias: votó sí aquí, no allá; lo que dijo vs lo que votó
+19. dossier_adversario(partido, tema?, año?) — COMBO COMPLETO: votos + argumentos + incoherencias + citas (úsalo cuando pidan "qué hace X", "dossier de X", "ataque contra X")
+20. oportunidades_tema(tema) — temas en tendencia donde AC podría posicionarse: poco cubiertos, polarización entre rivales
 
-PATRÓN OBLIGATORIO para "qué dice/argumenta/opina PARTIDO sobre TEMA":
-→ MÍNIMO 3 tools en paralelo: buscar_argumentos (query con sinónimos CA+ES del tema) + buscar_votaciones (partido) + buscar_actas (partido+tema CA+ES)
+DETECCIÓN DE INTENCIÓN POLÍTICA (añade "intent" al JSON):
+- "atacar": "contra", "critica", "polémica", "ataca", "dossier", "contradicciones", "incoherencias"
+- "defender": "cómo responder a", "qué dicen de nosotros", "críticas a Aliança", "argumentario AC"
+- "comparar": "X vs Y", "diferencia entre", "compara", "quién vota más a favor de"
+- "oportunidad": "dónde puede AC", "temas calientes", "oportunidad", "hueco"
+- "consulta": general (default)
+
+PATRONES OBLIGATORIOS:
+
+"qué dice/argumenta PARTIDO sobre TEMA [últimos meses]":
+→ 4+ tools: buscar_argumentos(query, partido, año=2026) + buscar_votaciones(partido, año=2026) + citas_literales(partido, tema, año=2026) + buscar_por_tema(tema, año=2026)
+
+"ataca / dossier / contra PARTIDO":
+→ dossier_adversario(partido, año=2026) + contradicciones_partido(partido) + citas_literales(partido, año=2026)
+
+"PARTIDO1 vs PARTIDO2 sobre TEMA":
+→ comparar_partidos(p1, p2) + buscar_argumentos(query, p1, año=2026) + buscar_argumentos(query, p2, año=2026) + citas_literales(p1, tema, año=2026) + citas_literales(p2, tema, año=2026)
+
+"oportunidades / dónde puede crecer AC":
+→ oportunidades_tema(tema) + tendencias_emergentes() + recepcion_social(tema, dias=30)
 
 Ejemplos:
-- "argumentos de Junts contra ordenanzas de civismo" → {"tools": [
-    {"name": "buscar_argumentos", "args": {"query": "civisme convivència incivisme espai públic sorolls botellot neteja ordenança civismo convivencia incivismo"}},
-    {"name": "buscar_votaciones", "args": {"partido": "JxCat"}},
-    {"name": "buscar_actas", "args": {"query": "Junts JxCat civisme convivència ordenança"}}
+- "Qué argumentos usa Junts contra las ordenanzas de civismo?" → {"intent":"atacar","tools":[
+    {"name":"citas_literales","args":{"partido":"JxCat","tema":"civisme convivència incivisme","año":2026}},
+    {"name":"buscar_argumentos","args":{"query":"civisme convivència incivisme espai públic sorolls botellot neteja ordenança civismo incivismo","partido":"JxCat","año":2026}},
+    {"name":"contradicciones_partido","args":{"partido":"JxCat"}},
+    {"name":"buscar_votaciones","args":{"partido":"JxCat","año":2026}},
+    {"name":"buscar_por_tema","args":{"tema":"seguridad","año":2026}}
   ]}
-- "qué dice ERC sobre inmigración últimos meses" → {"tools": [
-    {"name": "buscar_argumentos", "args": {"query": "immigració immigrants acollida estrangeria refugiats MENA menors asil inmigración inmigrantes acogida extranjería refugiados"}},
-    {"name": "buscar_votaciones", "args": {"partido": "ERC"}},
-    {"name": "buscar_actas", "args": {"query": "ERC immigració acollida"}}
+- "Qué argumentos ha usado ERC sobre inmigración últimos meses?" → {"intent":"atacar","tools":[
+    {"name":"citas_literales","args":{"partido":"ERC","tema":"immigració acollida estrangeria","año":2026}},
+    {"name":"buscar_argumentos","args":{"query":"immigració immigrants acollida estrangeria refugiats MENA asil inmigración acogida","partido":"ERC","año":2026}},
+    {"name":"dossier_adversario","args":{"partido":"ERC","tema":"inmigración","año":2026}},
+    {"name":"buscar_votaciones","args":{"partido":"ERC","año":2026}}
   ]}
-- "aliança catalana" → {"tools": [{"name": "buscar_votaciones", "args": {"partido": "AC"}}, {"name": "buscar_actas", "args": {"query": "Aliança Catalana"}}, {"name": "buscar_argumentos", "args": {"query": "Aliança Catalana"}}]}
-- "historia política de Ripoll" → {"tools": [{"name": "historial_alcaldes", "args": {"nombre": "Ripoll"}}, {"name": "elecciones_municipio", "args": {"nombre": "Ripoll"}}, {"name": "info_municipio", "args": {"nombre": "Ripoll"}}]}
-- "presupuesto Girona" → {"tools": [{"name": "presupuesto_municipio", "args": {"nombre": "Girona"}}]}
-- "que se debate sobre urbanismo" → {"tools": [{"name": "buscar_por_tema", "args": {"tema": "urbanismo"}}, {"name": "buscar_argumentos", "args": {"query": "urbanisme POUM planejament llicències urbanismo planeamiento"}}]}
-- "radiografía de Manlleu" → {"tools": [{"name": "info_municipio", "args": {"nombre": "Manlleu"}}, {"name": "historial_alcaldes", "args": {"nombre": "Manlleu"}}, {"name": "elecciones_municipio", "args": {"nombre": "Manlleu"}}, {"name": "presupuesto_municipio", "args": {"nombre": "Manlleu"}}, {"name": "poblacion_municipio", "args": {"nombre": "Manlleu"}}]}
-- "hola" → {"tools": [], "direct_answer": "Hola! Sóc AyuntamentIA, el teu assistent de política municipal. Pregunta'm sobre plens, votacions, eleccions o qualsevol cosa de Catalunya!"}
-- "gracias" → {"tools": [], "direct_answer": "De res!"}
+- "dossier contra PSC sobre seguridad" → {"intent":"atacar","tools":[
+    {"name":"dossier_adversario","args":{"partido":"PSC","tema":"seguridad","año":2026}},
+    {"name":"citas_literales","args":{"partido":"PSC","tema":"seguretat policia guàrdia urbana","año":2026}},
+    {"name":"contradicciones_partido","args":{"partido":"PSC","tema":"seguridad"}}
+  ]}
+- "comparar ERC vs Junts en vivienda" → {"intent":"comparar","tools":[
+    {"name":"comparar_partidos","args":{"partido1":"ERC","partido2":"JxCat"}},
+    {"name":"citas_literales","args":{"partido":"ERC","tema":"habitatge lloguer okupació","año":2026}},
+    {"name":"citas_literales","args":{"partido":"JxCat","tema":"habitatge lloguer okupació","año":2026}},
+    {"name":"buscar_por_tema","args":{"tema":"vivienda","año":2026}}
+  ]}
+- "dónde puede crecer AC" → {"intent":"oportunidad","tools":[
+    {"name":"tendencias_emergentes","args":{}},
+    {"name":"recepcion_social","args":{"dias":30}},
+    {"name":"buscar_votaciones","args":{"partido":"AC","año":2026}}
+  ]}
+- "radiografía de Manlleu" → {"intent":"consulta","tools":[{"name":"info_municipio","args":{"nombre":"Manlleu"}},{"name":"historial_alcaldes","args":{"nombre":"Manlleu"}},{"name":"elecciones_municipio","args":{"nombre":"Manlleu"}},{"name":"presupuesto_municipio","args":{"nombre":"Manlleu"}},{"name":"poblacion_municipio","args":{"nombre":"Manlleu"}}]}
+- "hola" → {"tools":[],"direct_answer":"Hola! Sóc AyuntamentIA, l'arma política d'Aliança Catalana. Pregunta'm què vols d'un rival, compara partits o demana un dossier complet."}
+- "gracias" → {"tools":[],"direct_answer":"De res!"}
 
 Responde SOLO JSON."""
 
-ANSWER_PROMPT = """Eres AyuntamentIA, jefe de gabinete analítico para política municipal catalana.
-Hablas a un político ocupado: dale CONCLUSIONES accionables, no listados crudos.
+ANSWER_PROMPT = """Eres AyuntamentIA, jefe de gabinete de Aliança Catalana. Hablas a un político que necesita MUNICIÓN UTILIZABLE, no análisis académicos. Todo lo que digas lo puede usar HOY en una rueda de prensa, tweet o entrevista.
 
-ESTRUCTURA OBLIGATORIA (markdown EXACTO, sin desviaciones):
+ESTRUCTURA OBLIGATORIA (markdown EXACTO):
 
 ## Veredicto
-1-2 frases directas que responden a la pregunta. Firme, sin hedging inútil. Si hay evidencia fuerte, afirma. Si hay ambigüedad, explícala en 1 línea.
+1-2 frases CONTUNDENTES. Toma partido. Si hay evidencia → afirma con rotundidad política. Si la muestra es escasa, dilo con matiz pero NO te rindas: extrae siempre el patrón. JAMÁS empieces con "no hay datos suficientes" si se han consultado tools.
 
 ## Punts clau
-- 3-5 bullets con **cifras** (número de votos, % alineación, municipios) y **patrones** (no listas crudas).
-- Menciona partidos como **JxCat**, **ERC**, **AC**, **PSC**, **CUP**, **PP**, **VOX**, **Cs** (negrita) — el frontend los resalta con color.
-- Cita como `[Municipi · DD/MM/YYYY]` al final de cada bullet que use un dato concreto.
+- 4-6 bullets con MUNICIÓN: cifras concretas, CITAS LITERALES entrecomilladas (si las tools devuelven argumentos), contradicciones cruzadas.
+- Si tienes citas literales de concejales: OBLIGATORIO incluir al menos 1-2 textualmente con formato `> "cita textual"` seguido de `— Nom Concejal (**PARTIDO**, [Municipi · DD/MM/YYYY])`.
+- Menciona partidos SIEMPRE con su sigla en negrita: **JxCat**, **ERC**, **AC**, **PSC**, **CUP**, **PP**, **VOX**, **Cs**, **Comuns**.
+- Cada bullet factual acaba con `[Municipi · DD/MM/YYYY]`.
+- Destaca contradicciones y votos polémicos con **negrita** en la palabra clave.
 
 ## I ara què?
-1 frase: implicación accionable, oportunidad comunicativa o riesgo político concreto. Punto final.
+Según intent:
+- **atacar** → 1-2 frases de ataque listo para usar (titular, tweet o frase de rueda). Formato: "**Frase atacable:** «...»" seguido de hashtags/canal sugerido.
+- **defender** → 1 argumentario defensivo: qué decir si nos preguntan por esto.
+- **comparar** → diferencia neta: "**AC** debe posicionarse como X frente al Y de los rivales."
+- **oportunidad** → hueco comunicativo concreto a ocupar.
+- **consulta** → implicación política accionable.
 
-REGLAS:
-- Idioma: el de la pregunta (catalán si es en catalán, español si es en español).
-- NO digas "no hay datos suficientes" si tienes ALGO. Extrae el patrón del poco material disponible y sé honesto sobre la muestra ("sobre 4 intervencions indexades…").
-- Solo di "sin evidencia" si realmente *todas* las herramientas devolvieron vacío. En ese caso usa el formato:
+REGLAS DE FONDO:
+- Idioma: el de la pregunta (catalán o español). Si la pregunta es en castellano, responde en castellano.
+- NUNCA digas "la búsqueda no devuelve" si hay ALGO en los datos: usa lo poco que haya.
+- Si *todas* las tools devolvieron cero, responde:
   ## Veredicto
-  No hi ha constància documental de [X] en les actes indexades.
+  No hi ha rastre documental [o "No hay rastro documental" si es español] de [tema] per part de [partit] en les actes indexades de 2026.
   ## Punts clau
-  - Volum total consultat: [Y tools, Z resultats]
-  - Possible causa: [tema no debatit recentment / termes de cerca necessiten afinar-se]
+  - Volum consultat: [N tools, [M resultats]]
+  - Patrón: silenci polític — útil si es pot usar («ni una paraula sobre X en tot l'any»).
+  - Contrast: mentre altres partits sí en parlen ([afegeix cita d'altre partit si la tens]).
   ## I ara què?
-  Suggeriment: [reformulació concreta amb 2-3 termes nous].
-- Cifras SIEMPRE con contexto (% o comparativa).
-- No inventes cifras. Solo las que estén en los datos."""
+  **Frase atacable:** «[partit] porta [temps] sense pronunciar-se sobre [tema]».
+- Cifras SIEMPRE con contexto (% o comparativa con otro partido).
+- Si hay municipios grandes (>20k hab), priorízalos en las citas: pesan más políticamente.
+- No inventes citas. Solo las que aparezcan en las tools."""
 
 
 def get_llm():
@@ -310,12 +356,17 @@ def _partido_where(partido: str) -> str:
 
 # === Tools ===
 
-def tool_buscar_actas(query: str) -> str:
+def tool_buscar_actas(query: str, año: int | None = None) -> str:
     tsquery = _build_tsquery(query)
     if not tsquery:
         return "[]"
+    year_filter = ""
+    params: list = [tsquery]
+    if año:
+        year_filter = "AND EXTRACT(YEAR FROM p.fecha) = %s"
+        params.append(int(año))
     with get_cursor() as cur:
-        cur.execute("""
+        cur.execute(f"""
             SELECT p.titulo, p.tema, p.resumen, p.resultado, p.fecha,
                    m.nombre as municipio,
                    json_agg(DISTINCT jsonb_build_object('partido', v.partido, 'sentido', v.sentido))
@@ -325,14 +376,20 @@ def tool_buscar_actas(query: str) -> str:
             LEFT JOIN votaciones v ON v.punto_id = p.id
             JOIN actas a ON p.acta_id = a.id
             WHERE a.tsv @@ to_tsquery('spanish', %s)
+              {year_filter}
             GROUP BY p.id, p.titulo, p.tema, p.resumen, p.resultado, p.fecha, m.nombre
-            ORDER BY p.fecha DESC LIMIT 15
-        """, (tsquery,))
+            ORDER BY p.fecha DESC LIMIT 20
+        """, params)
         return json.dumps([dict(r) for r in cur.fetchall()], default=str, ensure_ascii=False)
 
 
-def tool_buscar_votaciones(partido: str) -> str:
+def tool_buscar_votaciones(partido: str, año: int | None = None) -> str:
     where = _partido_where(partido)
+    year_extra = ""
+    params: list = []
+    if año:
+        year_extra = "AND EXTRACT(YEAR FROM p.fecha) = %s"
+        params.append(int(año))
 
     with get_cursor() as cur:
         cur.execute(f"""
@@ -340,18 +397,31 @@ def tool_buscar_votaciones(partido: str) -> str:
                    m.nombre as municipio, p.resumen
             FROM votaciones v JOIN puntos_pleno p ON v.punto_id = p.id
             JOIN municipios m ON p.municipio_id = m.id
-            WHERE {where} ORDER BY p.fecha DESC LIMIT 30
-        """)
+            WHERE {where} {year_extra}
+            ORDER BY p.fecha DESC LIMIT 40
+        """, params)
         rows = cur.fetchall()
-        cur.execute(f"SELECT v.sentido, COUNT(*) as n FROM votaciones v JOIN puntos_pleno p ON v.punto_id = p.id WHERE {where} GROUP BY v.sentido")
+        cur.execute(f"""SELECT v.sentido, COUNT(*) as n
+                        FROM votaciones v JOIN puntos_pleno p ON v.punto_id = p.id
+                        WHERE {where} {year_extra} GROUP BY v.sentido""", params)
         stats = {s["sentido"]: s["n"] for s in cur.fetchall()}
-        cur.execute(f"SELECT DISTINCT m.nombre, COUNT(v.id) as votos FROM votaciones v JOIN puntos_pleno p ON v.punto_id = p.id JOIN municipios m ON p.municipio_id = m.id WHERE {where} GROUP BY m.nombre ORDER BY votos DESC")
+        cur.execute(f"""SELECT DISTINCT m.nombre, COUNT(v.id) as votos
+                        FROM votaciones v JOIN puntos_pleno p ON v.punto_id = p.id
+                        JOIN municipios m ON p.municipio_id = m.id
+                        WHERE {where} {year_extra}
+                        GROUP BY m.nombre ORDER BY votos DESC LIMIT 15""", params)
         municipios = [dict(m) for m in cur.fetchall()]
-        cur.execute(f"SELECT p.tema, COUNT(*) as n FROM votaciones v JOIN puntos_pleno p ON v.punto_id = p.id WHERE {where} AND p.tema IS NOT NULL GROUP BY p.tema ORDER BY n DESC LIMIT 8")
+        cur.execute(f"""SELECT p.tema, COUNT(*) as n
+                        FROM votaciones v JOIN puntos_pleno p ON v.punto_id = p.id
+                        WHERE {where} {year_extra} AND p.tema IS NOT NULL
+                        GROUP BY p.tema ORDER BY n DESC LIMIT 10""", params)
         temas = [dict(t) for t in cur.fetchall()]
-    return json.dumps({"partido": partido, "total": sum(stats.values()), "resumen": stats,
-                        "municipios": municipios, "temas": temas,
-                        "detalle": [dict(r) for r in rows]}, default=str, ensure_ascii=False)
+    return json.dumps({
+        "partido": partido, "año": año,
+        "total": sum(stats.values()), "resumen": stats,
+        "municipios": municipios, "temas": temas,
+        "detalle": [dict(r) for r in rows],
+    }, default=str, ensure_ascii=False)
 
 
 def tool_info_municipio(nombre: str) -> str:
@@ -387,11 +457,18 @@ def tool_estadisticas() -> str:
     return json.dumps({"stats": stats, "pipeline": pipeline, "temas": temas}, default=str, ensure_ascii=False)
 
 
-def tool_buscar_argumentos(query: str) -> str:
+def tool_buscar_argumentos(query: str, partido: str = "", año: int | None = None) -> str:
     clause_tpl, params = _build_like_params(query, max_terms=8)
     if not params:
         return "[]"
     like_clauses = clause_tpl.format(col="a.argumento")
+    extra_where = ""
+    if partido:
+        part_where = _partido_where(partido).replace("v.partido", "a.partido")
+        extra_where += f" AND {part_where}"
+    if año:
+        extra_where += " AND EXTRACT(YEAR FROM p.fecha) = %s"
+        params.append(int(año))
     with get_cursor() as cur:
         cur.execute(f"""
             SELECT a.partido, a.posicion, a.argumento, p.titulo, p.tema, p.fecha,
@@ -399,15 +476,20 @@ def tool_buscar_argumentos(query: str) -> str:
             FROM argumentos a
             JOIN puntos_pleno p ON a.punto_id = p.id
             JOIN municipios m ON p.municipio_id = m.id
-            WHERE {like_clauses}
-            ORDER BY p.fecha DESC LIMIT 20
+            WHERE ({like_clauses}) {extra_where}
+            ORDER BY p.fecha DESC LIMIT 25
         """, params)
         return json.dumps([dict(r) for r in cur.fetchall()], default=str, ensure_ascii=False)
 
 
-def tool_buscar_por_tema(tema: str) -> str:
+def tool_buscar_por_tema(tema: str, año: int | None = None) -> str:
+    year_filter = ""
+    params: list = [tema]
+    if año:
+        year_filter = "AND EXTRACT(YEAR FROM p.fecha) = %s"
+        params.append(int(año))
     with get_cursor() as cur:
-        cur.execute("""
+        cur.execute(f"""
             SELECT p.titulo, p.tema, p.resumen, p.resultado, p.fecha,
                    m.nombre as municipio,
                    json_agg(DISTINCT jsonb_build_object('partido', v.partido, 'sentido', v.sentido))
@@ -415,10 +497,10 @@ def tool_buscar_por_tema(tema: str) -> str:
             FROM puntos_pleno p
             JOIN municipios m ON p.municipio_id = m.id
             LEFT JOIN votaciones v ON v.punto_id = p.id
-            WHERE p.tema = %s
+            WHERE p.tema = %s {year_filter}
             GROUP BY p.id, p.titulo, p.tema, p.resumen, p.resultado, p.fecha, m.nombre
-            ORDER BY p.fecha DESC LIMIT 20
-        """, (tema,))
+            ORDER BY p.fecha DESC LIMIT 25
+        """, params)
         return json.dumps([dict(r) for r in cur.fetchall()], default=str, ensure_ascii=False)
 
 
@@ -520,6 +602,186 @@ def tool_ranking_concejales(partido: str = "", municipio: str = "", limit: int =
         return json.dumps([dict(r) for r in cur.fetchall()], default=str, ensure_ascii=False)
 
 
+def tool_citas_literales(partido: str, tema: str = "", año: int | None = None, limit: int = 15) -> str:
+    """Extrae frases textuales de concejales de un partido — MUNICIÓN POLÍTICA directa."""
+    part_where = _partido_where(partido).replace("v.partido", "a.partido")
+    where_parts = [part_where, "LENGTH(a.argumento) >= 30"]
+    params: list = []
+    if tema:
+        clause_tpl, tema_params = _build_like_params(tema, max_terms=6)
+        if tema_params:
+            where_parts.append("(" + clause_tpl.format(col="a.argumento") + ")")
+            params.extend(tema_params)
+    if año:
+        where_parts.append("EXTRACT(YEAR FROM p.fecha) = %s")
+        params.append(int(año))
+    where = " AND ".join(where_parts)
+    with get_cursor() as cur:
+        cur.execute(f"""
+            SELECT a.partido, a.posicion, a.argumento, p.titulo, p.tema, p.fecha,
+                   p.resultado, m.nombre as municipio, m.poblacion
+            FROM argumentos a
+            JOIN puntos_pleno p ON a.punto_id = p.id
+            JOIN municipios m ON p.municipio_id = m.id
+            WHERE {where}
+            ORDER BY
+                CASE WHEN m.poblacion > 20000 THEN 0 ELSE 1 END,
+                p.fecha DESC
+            LIMIT %s
+        """, params + [limit])
+        return json.dumps([dict(r) for r in cur.fetchall()], default=str, ensure_ascii=False)
+
+
+def tool_contradicciones_partido(partido: str, tema: str = "") -> str:
+    """Detecta incoherencias: mismo partido vota SÍ en un municipio y NO en otro sobre el mismo tema."""
+    part_where = _partido_where(partido)
+    tema_filter = ""
+    params: list = []
+    if tema:
+        tema_filter = "AND p.tema = %s"
+        params.append(tema)
+
+    with get_cursor() as cur:
+        # Incoherencias por tema: mismo partido vota distinto en distintos municipios
+        cur.execute(f"""
+            SELECT p.tema,
+                   COUNT(DISTINCT CASE WHEN v.sentido = 'a_favor' THEN m.id END) AS muni_favor,
+                   COUNT(DISTINCT CASE WHEN v.sentido = 'en_contra' THEN m.id END) AS muni_contra,
+                   COUNT(DISTINCT CASE WHEN v.sentido = 'abstencion' THEN m.id END) AS muni_abst,
+                   array_agg(DISTINCT m.nombre) FILTER (WHERE v.sentido = 'a_favor') AS municipios_favor,
+                   array_agg(DISTINCT m.nombre) FILTER (WHERE v.sentido = 'en_contra') AS municipios_contra
+            FROM votaciones v
+            JOIN puntos_pleno p ON v.punto_id = p.id
+            JOIN municipios m ON p.municipio_id = m.id
+            WHERE {part_where}
+              AND p.tema IS NOT NULL AND p.tema != 'procedimiento'
+              AND p.fecha >= CURRENT_DATE - INTERVAL '365 days'
+              {tema_filter}
+            GROUP BY p.tema
+            HAVING COUNT(DISTINCT CASE WHEN v.sentido = 'a_favor' THEN m.id END) >= 1
+               AND COUNT(DISTINCT CASE WHEN v.sentido = 'en_contra' THEN m.id END) >= 1
+            ORDER BY (COUNT(DISTINCT CASE WHEN v.sentido = 'a_favor' THEN m.id END)
+                    + COUNT(DISTINCT CASE WHEN v.sentido = 'en_contra' THEN m.id END)) DESC
+            LIMIT 15
+        """, params)
+        incoherencias = [dict(r) for r in cur.fetchall()]
+
+        # Votos polémicos: puntos donde el partido votó a favor/en contra contra la mayoría
+        cur.execute(f"""
+            SELECT v.sentido, p.titulo, p.tema, p.resultado, p.fecha,
+                   m.nombre as municipio, v.partido
+            FROM votaciones v
+            JOIN puntos_pleno p ON v.punto_id = p.id
+            JOIN municipios m ON p.municipio_id = m.id
+            WHERE {part_where}
+              AND p.fecha >= CURRENT_DATE - INTERVAL '180 days'
+              AND (
+                (v.sentido = 'en_contra' AND p.resultado = 'aprobada')
+                OR (v.sentido = 'a_favor' AND p.resultado = 'rechazada')
+              )
+              {tema_filter}
+            ORDER BY p.fecha DESC LIMIT 15
+        """, params)
+        votos_contracorriente = [dict(r) for r in cur.fetchall()]
+
+    return json.dumps({
+        "partido": partido,
+        "tema_filtrado": tema or None,
+        "incoherencias_por_tema": incoherencias,
+        "votos_contracorriente": votos_contracorriente,
+        "total_incoherencias": len(incoherencias),
+    }, default=str, ensure_ascii=False)
+
+
+def tool_dossier_adversario(partido: str, tema: str = "", año: int | None = 2026) -> str:
+    """Combo completo: votaciones + argumentos + citas + contradicciones + votos polémicos."""
+    votaciones = json.loads(tool_buscar_votaciones(partido, año))
+    citas_tema = json.loads(tool_citas_literales(partido, tema, año, limit=10)) if tema else []
+    citas_generales = json.loads(tool_citas_literales(partido, "", año, limit=8))
+    contradicciones = json.loads(tool_contradicciones_partido(partido, tema))
+
+    return json.dumps({
+        "partido": partido,
+        "tema": tema or None,
+        "año": año,
+        "resumen_votacion": votaciones.get("resumen", {}),
+        "total_votos": votaciones.get("total", 0),
+        "municipios_top": votaciones.get("municipios", [])[:8],
+        "temas_debatidos": votaciones.get("temas", [])[:6],
+        "citas_sobre_tema": citas_tema,
+        "citas_generales": citas_generales,
+        "incoherencias": contradicciones.get("incoherencias_por_tema", []),
+        "votos_contracorriente": contradicciones.get("votos_contracorriente", []),
+        "votaciones_detalle": votaciones.get("detalle", [])[:12],
+    }, default=str, ensure_ascii=False)
+
+
+def tool_oportunidades_tema(tema: str = "") -> str:
+    """Detecta temas en tendencia donde AC aún no ha tomado posición o rivales están divididos."""
+    with get_cursor() as cur:
+        # Temas en tendencia últimos 60 días
+        tema_filter = ""
+        params: list = []
+        if tema:
+            tema_filter = "AND p.tema = %s"
+            params.append(tema)
+
+        cur.execute(f"""
+            SELECT p.tema, COUNT(*) AS total_puntos,
+                   COUNT(DISTINCT p.municipio_id) AS municipios_debaten,
+                   COUNT(*) FILTER (WHERE p.fecha >= CURRENT_DATE - INTERVAL '30 days') AS ult_30d
+            FROM puntos_pleno p
+            WHERE p.fecha >= CURRENT_DATE - INTERVAL '60 days'
+              AND p.tema IS NOT NULL AND p.tema != 'procedimiento'
+              {tema_filter}
+            GROUP BY p.tema
+            ORDER BY ult_30d DESC LIMIT 8
+        """, params)
+        temas_calientes = [dict(r) for r in cur.fetchall()]
+
+        # Posición de AC en esos temas (silencios y oportunidades)
+        ac_where = _partido_where("AC")
+        cur.execute(f"""
+            SELECT p.tema,
+                   COUNT(v.id) FILTER (WHERE {ac_where}) AS votos_ac,
+                   COUNT(v.id) AS votos_totales,
+                   COUNT(DISTINCT p.municipio_id) AS municipios_con_tema
+            FROM puntos_pleno p
+            LEFT JOIN votaciones v ON v.punto_id = p.id
+            WHERE p.fecha >= CURRENT_DATE - INTERVAL '90 days'
+              AND p.tema IS NOT NULL AND p.tema != 'procedimiento'
+              {tema_filter}
+            GROUP BY p.tema
+            ORDER BY votos_totales DESC LIMIT 12
+        """, params)
+        posicion_ac = [dict(r) for r in cur.fetchall()]
+
+        # Divisiones entre rivales en esos temas
+        cur.execute(f"""
+            SELECT p.tema, v.partido,
+                   COUNT(*) FILTER (WHERE v.sentido = 'a_favor') AS favor,
+                   COUNT(*) FILTER (WHERE v.sentido = 'en_contra') AS contra
+            FROM votaciones v
+            JOIN puntos_pleno p ON v.punto_id = p.id
+            WHERE p.fecha >= CURRENT_DATE - INTERVAL '90 days'
+              AND p.tema IS NOT NULL AND p.tema != 'procedimiento'
+              AND v.partido IN ('ERC', 'PSC', 'JxCat', 'CUP', 'PP', 'VOX')
+              {tema_filter}
+            GROUP BY p.tema, v.partido
+            HAVING COUNT(*) FILTER (WHERE v.sentido = 'a_favor') >= 1
+               AND COUNT(*) FILTER (WHERE v.sentido = 'en_contra') >= 1
+            ORDER BY p.tema, (COUNT(*) FILTER (WHERE v.sentido = 'a_favor') + COUNT(*) FILTER (WHERE v.sentido = 'en_contra')) DESC
+            LIMIT 20
+        """, params)
+        rivales_divididos = [dict(r) for r in cur.fetchall()]
+
+    return json.dumps({
+        "temas_calientes_60d": temas_calientes,
+        "posicion_ac_90d": posicion_ac,
+        "rivales_divididos_90d": rivales_divididos,
+    }, default=str, ensure_ascii=False)
+
+
 def tool_iniciativas_parlament(query: str) -> str:
     clause_tpl, params = _build_like_params(query, max_terms=6)
     if not params:
@@ -534,13 +796,21 @@ def tool_iniciativas_parlament(query: str) -> str:
         return json.dumps([dict(r) for r in cur.fetchall()], default=str, ensure_ascii=False)
 
 
+def _opt_year(a: dict) -> int | None:
+    v = a.get("año") or a.get("year") or a.get("anyo")
+    try:
+        return int(v) if v else None
+    except (TypeError, ValueError):
+        return None
+
+
 TOOL_MAP = {
-    "buscar_actas": lambda a: tool_buscar_actas(a.get("query", "")),
-    "buscar_votaciones": lambda a: tool_buscar_votaciones(a.get("partido", "")),
+    "buscar_actas": lambda a: tool_buscar_actas(a.get("query", ""), _opt_year(a)),
+    "buscar_votaciones": lambda a: tool_buscar_votaciones(a.get("partido", ""), _opt_year(a)),
     "info_municipio": lambda a: tool_info_municipio(a.get("nombre", "")),
     "estadisticas": lambda a: tool_estadisticas(),
-    "buscar_argumentos": lambda a: tool_buscar_argumentos(a.get("query", "")),
-    "buscar_por_tema": lambda a: tool_buscar_por_tema(a.get("tema", "")),
+    "buscar_argumentos": lambda a: tool_buscar_argumentos(a.get("query", ""), a.get("partido", ""), _opt_year(a)),
+    "buscar_por_tema": lambda a: tool_buscar_por_tema(a.get("tema", ""), _opt_year(a)),
     "comparar_partidos": lambda a: tool_comparar_partidos(a.get("partido1", ""), a.get("partido2", "")),
     "elecciones_municipio": lambda a: tool_elecciones_municipio(a.get("nombre", "")),
     "historial_alcaldes": lambda a: tool_historial_alcaldes(a.get("nombre", "")),
@@ -551,6 +821,10 @@ TOOL_MAP = {
     "recepcion_social": lambda a: tool_recepcion_social(a.get("tema", ""), a.get("municipio", ""), int(a.get("dias", 14))),
     "tendencias_emergentes": lambda a: tool_tendencias_emergentes(),
     "ranking_concejales": lambda a: tool_ranking_concejales(a.get("partido", ""), a.get("municipio", ""), int(a.get("limit", 20))),
+    "citas_literales": lambda a: tool_citas_literales(a.get("partido", ""), a.get("tema", ""), _opt_year(a), int(a.get("limit", 15))),
+    "contradicciones_partido": lambda a: tool_contradicciones_partido(a.get("partido", ""), a.get("tema", "")),
+    "dossier_adversario": lambda a: tool_dossier_adversario(a.get("partido", ""), a.get("tema", ""), _opt_year(a) or 2026),
+    "oportunidades_tema": lambda a: tool_oportunidades_tema(a.get("tema", "")),
 }
 
 
@@ -654,7 +928,9 @@ def chat(
         plan = None
 
     if plan and plan.get("direct_answer"):
-        return {"answer": plan["direct_answer"], "sources": [], "follow_ups": []}
+        return {"answer": plan["direct_answer"], "sources": [], "follow_ups": [], "intent": "consulta"}
+
+    intent = (plan.get("intent", "consulta") if plan else "consulta") or "consulta"
 
     # Step 2: Execute initial plan
     _execute_plan(plan or {}, tool_results, sources, tools_used)
@@ -689,7 +965,14 @@ def chat(
 
     # Step 3: Answer with data
     data = "\n\n---\n\n".join(tool_results)
-    msgs = [{"role": "system", "content": ANSWER_PROMPT}]
+    intent_hint = {
+        "atacar": "INTENCIÓN DETECTADA: ATACAR. Objetivo: generar munición política contra el rival. La sección '¿Y ahora qué?' DEBE dar una frase atacable lista para tweet/rueda.",
+        "defender": "INTENCIÓN DETECTADA: DEFENDER. Objetivo: argumentario defensivo. La sección '¿Y ahora qué?' DEBE dar la respuesta a dar si nos preguntan.",
+        "comparar": "INTENCIÓN DETECTADA: COMPARAR. Objetivo: contraste entre partidos. La sección '¿Y ahora qué?' DEBE posicionar AC frente a los rivales.",
+        "oportunidad": "INTENCIÓN DETECTADA: OPORTUNIDAD. Objetivo: hueco comunicativo. La sección '¿Y ahora qué?' DEBE identificar el espacio concreto a ocupar.",
+        "consulta": "INTENCIÓN: CONSULTA. Responde de forma útil e informada.",
+    }.get(intent, "")
+    msgs = [{"role": "system", "content": ANSWER_PROMPT + "\n\n" + intent_hint}]
     for h in req.history[-6:]:
         msgs.append({"role": h.get("role", "user"), "content": h.get("content", "")})
     msgs.append({"role": "user", "content": f"Dades consultades:\n\n{data[:14000]}\n\nPregunta: {req.message}"})
@@ -724,6 +1007,7 @@ def chat(
             "n_sources": len(sources),
             "useful_rows": useful,
             "retried": retried,
+            "intent": intent,
             "latency_ms": int((time.time() - t0) * 1000),
         },
         request=request,
@@ -732,4 +1016,5 @@ def chat(
         "answer": answer or "Sense resposta.",
         "sources": sources[:6],
         "follow_ups": follow_ups,
+        "intent": intent,
     }

@@ -50,7 +50,7 @@ export function ChatMessage({ message, onFollowUp, followUpDisabled }: ChatMessa
       </div>
 
       <div className="flex flex-col gap-2 w-full max-w-[min(720px,calc(100%-3rem))]">
-        <AssistantAnswerCard content={message.content} />
+        <AssistantAnswerCard content={message.content} intent={message.intent} />
 
         {message.sources && message.sources.length > 0 && (
           <SourcesGrid sources={message.sources} />

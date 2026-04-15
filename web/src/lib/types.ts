@@ -51,12 +51,15 @@ export interface SearchResponse {
 }
 
 // Chat types
+export type ChatIntent = 'atacar' | 'defender' | 'comparar' | 'oportunidad' | 'consulta';
+
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   sources?: Source[];
   followUps?: string[];
+  intent?: ChatIntent;
   timestamp: string;
 }
 
@@ -79,28 +82,42 @@ export interface ChatResponse {
   answer: string;
   sources?: Source[];
   follow_ups?: string[];
+  intent?: ChatIntent;
 }
 
 // Alerts types
 export type AlertSeverity = 'alta' | 'media' | 'baja';
+export type AlertEstado = 'nueva' | 'vista' | 'resuelta' | 'descartada';
 
 export interface Alerta {
-  id: string;
-  severity: AlertSeverity;
+  id: number;
+  tipo: string;
+  severidad: AlertSeverity;
   titulo: string;
   descripcion: string;
-  municipio: string;
-  fecha: string;
-  revisada: boolean;
-  tipo: string;
+  estado: AlertEstado;
+  punto_id?: number | null;
+  municipio_id?: number | null;
+  cargo_electo_id?: number | null;
+  contexto?: Record<string, unknown> | null;
+  puntos_comparados?: unknown | null;
+  created_at: string;
+  viewed_at?: string | null;
+  resolved_at?: string | null;
+  resolved_by?: string | null;
+  municipio?: string | null;
+  concejal?: string | null;
+  punto_titulo?: string | null;
+  punto_tema?: string | null;
 }
 
 export interface AlertasStats {
-  alta: number;
-  media: number;
-  baja: number;
   total: number;
-  sin_revisar: number;
+  nuevas: number;
+  altas_nuevas: number;
+  medias_nuevas: number;
+  bajas_nuevas: number;
+  semana: number;
 }
 
 // Municipios types

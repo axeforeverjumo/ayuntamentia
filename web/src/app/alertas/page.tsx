@@ -1,33 +1,77 @@
 'use client';
 
-import { useState, useEffect, useTransition } from 'react';
+import { useState, useEffect, useTransition, useMemo } from 'react';
 import {
-  Bell,
-  AlertTriangle,
-  AlertCircle,
-  Info,
-  CheckCircle2,
-  Filter,
-  Loader2,
-  RefreshCw,
-  MapPin,
-  Clock,
+  Bell, AlertTriangle, AlertCircle, Info, CheckCircle2,
+  Filter, Loader2, RefreshCw, MapPin, Clock, X, Eye, Sparkles,
+  TrendingUp, Building2, Tag,
 } from 'lucide-react';
-import { AlertBadge } from '@/components/ui/AlertBadge';
 import { apiClient } from '@/lib/ApiClient';
-import type { Alerta, AlertasStats, AlertSeverity } from '@/lib/types';
-import { formatDate, cn } from '@/lib/utils';
+import { PartidoChip } from '@/components/ui/PartidoChip';
+import type { Alerta, AlertasStats, AlertSeverity, AlertEstado } from '@/lib/types';
+import { cn } from '@/lib/utils';
 
-const severityIcons: Record<AlertSeverity, React.ComponentType<{ className?: string }>> = {
-  alta: AlertTriangle,
-  media: AlertCircle,
-  baja: Info,
+type ListResponse = { total: number; page: number; results: Alerta[] } | Alerta[];
+
+const SEVERITY_META: Record<AlertSeverity, {
+  label: string; icon: typeof AlertTriangle; text: string; bg: string;
+  border: string; glow: string; borderL: string;
+}> = {
+  alta: {
+    label: 'Alta', icon: AlertTriangle,
+    text: 'text-[#f87171]', bg: 'bg-[#2a0a0a]',
+    border: 'border-[#dc2626]/40',
+    borderL: 'border-l-[#dc2626]',
+    glow: 'shadow-[0_0_28px_-10px_rgba(220,38,38,0.5)]',
+  },
+  media: {
+    label: 'Mitja', icon: AlertCircle,
+    text: 'text-[#fbbf24]', bg: 'bg-[#2a1f08]',
+    border: 'border-[#d97706]/40',
+    borderL: 'border-l-[#d97706]',
+    glow: 'shadow-[0_0_28px_-10px_rgba(217,119,6,0.4)]',
+  },
+  baja: {
+    label: 'Baixa', icon: Info,
+    text: 'text-[#4ade80]', bg: 'bg-[#052e16]',
+    border: 'border-[#16a34a]/40',
+    borderL: 'border-l-[#16a34a]',
+    glow: 'shadow-[0_0_28px_-10px_rgba(22,163,74,0.4)]',
+  },
 };
+
+const TIPO_LABEL: Record<string, string> = {
+  incoherencia_interna: 'Incoherència interna',
+  tendencia_emergente: 'Tendència emergent',
+  contradiccion_rival: 'Contradicció rival',
+  voto_polemic: 'Vot polèmic',
+  promesa_incumplida: 'Promesa incomplerta',
+};
+
+function formatFechaLarga(fecha?: string | null): string {
+  if (!fecha) return '';
+  try {
+    const d = new Date(fecha);
+    if (isNaN(d.getTime())) return fecha;
+    return new Intl.DateTimeFormat('ca-ES', {
+      day: 'numeric', month: 'short', year: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    }).format(d);
+  } catch {
+    return fecha;
+  }
+}
+
+function extractPartido(titulo: string): string | null {
+  const m = titulo.match(/\b(AC|ERC|PSC|CUP|PP|VOX|Cs|JxCat|Junts|Comuns|Aliança\s+Catalana)\b/i);
+  return m ? m[1] : null;
+}
 
 export default function AlertasPage() {
   const [alertas, setAlertas] = useState<Alerta[]>([]);
   const [stats, setStats] = useState<AlertasStats | null>(null);
-  const [filter, setFilter] = useState<AlertSeverity | 'todas'>('todas');
+  const [filter, setFilter] = useState<AlertSeverity | 'totes'>('totes');
+  const [estadoFilter, setEstadoFilter] = useState<'nueva' | 'todas'>('nueva');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -36,14 +80,16 @@ export default function AlertasPage() {
     setLoading(true);
     setError(null);
     try {
-      const [alertasData, statsData] = await Promise.all([
-        apiClient.get<any>('/api/alertas/'),
+      const params = estadoFilter === 'nueva' ? '?estado=nueva' : '';
+      const [listResp, statsData] = await Promise.all([
+        apiClient.get<ListResponse>(`/api/alertas/${params}`),
         apiClient.get<AlertasStats>('/api/alertas/stats/resumen'),
       ]);
-      setAlertas(Array.isArray(alertasData) ? alertasData : alertasData.results || []);
+      const list = Array.isArray(listResp) ? listResp : (listResp.results || []);
+      setAlertas(list);
       setStats(statsData);
     } catch {
-      setError('No s\'ha pogut carregar les alertes.');
+      setError('No s\'han pogut carregar les alertes.');
     } finally {
       setLoading(false);
     }
@@ -51,245 +97,361 @@ export default function AlertasPage() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [estadoFilter]);
 
-  const markAsReviewed = async (id: string) => {
+  const updateEstado = (id: number, estado: AlertEstado) => {
     startTransition(async () => {
       try {
-        await apiClient.patch(`/api/alertas/${id}/`, { revisada: true });
+        await apiClient.patch(`/api/alertas/${id}/estado?estado=${estado}`, null);
         setAlertas((prev) =>
-          prev.map((a) => (a.id === id ? { ...a, revisada: true } : a)),
+          estadoFilter === 'nueva'
+            ? prev.filter((a) => a.id !== id)
+            : prev.map((a) => a.id === id ? { ...a, estado } : a)
         );
         if (stats) {
-          setStats({ ...stats, sin_revisar: Math.max(0, stats.sin_revisar - 1) });
+          setStats({
+            ...stats,
+            nuevas: Math.max(0, stats.nuevas - 1),
+          });
         }
       } catch {
-        // Silently fail for now
+        // silently fail
       }
     });
   };
 
-  const filteredAlertas = alertas.filter(
-    (a) => filter === 'todas' || a.severity === filter,
+  const filteredAlertas = useMemo(
+    () => alertas.filter((a) => filter === 'totes' || a.severidad === filter),
+    [alertas, filter],
   );
 
+  const counts = useMemo(() => {
+    const c: Record<AlertSeverity, number> = { alta: 0, media: 0, baja: 0 };
+    for (const a of alertas) c[a.severidad] = (c[a.severidad] || 0) + 1;
+    return c;
+  }, [alertas]);
+
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-[#e6edf3]">Alertes</h1>
-          <p className="text-sm text-[#8b949e] mt-0.5">
-            Notificacions i anomalies detectades
-          </p>
-        </div>
-        <button
-          onClick={loadData}
-          disabled={loading}
-          className="flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg border border-[#30363d] text-[#8b949e] hover:bg-[#161b22] transition-colors"
-        >
-          <RefreshCw className={cn('w-3.5 h-3.5', loading && 'animate-spin')} />
-          Actualitzar
-        </button>
+    <div className="min-h-screen p-6 relative">
+      {/* Ambient glow */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -top-40 -left-40 w-[400px] h-[400px] rounded-full bg-[#d97706] opacity-[0.04] blur-[120px]" />
+        <div className="absolute -bottom-40 -right-40 w-[400px] h-[400px] rounded-full bg-[#dc2626] opacity-[0.04] blur-[120px]" />
       </div>
 
-      {/* Stats */}
-      {stats && (
-        <div className="grid grid-cols-4 gap-4">
-          <div className="bg-[#161b22] border border-[#30363d] rounded-lg p-4">
-            <div className="flex items-center justify-between mb-2">
-              <Bell className="w-4 h-4 text-[#8b949e]" />
-              <span className="text-xs text-[#6e7681]">Total</span>
+      <div className="relative z-10 space-y-6 max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#d97706]/20 to-[#dc2626]/20 border border-[#d97706]/30 flex items-center justify-center relative">
+              <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-[#d97706]/10 to-[#dc2626]/10 blur-md" />
+              <Bell className="w-4 h-4 text-[#fbbf24] relative" />
             </div>
-            <p className="text-2xl font-bold text-[#e6edf3]">{stats.total}</p>
-            <p className="text-xs text-[#8b949e] mt-0.5">alertes</p>
-          </div>
-          <div className="bg-[#161b22] border border-[#7f1d1d] rounded-lg p-4">
-            <div className="flex items-center justify-between mb-2">
-              <AlertTriangle className="w-4 h-4 text-[#f87171]" />
-              <span className="text-xs text-[#6e7681]">Alta</span>
+            <div>
+              <h1 className="text-lg font-bold text-[#e6edf3] flex items-center gap-2">
+                Alertes polítiques
+                {stats && stats.nuevas > 0 && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#2a1f08] border border-[#d97706]/40 text-[10px] font-semibold uppercase tracking-wider text-[#fbbf24]">
+                    <span className="w-1 h-1 rounded-full bg-[#fbbf24] animate-pulse" />
+                    {stats.nuevas} noves
+                  </span>
+                )}
+              </h1>
+              <p className="text-xs text-[#8b949e] mt-0.5">
+                Incoherències, contradiccions i tendències detectades automàticament
+              </p>
             </div>
-            <p className="text-2xl font-bold text-[#f87171]">{stats.alta}</p>
-            <p className="text-xs text-[#8b949e] mt-0.5">prioritat alta</p>
           </div>
-          <div className="bg-[#161b22] border border-[#78350f] rounded-lg p-4">
-            <div className="flex items-center justify-between mb-2">
-              <AlertCircle className="w-4 h-4 text-[#fbbf24]" />
-              <span className="text-xs text-[#6e7681]">Mitja</span>
-            </div>
-            <p className="text-2xl font-bold text-[#fbbf24]">{stats.media}</p>
-            <p className="text-xs text-[#8b949e] mt-0.5">prioritat mitja</p>
-          </div>
-          <div className="bg-[#161b22] border border-[#14532d] rounded-lg p-4">
-            <div className="flex items-center justify-between mb-2">
-              <Info className="w-4 h-4 text-[#4ade80]" />
-              <span className="text-xs text-[#6e7681]">Baixa</span>
-            </div>
-            <p className="text-2xl font-bold text-[#4ade80]">{stats.baja}</p>
-            <p className="text-xs text-[#8b949e] mt-0.5">prioritat baixa</p>
-          </div>
+          <button
+            onClick={loadData}
+            disabled={loading}
+            className={cn(
+              'flex items-center gap-2 px-3 py-2 text-xs rounded-xl',
+              'bg-gradient-to-r from-[#1a0b2e]/50 to-[#0a1e26]/50',
+              'border border-[#7c3aed]/30 text-[#c4b5fd]',
+              'hover:border-[#7c3aed]/60 hover:text-[#e6edf3]',
+              'transition-all duration-200',
+              'disabled:opacity-50',
+            )}
+          >
+            <RefreshCw className={cn('w-3.5 h-3.5', loading && 'animate-spin')} />
+            Actualitzar
+          </button>
         </div>
-      )}
 
-      {/* Filter tabs */}
-      <div className="flex items-center gap-2">
-        <Filter className="w-4 h-4 text-[#8b949e]" />
-        <div className="flex bg-[#161b22] border border-[#30363d] rounded-lg p-1 gap-1">
-          {(
-            ['todas', 'alta', 'media', 'baja'] as Array<
-              AlertSeverity | 'todas'
-            >
-          ).map((f) => (
+        {/* Stats */}
+        {stats && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <StatCard
+              icon={Bell} label="Totals" value={stats.total}
+              sub={`${stats.nuevas} sense revisar`}
+              gradient="from-[#7c3aed]/15 to-[#06b6d4]/15"
+              border="border-[#7c3aed]/30" iconColor="text-[#c4b5fd]"
+            />
+            <StatCard
+              icon={AlertTriangle} label="Alta prioritat" value={stats.altas_nuevas}
+              sub="requereixen atenció"
+              gradient="from-[#dc2626]/15 to-[#2a0a0a]"
+              border="border-[#dc2626]/40" iconColor="text-[#f87171]"
+            />
+            <StatCard
+              icon={AlertCircle} label="Prioritat mitja" value={stats.medias_nuevas}
+              sub="patrons a vigilar"
+              gradient="from-[#d97706]/15 to-[#2a1f08]"
+              border="border-[#d97706]/40" iconColor="text-[#fbbf24]"
+            />
+            <StatCard
+              icon={TrendingUp} label="Aquesta setmana" value={stats.semana}
+              sub="alertes noves"
+              gradient="from-[#16a34a]/15 to-[#052e16]"
+              border="border-[#16a34a]/40" iconColor="text-[#4ade80]"
+            />
+          </div>
+        )}
+
+        {/* Filters */}
+        <div className="flex items-center gap-3 flex-wrap">
+          <Filter className="w-4 h-4 text-[#8b949e]" />
+          <div className="flex bg-gradient-to-r from-[#0f141b] to-[#161b22] border border-[#21262d] rounded-xl p-1 gap-1">
+            {(['totes', 'alta', 'media', 'baja'] as const).map((f) => {
+              const count = f === 'totes' ? alertas.length : counts[f];
+              return (
+                <button
+                  key={f}
+                  onClick={() => setFilter(f)}
+                  className={cn(
+                    'px-3 py-1.5 rounded-lg text-xs font-medium transition-all capitalize',
+                    filter === f
+                      ? 'bg-gradient-to-r from-[#1a0b2e] to-[#0a1e26] text-[#e6edf3] border border-[#7c3aed]/40'
+                      : 'text-[#8b949e] hover:text-[#e6edf3]',
+                  )}
+                >
+                  {f === 'totes' ? 'Totes' : SEVERITY_META[f].label}
+                  <span className="ml-1.5 text-[10px] text-[#6e7681]">({count})</span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="flex bg-gradient-to-r from-[#0f141b] to-[#161b22] border border-[#21262d] rounded-xl p-1 gap-1 ml-auto">
             <button
-              key={f}
-              onClick={() => setFilter(f)}
+              onClick={() => setEstadoFilter('nueva')}
               className={cn(
-                'px-3 py-1.5 rounded-md text-xs font-medium transition-colors capitalize',
-                filter === f
-                  ? 'bg-[#1c2128] text-[#e6edf3]'
+                'px-3 py-1.5 rounded-lg text-xs font-medium transition-all',
+                estadoFilter === 'nueva'
+                  ? 'bg-gradient-to-r from-[#2a1f08] to-[#1f1a0d] text-[#fbbf24] border border-[#d97706]/40'
                   : 'text-[#8b949e] hover:text-[#e6edf3]',
               )}
             >
-              {f === 'todas' ? 'Totes' : f.charAt(0).toUpperCase() + f.slice(1)}
-              {f !== 'todas' && stats && (
-                <span className="ml-1.5 text-[10px] text-[#6e7681]">
-                  ({stats[f as AlertSeverity]})
-                </span>
-              )}
+              Sense revisar
             </button>
-          ))}
+            <button
+              onClick={() => setEstadoFilter('todas')}
+              className={cn(
+                'px-3 py-1.5 rounded-lg text-xs font-medium transition-all',
+                estadoFilter === 'todas'
+                  ? 'bg-gradient-to-r from-[#1a0b2e] to-[#0a1e26] text-[#e6edf3] border border-[#7c3aed]/40'
+                  : 'text-[#8b949e] hover:text-[#e6edf3]',
+              )}
+            >
+              Totes
+            </button>
+          </div>
         </div>
-        {stats && stats.sin_revisar > 0 && (
-          <span className="ml-auto text-xs text-[#fbbf24] flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#fbbf24] animate-pulse inline-block" />
-            {stats.sin_revisar} sense revisar
-          </span>
+
+        {/* Error state */}
+        {error && (
+          <div className="flex items-center gap-3 p-4 rounded-xl bg-gradient-to-r from-[#450a0a] to-[#2a0a0a] border border-[#dc2626]/40">
+            <AlertCircle className="w-4 h-4 text-[#f87171] flex-shrink-0" />
+            <p className="text-sm text-[#fca5a5]">{error}</p>
+          </div>
+        )}
+
+        {/* Loading */}
+        {loading && (
+          <div className="flex items-center justify-center py-16">
+            <div className="flex items-center gap-3">
+              <Loader2 className="w-5 h-5 text-[#c4b5fd] animate-spin" />
+              <span className="text-sm text-[#8b949e]">Carregant alertes…</span>
+            </div>
+          </div>
+        )}
+
+        {/* Alerts list */}
+        {!loading && (
+          <div className="space-y-3">
+            {filteredAlertas.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 bg-gradient-to-br from-[#0f141b] to-[#161b22] border border-[#21262d] rounded-2xl">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#052e16] to-[#0a1e26] border border-[#16a34a]/30 flex items-center justify-center mb-3">
+                  <CheckCircle2 className="w-6 h-6 text-[#4ade80]" />
+                </div>
+                <p className="text-sm font-medium text-[#e6edf3]">
+                  {estadoFilter === 'nueva' ? 'Cap alerta pendent' : 'Cap alerta'}
+                </p>
+                <p className="text-xs text-[#6e7681] mt-1">
+                  {filter !== 'totes' ? `No hi ha alertes de prioritat ${SEVERITY_META[filter].label.toLowerCase()}` : 'Sistema net'}
+                </p>
+              </div>
+            ) : (
+              filteredAlertas.map((alerta) => (
+                <AlertaCard
+                  key={alerta.id}
+                  alerta={alerta}
+                  onMarkViewed={(id) => updateEstado(id, 'vista')}
+                  onDismiss={(id) => updateEstado(id, 'descartada')}
+                  onResolve={(id) => updateEstado(id, 'resuelta')}
+                  isPending={isPending}
+                />
+              ))
+            )}
+          </div>
         )}
       </div>
+    </div>
+  );
+}
 
-      {/* Error state */}
-      {error && (
-        <div className="flex items-center gap-3 p-4 rounded-lg bg-[#450a0a] border border-[#7f1d1d]">
-          <AlertCircle className="w-4 h-4 text-[#f87171] flex-shrink-0" />
-          <p className="text-sm text-[#f87171]">{error}</p>
-        </div>
-      )}
-
-      {/* Loading */}
-      {loading && (
-        <div className="flex items-center justify-center py-16">
-          <Loader2 className="w-6 h-6 text-[#2563eb] animate-spin" />
-          <span className="ml-2 text-sm text-[#8b949e]">
-            Carregant alertes...
-          </span>
-        </div>
-      )}
-
-      {/* Alerts list */}
-      {!loading && (
-        <div className="space-y-3">
-          {filteredAlertas.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 bg-[#161b22] border border-[#30363d] rounded-lg">
-              <CheckCircle2 className="w-10 h-10 text-[#4ade80] mb-3" />
-              <p className="text-sm font-medium text-[#8b949e]">
-                Cap alerta pendent
-              </p>
-              <p className="text-xs text-[#6e7681] mt-1">
-                No hi ha alertes{' '}
-                {filter !== 'todas' ? `de prioritat ${filter}` : ''} actives
-              </p>
-            </div>
-          ) : (
-            filteredAlertas.map((alerta) => (
-              <AlertaCard
-                key={alerta.id}
-                alerta={alerta}
-                onMarkReviewed={markAsReviewed}
-                isPending={isPending}
-              />
-            ))
-          )}
-        </div>
-      )}
+function StatCard({ icon: Icon, label, value, sub, gradient, border, iconColor }: {
+  icon: typeof Bell; label: string; value: number | string; sub: string;
+  gradient: string; border: string; iconColor: string;
+}) {
+  return (
+    <div className={cn(
+      'relative overflow-hidden rounded-2xl p-4 border bg-gradient-to-br from-[#0f141b] to-[#161b22]',
+      border,
+    )}>
+      <div className={cn('absolute -top-10 -right-10 w-28 h-28 rounded-full bg-gradient-to-br opacity-40 blur-2xl pointer-events-none', gradient)} />
+      <div className="relative flex items-center justify-between mb-2">
+        <Icon className={cn('w-4 h-4', iconColor)} />
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-[#6e7681]">
+          {label}
+        </span>
+      </div>
+      <p className={cn('text-2xl font-bold relative', iconColor)}>{value}</p>
+      <p className="text-[11px] text-[#8b949e] mt-0.5 relative">{sub}</p>
     </div>
   );
 }
 
 function AlertaCard({
-  alerta,
-  onMarkReviewed,
-  isPending,
+  alerta, onMarkViewed, onDismiss, onResolve, isPending,
 }: {
   alerta: Alerta;
-  onMarkReviewed: (id: string) => void;
+  onMarkViewed: (id: number) => void;
+  onDismiss: (id: number) => void;
+  onResolve: (id: number) => void;
   isPending: boolean;
 }) {
-  const SeverityIcon = severityIcons[alerta.severity];
-
-  const borderColors: Record<AlertSeverity, string> = {
-    alta: 'border-l-[#dc2626]',
-    media: 'border-l-[#d97706]',
-    baja: 'border-l-[#16a34a]',
-  };
+  const meta = SEVERITY_META[alerta.severidad];
+  const SeverityIcon = meta.icon;
+  const partido = extractPartido(alerta.titulo);
+  const tipoLabel = TIPO_LABEL[alerta.tipo] || alerta.tipo;
+  const isResolved = alerta.estado === 'resuelta' || alerta.estado === 'descartada';
 
   return (
     <div
       className={cn(
-        'bg-[#161b22] border border-[#30363d] border-l-2 rounded-lg p-4 transition-all',
-        borderColors[alerta.severity],
-        alerta.revisada && 'opacity-60',
+        'relative overflow-hidden rounded-2xl border border-l-2 p-4 transition-all',
+        'bg-gradient-to-br from-[#0f141b] to-[#161b22]',
+        meta.border, meta.borderL, meta.glow,
+        isResolved && 'opacity-50',
       )}
     >
-      <div className="flex items-start gap-3">
-        <SeverityIcon
-          className={cn(
-            'w-5 h-5 flex-shrink-0 mt-0.5',
-            alerta.severity === 'alta'
-              ? 'text-[#f87171]'
-              : alerta.severity === 'media'
-                ? 'text-[#fbbf24]'
-                : 'text-[#4ade80]',
-          )}
-        />
+      <div className="absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl opacity-[0.07] pointer-events-none"
+           style={{ background: alerta.severidad === 'alta' ? '#dc2626' : alerta.severidad === 'media' ? '#d97706' : '#16a34a' }} />
+
+      <div className="relative flex items-start gap-3">
+        <div className={cn(
+          'flex-shrink-0 w-9 h-9 rounded-xl border flex items-center justify-center',
+          meta.bg, meta.border,
+        )}>
+          <SeverityIcon className={cn('w-4 h-4', meta.text)} />
+        </div>
+
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap mb-1">
-            <AlertBadge severity={alerta.severity} />
-            <span className="text-xs text-[#8b949e] bg-[#1c2128] px-1.5 py-0.5 rounded border border-[#30363d]">
-              {alerta.tipo}
+          <div className="flex items-center gap-2 flex-wrap mb-2">
+            <span className={cn(
+              'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider border',
+              meta.bg, meta.text, meta.border,
+            )}>
+              <span className={cn('w-1 h-1 rounded-full', meta.text.replace('text-', 'bg-'))} />
+              {meta.label}
             </span>
-            {alerta.revisada && (
-              <span className="flex items-center gap-1 text-xs text-[#4ade80]">
-                <CheckCircle2 className="w-3 h-3" />
-                Revisada
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#1c2128] border border-[#30363d] text-[#8b949e]">
+              <Tag className="w-2.5 h-2.5" />
+              {tipoLabel}
+            </span>
+            {partido && <PartidoChip partido={partido} size="xs" />}
+            {alerta.estado === 'vista' && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#0a1930] border border-[#1e40af]/30 text-[#93c5fd]">
+                <Eye className="w-2.5 h-2.5" />
+                Vista
+              </span>
+            )}
+            {alerta.estado === 'resuelta' && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#052e16] border border-[#16a34a]/30 text-[#4ade80]">
+                <CheckCircle2 className="w-2.5 h-2.5" />
+                Resolta
               </span>
             )}
           </div>
-          <h3 className="text-sm font-semibold text-[#e6edf3] mb-1">
+
+          <h3 className="text-[14px] font-semibold text-[#f3f6fa] mb-1.5 leading-snug">
             {alerta.titulo}
           </h3>
-          <p className="text-xs text-[#8b949e] leading-relaxed mb-2">
+          <p className="text-[12px] text-[#c9d1d9] leading-relaxed mb-3">
             {alerta.descripcion}
           </p>
-          <div className="flex items-center gap-4 text-xs text-[#6e7681]">
-            <span className="flex items-center gap-1">
-              <MapPin className="w-3 h-3" />
-              {alerta.municipio}
-            </span>
-            <span className="flex items-center gap-1">
+
+          <div className="flex items-center gap-3 text-[10px] text-[#8b949e] flex-wrap">
+            {alerta.municipio && (
+              <span className="inline-flex items-center gap-1">
+                <Building2 className="w-3 h-3" />
+                {alerta.municipio}
+              </span>
+            )}
+            {alerta.punto_titulo && (
+              <span className="inline-flex items-center gap-1 max-w-md truncate">
+                <Sparkles className="w-3 h-3 flex-shrink-0" />
+                <span className="truncate">{alerta.punto_titulo}</span>
+              </span>
+            )}
+            <span className="inline-flex items-center gap-1 ml-auto">
               <Clock className="w-3 h-3" />
-              {formatDate(alerta.fecha)}
+              {formatFechaLarga(alerta.created_at)}
             </span>
           </div>
         </div>
-        {!alerta.revisada && (
-          <button
-            onClick={() => onMarkReviewed(alerta.id)}
-            disabled={isPending}
-            className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-[#30363d] text-[#8b949e] hover:border-[#4ade80] hover:text-[#4ade80] transition-colors disabled:opacity-50"
-          >
-            <CheckCircle2 className="w-3 h-3" />
-            Marcar revisada
-          </button>
+
+        {!isResolved && (
+          <div className="flex-shrink-0 flex flex-col gap-1.5">
+            {alerta.estado === 'nueva' && (
+              <button
+                onClick={() => onMarkViewed(alerta.id)}
+                disabled={isPending}
+                title="Marcar com a vista"
+                className="w-8 h-8 rounded-lg flex items-center justify-center bg-[#0f141b] border border-[#21262d] text-[#8b949e] hover:border-[#1e40af]/50 hover:text-[#93c5fd] transition-colors disabled:opacity-50"
+              >
+                <Eye className="w-3.5 h-3.5" />
+              </button>
+            )}
+            <button
+              onClick={() => onResolve(alerta.id)}
+              disabled={isPending}
+              title="Marcar com a resolta"
+              className="w-8 h-8 rounded-lg flex items-center justify-center bg-[#0f141b] border border-[#21262d] text-[#8b949e] hover:border-[#16a34a]/50 hover:text-[#4ade80] transition-colors disabled:opacity-50"
+            >
+              <CheckCircle2 className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => onDismiss(alerta.id)}
+              disabled={isPending}
+              title="Descartar"
+              className="w-8 h-8 rounded-lg flex items-center justify-center bg-[#0f141b] border border-[#21262d] text-[#8b949e] hover:border-[#dc2626]/50 hover:text-[#f87171] transition-colors disabled:opacity-50"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
         )}
       </div>
     </div>

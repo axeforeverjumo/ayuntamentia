@@ -75,7 +75,7 @@ export const apiClient = {
     return request<T>(path, {
       ...options,
       method: 'PATCH',
-      body: JSON.stringify(body),
+      ...(body != null ? { body: JSON.stringify(body) } : {}),
     });
   },
 
