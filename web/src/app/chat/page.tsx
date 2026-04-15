@@ -9,6 +9,7 @@ import { ChatMessage } from "@/components/ui/ChatMessage";
 import { ProgressiveLoader } from "@/components/ui/ProgressiveLoader";
 import { PoliticalModes } from "@/components/ui/PoliticalModes";
 import { apiClient } from "@/lib/ApiClient";
+import { CLIENT_CONFIG } from "@/lib/clientConfig";
 import type { ChatMessage as ChatMessageType, ChatResponse } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -276,7 +277,7 @@ export default function ChatPage() {
                 </div>
               </div>
               <h2 className="text-2xl font-bold bg-gradient-to-r from-[#c4b5fd] via-[#f3f6fa] to-[#67e8f9] bg-clip-text text-transparent mb-2">
-                L'arma política d'Aliança Catalana
+                L'arma política de {CLIENT_CONFIG.nombre}
               </h2>
               <p className="text-sm text-[#8b949e] leading-relaxed mb-6 max-w-md">
                 Tria el mode. Pregunta com un polític: ataca rivals, defensa posicions,

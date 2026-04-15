@@ -16,7 +16,33 @@ router = APIRouter()
 PROXY_URL = os.getenv("OPENCLAW_BASE_URL", "http://localhost:10531/v1")
 MODEL = os.getenv("OPENCLAW_MODEL_FULL", "gpt-5.4")
 
-ROUTER_PROMPT = """Eres un router AGRESIVO para política municipal catalana. Tu cliente: un político que necesita SABER QUÉ SE DICE (de sus rivales o sobre un tema) en un periodo concreto, y cómo usarlo. Responde SOLO JSON.
+# === Configuración multi-tenant ===
+# El "cliente" es el partido que usa la herramienta. Define el POV de los prompts,
+# las preguntas de los modos políticos y los ejemplos del empty state.
+CLIENT_PARTIDO = os.getenv("CLIENT_PARTIDO", "AC").strip()  # sigla canónica
+CLIENT_NOMBRE = os.getenv("CLIENT_NOMBRE", "Aliança Catalana").strip()
+# Rivales por defecto (en orden de prioridad política) — el prompt los usa en
+# comparativas y ejemplos. Se puede override via CLIENT_RIVALES (lista CSV).
+_default_rivales_por_partido: dict[str, str] = {
+    "AC":     "JxCat,ERC,PSC,CUP,PP,VOX,Cs",
+    "PP":     "PSC,ERC,JxCat,VOX,CUP,Cs",
+    "PSC":    "ERC,JxCat,PP,CUP,VOX,Cs",
+    "ERC":    "JxCat,PSC,CUP,PP,VOX,Cs",
+    "JXCAT":  "ERC,PSC,CUP,PP,VOX,Cs",
+    "CUP":    "ERC,JxCat,PSC,Comuns,PP,VOX",
+    "VOX":    "PP,PSC,ERC,JxCat,CUP,Cs",
+    "CS":     "PSC,PP,ERC,JxCat,CUP,VOX",
+    "COMUNS": "PSC,ERC,CUP,JxCat,PP,VOX",
+}
+_client_key = CLIENT_PARTIDO.upper()
+_rivales_env = os.getenv("CLIENT_RIVALES", "").strip()
+CLIENT_RIVALES: list[str] = (
+    [r.strip() for r in _rivales_env.split(",") if r.strip()]
+    if _rivales_env
+    else [r.strip() for r in _default_rivales_por_partido.get(_client_key, "JxCat,ERC,PSC,CUP,PP,VOX,Cs").split(",")]
+)
+
+_ROUTER_PROMPT_TMPL = """Eres un router AGRESIVO para política municipal catalana. Tu cliente: $CLIENT_NOMBRE ($CLIENT_PARTIDO). Necesita SABER QUÉ SE DICE (de sus rivales o sobre un tema) en un periodo concreto, y cómo usarlo. Responde SOLO JSON.
 
 REGLA DE ORO: pide MUCHAS herramientas. 4-6 tools es normal. NUNCA menos de 3 si la pregunta es sustantiva.
 REGLA BILINGÜE: los datos están en catalán. Traduce SIEMPRE español→catalán en las queries (ej: "inmigración" → "immigració acollida estrangeria MENA inmigración").
@@ -70,10 +96,10 @@ Herramientas:
 
 DETECCIÓN DE INTENCIÓN POLÍTICA (añade "intent" al JSON):
 - "atacar": "contra", "ataca", "dossier", "polémica", "contradicciones", "incoherencias", "punts dèbils", "cómo joder"
-- "defender": "cómo responder", "qué dicen de AC/nosotros", "argumentario"
+- "defender": "cómo responder", "qué dicen de $CLIENT_PARTIDO/nosotros", "argumentario", "críticas a $CLIENT_NOMBRE"
 - "comparar": "X vs Y", "compara", "diferencia entre"
 - "monitor": "qué se dice de", "qué se habla de", "resumen", "monitoreo", "actividad reciente", "noticias de", "en marzo", "este mes de X" ⭐
-- "oportunidad": "dónde puede crecer", "temas calientes", "hueco"
+- "oportunidad": "dónde puede crecer $CLIENT_PARTIDO", "temas calientes", "hueco"
 - "consulta": default
 
 PATRONES:
@@ -105,10 +131,10 @@ Ejemplos:
     {"name":"citas_literales","args":{"partido":"ERC","año":2026,"mes":3}},
     {"name":"buscar_votaciones","args":{"partido":"ERC","año":2026,"mes":3}}
   ]}
-- "Qué se está hablando de Aliança Catalana?" → {"intent":"monitor","tools":[
-    {"name":"monitoring_partido","args":{"partido":"AC","dias_atras":60}},
-    {"name":"citas_literales","args":{"partido":"AC","dias_atras":60}},
-    {"name":"buscar_argumentos","args":{"query":"Aliança Catalana AC","dias_atras":60}},
+- "Qué se está hablando de $CLIENT_NOMBRE?" (el nostre partit) → {"intent":"monitor","tools":[
+    {"name":"monitoring_partido","args":{"partido":"$CLIENT_PARTIDO","dias_atras":60}},
+    {"name":"citas_literales","args":{"partido":"$CLIENT_PARTIDO","dias_atras":60}},
+    {"name":"buscar_argumentos","args":{"query":"$CLIENT_NOMBRE $CLIENT_PARTIDO","dias_atras":60}},
     {"name":"recepcion_social","args":{"dias":60}}
   ]}
 - "Qué argumentos usa Junts contra las ordenanzas de civismo?" → {"intent":"atacar","tools":[
@@ -134,17 +160,17 @@ Ejemplos:
     {"name":"citas_literales","args":{"partido":"ERC","tema":"habitatge lloguer okupació","año":2026}},
     {"name":"citas_literales","args":{"partido":"JxCat","tema":"habitatge lloguer okupació","año":2026}}
   ]}
-- "dónde puede crecer AC" → {"intent":"oportunidad","tools":[
+- "dónde puede crecer $CLIENT_PARTIDO" → {"intent":"oportunidad","tools":[
     {"name":"oportunidades_tema","args":{}},
     {"name":"tendencias_emergentes","args":{}},
     {"name":"recepcion_social","args":{"dias":30}}
   ]}
-- "hola" → {"tools":[],"direct_answer":"Hola! Sóc AyuntamentIA, l'arma política del teu partit. Pregunta'm: què es diu d'un rival al març? Dossier contra Junts? Comparar partits? O on pots créixer?"}
+- "hola" → {"tools":[],"direct_answer":"Hola! Sóc AyuntamentIA, l'arma política de $CLIENT_NOMBRE. Pregunta'm: què es diu d'un rival al març? Dossier contra un partit? Comparar posicions? O on pots créixer?"}
 - "gracias" → {"tools":[],"direct_answer":"De res!"}
 
 Responde SOLO JSON."""
 
-ANSWER_PROMPT = """Eres AyuntamentIA, jefe de gabinete de Aliança Catalana. Hablas a un político que necesita MUNICIÓN UTILIZABLE, no análisis académicos. Todo lo que digas lo puede usar HOY en una rueda de prensa, tweet o entrevista.
+_ANSWER_PROMPT_TMPL = """Eres AyuntamentIA, jefe de gabinete de $CLIENT_NOMBRE ($CLIENT_PARTIDO). Hablas a un político que necesita MUNICIÓN UTILIZABLE, no análisis académicos. Todo lo que digas lo puede usar HOY en una rueda de prensa, tweet o entrevista.
 
 ESTRUCTURA OBLIGATORIA (markdown EXACTO):
 
@@ -162,7 +188,7 @@ ESTRUCTURA OBLIGATORIA (markdown EXACTO):
 Según intent:
 - **atacar** → 1-2 frases de ataque listo para usar (titular, tweet o frase de rueda). Formato: "**Frase atacable:** «...»" seguido de hashtags/canal sugerido.
 - **defender** → 1 argumentario defensivo: qué decir si nos preguntan por esto.
-- **comparar** → diferencia neta: "**AC** debe posicionarse como X frente al Y de los rivales."
+- **comparar** → diferencia neta: "**$CLIENT_PARTIDO** debe posicionarse como X frente al Y de los rivales."
 - **monitor** → resumen ejecutivo tipo briefing: "**Temperatura política:** [baja/media/alta]. Lo que merece atención: X. Lo que hay que seguir: Y."
 - **oportunidad** → hueco comunicativo concreto a ocupar.
 - **consulta** → implicación política accionable.
@@ -182,6 +208,20 @@ REGLAS DE FONDO:
 - Cifras SIEMPRE con contexto (% o comparativa con otro partido).
 - Si hay municipios grandes (>20k hab), priorízalos en las citas: pesan más políticamente.
 - No inventes citas. Solo las que aparezcan en las tools."""
+
+
+# === Renderizado de prompts con config del cliente ===
+from string import Template as _Tmpl
+
+def _render_prompt(tmpl: str) -> str:
+    return _Tmpl(tmpl).safe_substitute(
+        CLIENT_PARTIDO=CLIENT_PARTIDO,
+        CLIENT_NOMBRE=CLIENT_NOMBRE,
+        CLIENT_RIVALES=", ".join(CLIENT_RIVALES),
+    )
+
+ROUTER_PROMPT = _render_prompt(_ROUTER_PROMPT_TMPL)
+ANSWER_PROMPT = _render_prompt(_ANSWER_PROMPT_TMPL)
 
 
 def get_llm():
@@ -1386,9 +1426,8 @@ def tool_narrativas_cruzadas(
 
 
 def tool_oportunidades_tema(tema: str = "") -> str:
-    """Detecta temas en tendencia donde AC aún no ha tomado posición o rivales están divididos."""
+    """Detecta temas en tendencia donde el CLIENTE aún no ha tomado posición o rivales están divididos."""
     with get_cursor() as cur:
-        # Temas en tendencia últimos 60 días
         tema_filter = ""
         params: list = []
         if tema:
@@ -1408,11 +1447,11 @@ def tool_oportunidades_tema(tema: str = "") -> str:
         """, params)
         temas_calientes = [dict(r) for r in cur.fetchall()]
 
-        # Posición de AC en esos temas (silencios y oportunidades)
-        ac_where = _partido_where("AC")
+        # Posición del cliente en esos temas
+        client_where = _partido_where(CLIENT_PARTIDO)
         cur.execute(f"""
             SELECT p.tema,
-                   COUNT(v.id) FILTER (WHERE {ac_where}) AS votos_ac,
+                   COUNT(v.id) FILTER (WHERE {client_where}) AS votos_cliente,
                    COUNT(v.id) AS votos_totales,
                    COUNT(DISTINCT p.municipio_id) AS municipios_con_tema
             FROM puntos_pleno p
@@ -1423,9 +1462,11 @@ def tool_oportunidades_tema(tema: str = "") -> str:
             GROUP BY p.tema
             ORDER BY votos_totales DESC LIMIT 12
         """, params)
-        posicion_ac = [dict(r) for r in cur.fetchall()]
+        posicion_cliente = [dict(r) for r in cur.fetchall()]
 
-        # Divisiones entre rivales en esos temas
+        # Divisiones entre rivales en esos temas (usa CLIENT_RIVALES)
+        rivales_in = ",".join("%s" for _ in CLIENT_RIVALES) if CLIENT_RIVALES else "%s"
+        rivales_params = list(CLIENT_RIVALES) if CLIENT_RIVALES else ["ERC"]
         cur.execute(f"""
             SELECT p.tema, v.partido,
                    COUNT(*) FILTER (WHERE v.sentido = 'a_favor') AS favor,
@@ -1434,19 +1475,21 @@ def tool_oportunidades_tema(tema: str = "") -> str:
             JOIN puntos_pleno p ON v.punto_id = p.id
             WHERE p.fecha >= CURRENT_DATE - INTERVAL '90 days'
               AND p.tema IS NOT NULL AND p.tema != 'procedimiento'
-              AND v.partido IN ('ERC', 'PSC', 'JxCat', 'CUP', 'PP', 'VOX')
+              AND v.partido IN ({rivales_in})
               {tema_filter}
             GROUP BY p.tema, v.partido
             HAVING COUNT(*) FILTER (WHERE v.sentido = 'a_favor') >= 1
                AND COUNT(*) FILTER (WHERE v.sentido = 'en_contra') >= 1
             ORDER BY p.tema, (COUNT(*) FILTER (WHERE v.sentido = 'a_favor') + COUNT(*) FILTER (WHERE v.sentido = 'en_contra')) DESC
             LIMIT 20
-        """, params)
+        """, rivales_params + params)
         rivales_divididos = [dict(r) for r in cur.fetchall()]
 
     return json.dumps({
+        "cliente": CLIENT_PARTIDO,
+        "cliente_nombre": CLIENT_NOMBRE,
         "temas_calientes_60d": temas_calientes,
-        "posicion_ac_90d": posicion_ac,
+        "posicion_cliente_90d": posicion_cliente,
         "rivales_divididos_90d": rivales_divididos,
     }, default=str, ensure_ascii=False)
 
@@ -1667,6 +1710,17 @@ Deben ser concretas, cortas (<90 caracteres), en el idioma de la pregunta, y que
 Responde SOLO JSON: {"followups": ["...", "...", "..."]}"""
 
 
+@router.get("/config")
+def chat_config():
+    """Devuelve la configuración del cliente (partido que usa la herramienta).
+    Se usa en el frontend para personalizar UI, preguntas y branding."""
+    return {
+        "partido": CLIENT_PARTIDO,
+        "nombre": CLIENT_NOMBRE,
+        "rivales": CLIENT_RIVALES,
+    }
+
+
 @router.post("/")
 def chat(
     req: ChatRequest,
@@ -1748,9 +1802,9 @@ def chat(
     # Step 3: Answer with data
     data = "\n\n---\n\n".join(tool_results)
     intent_hint = {
-        "atacar": "INTENCIÓN DETECTADA: ATACAR. Objetivo: generar munición política contra el rival. La sección '¿Y ahora qué?' DEBE dar una frase atacable lista para tweet/rueda.",
-        "defender": "INTENCIÓN DETECTADA: DEFENDER. Objetivo: argumentario defensivo. La sección '¿Y ahora qué?' DEBE dar la respuesta a dar si nos preguntan.",
-        "comparar": "INTENCIÓN DETECTADA: COMPARAR. Objetivo: contraste entre partidos. La sección '¿Y ahora qué?' DEBE posicionar frente a los rivales con diferencia neta.",
+        "atacar": f"INTENCIÓN DETECTADA: ATACAR. Cliente: {CLIENT_NOMBRE} ({CLIENT_PARTIDO}). Objetivo: munición política contra el rival. La sección '¿Y ahora qué?' DEBE dar una frase atacable lista para tweet/rueda.",
+        "defender": f"INTENCIÓN DETECTADA: DEFENDER. Cliente: {CLIENT_NOMBRE} ({CLIENT_PARTIDO}). Objetivo: argumentario defensivo para {CLIENT_PARTIDO}. La sección '¿Y ahora qué?' DEBE dar la respuesta a dar si nos preguntan.",
+        "comparar": f"INTENCIÓN DETECTADA: COMPARAR. Cliente: {CLIENT_NOMBRE} ({CLIENT_PARTIDO}). Objetivo: contraste entre partidos. La sección '¿Y ahora qué?' DEBE posicionar {CLIENT_PARTIDO} frente a los rivales con diferencia neta.",
         "monitor": (
             "INTENCIÓN DETECTADA: MONITOR. Objetivo: briefing ejecutivo sobre el partido en el periodo. "
             "ESTRUCTURA OBLIGATORIA de Punts clau (usa estos emojis/labels tal cual):\n"
@@ -1766,7 +1820,7 @@ def chat(
             "NUNCA digas 'nadie habla de ellos' sin verificar: el sistema buscó el nombre del partido, sus alias Y los patrones nombre+apellido de sus concejales activos. "
             "Si realmente hay 0 menciones en argumentos Y 0 en resúmenes Y 0 confrontaciones, el patrón es silencio institucional — explícalo como munición política ('X no genera debate' es útil)."
         ),
-        "oportunidad": "INTENCIÓN DETECTADA: OPORTUNIDAD. Objetivo: hueco comunicativo. La sección '¿Y ahora qué?' DEBE identificar el espacio concreto a ocupar.",
+        "oportunidad": f"INTENCIÓN DETECTADA: OPORTUNIDAD. Cliente: {CLIENT_NOMBRE} ({CLIENT_PARTIDO}). Objetivo: hueco comunicativo para {CLIENT_PARTIDO}. La sección '¿Y ahora qué?' DEBE identificar el espacio concreto a ocupar.",
         "consulta": "INTENCIÓN: CONSULTA. Responde de forma útil e informada.",
     }.get(intent, "")
     msgs = [{"role": "system", "content": ANSWER_PROMPT + "\n\n" + intent_hint}]

@@ -5,6 +5,8 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 
 API_URL = os.getenv("API_URL", "http://localhost:8050")
+CLIENT_PARTIDO = os.getenv("CLIENT_PARTIDO", "AC").strip()
+CLIENT_NOMBRE = os.getenv("CLIENT_NOMBRE", "Aliança Catalana").strip()
 
 GREETINGS_CA = {"hola", "hey", "bon dia", "bona tarda", "bona nit", "ei", "ep"}
 GREETINGS_ES = {"hola", "hey", "buenas", "buenos dias", "buenos días", "que tal", "buenas tardes", "buenas noches"}
@@ -40,28 +42,28 @@ def _is_catalan(text: str) -> bool:
 def _greeting_response(catalan: bool) -> str:
     if catalan:
         return (
-            "Hola! 👋 Sóc l'arma política d'*Aliança Catalana*.\n\n"
+            f"Hola! 👋 Sóc l'arma política de *{CLIENT_NOMBRE}*.\n\n"
             "Puc ajudar-te amb:\n"
             "⚔️ Atacar rivals amb dades reals\n"
-            "🛡️ Defensar posicions d'AC\n"
+            f"🛡️ Defensar posicions de {CLIENT_PARTIDO}\n"
             "⚖️ Comparar partits en qualsevol tema\n"
             "💡 Detectar oportunitats polítiques\n\n"
             "Prova per exemple:\n"
-            "  _Dossier contra Junts sobre civisme_\n"
-            "  _ERC vs PSC en immigració 2026_\n"
-            "  _On pot créixer AC ara?_"
+            f"  _Què s'ha dit de {CLIENT_NOMBRE} aquest mes?_\n"
+            "  _Comparar ERC vs PSC en immigració 2026_\n"
+            f"  _On pot créixer {CLIENT_PARTIDO} ara?_"
         )
     return (
-        "Hola! 👋 Soy el arma política de *Aliança Catalana*.\n\n"
+        f"Hola! 👋 Soy el arma política de *{CLIENT_NOMBRE}*.\n\n"
         "Puedo ayudarte con:\n"
         "⚔️ Atacar rivales con datos reales\n"
-        "🛡️ Defender posiciones de AC\n"
+        f"🛡️ Defender posiciones de {CLIENT_PARTIDO}\n"
         "⚖️ Comparar partidos en cualquier tema\n"
         "💡 Detectar oportunidades políticas\n\n"
         "Prueba por ejemplo:\n"
-        "  _Dossier contra Junts sobre civismo_\n"
-        "  _ERC vs PSC en inmigración 2026_\n"
-        "  _¿Dónde puede crecer AC ahora?_"
+        f"  _¿Qué se ha dicho de {CLIENT_NOMBRE} este mes?_\n"
+        "  _Comparar ERC vs PSC en inmigración 2026_\n"
+        f"  _¿Dónde puede crecer {CLIENT_PARTIDO} ahora?_"
     )
 
 

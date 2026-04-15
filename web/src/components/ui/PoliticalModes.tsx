@@ -2,6 +2,7 @@
 
 import { Swords, Shield, Scale, Lightbulb, Radar, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getModeQuestions, CLIENT_CONFIG } from '@/lib/clientConfig';
 
 export type PoliticalMode = 'atacar' | 'defender' | 'comparar' | 'oportunidad' | 'monitor';
 
@@ -14,25 +15,18 @@ interface ModeCard {
   border: string;
   iconColor: string;
   accentBg: string;
-  questions: string[];
 }
 
-const MODES: ModeCard[] = [
+const MODE_DEFS: ModeCard[] = [
   {
     id: 'monitor',
     label: 'Monitoritzar',
-    description: 'Què es diu d\'un partit o tema',
+    description: "Què es diu d'un partit o tema",
     icon: Radar,
     gradient: 'from-[#052e16] via-[#0a1e26] to-[#0d1117]',
     border: 'border-[#16a34a]/40',
     iconColor: 'text-[#4ade80]',
     accentBg: 'bg-[#16a34a]',
-    questions: [
-      "Què s'ha dit d'Aliança Catalana aquest mes?",
-      "Qui ataca els regidors d'AC als darrers mesos?",
-      "Tot sobre ERC al març 2026",
-      "Què diuen del PP sobre els nostres regidors?",
-    ],
   },
   {
     id: 'atacar',
@@ -43,28 +37,16 @@ const MODES: ModeCard[] = [
     border: 'border-[#dc2626]/40',
     iconColor: 'text-[#f87171]',
     accentBg: 'bg-[#dc2626]',
-    questions: [
-      'Dossier complet contra Junts sobre civisme',
-      "Contradiccions d'ERC en habitatge aquest any",
-      'Votacions polèmiques del PSC en seguretat 2026',
-      'Punts dèbils de la CUP en hisenda',
-    ],
   },
   {
     id: 'defender',
     label: 'Defensar',
-    description: 'Argumentari per AC',
+    description: `Argumentari per ${CLIENT_CONFIG.partido}`,
     icon: Shield,
     gradient: 'from-[#0a1930] via-[#0d1b24] to-[#0d1117]',
     border: 'border-[#1e40af]/40',
     iconColor: 'text-[#93c5fd]',
     accentBg: 'bg-[#1e40af]',
-    questions: [
-      "Com respondre a crítiques d'ERC sobre immigració?",
-      "Com defensar el vot d'AC sobre civisme?",
-      "Punts forts d'AC en seguretat per rebatre",
-      'Dades favorables a AC en habitatge 2026',
-    ],
   },
   {
     id: 'comparar',
@@ -75,12 +57,6 @@ const MODES: ModeCard[] = [
     border: 'border-[#7c3aed]/40',
     iconColor: 'text-[#c4b5fd]',
     accentBg: 'bg-[#7c3aed]',
-    questions: [
-      'ERC vs Junts en immigració 2026',
-      'AC vs PSC en ordenances de civisme',
-      'Qui vota més a favor de més policia local?',
-      'Diferència entre CUP i ERC en habitatge',
-    ],
   },
   {
     id: 'oportunidad',
@@ -91,14 +67,13 @@ const MODES: ModeCard[] = [
     border: 'border-[#d97706]/40',
     iconColor: 'text-[#fbbf24]',
     accentBg: 'bg-[#d97706]',
-    questions: [
-      "On pot créixer AC ara mateix?",
-      'Temes calents on rivals estan dividits',
-      'Buits comunicatius dels 30 últims dies',
-      "Municipis grans sense veu d'AC forta",
-    ],
   },
 ];
+
+const MODES: Array<ModeCard & { questions: string[] }> = MODE_DEFS.map((m) => ({
+  ...m,
+  questions: getModeQuestions(m.id, CLIENT_CONFIG),
+}));
 
 interface Props {
   onAsk: (q: string) => void;

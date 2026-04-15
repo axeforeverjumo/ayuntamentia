@@ -46,6 +46,9 @@ services:
       - OPENCLAW_BASE_URL=http://localhost:10531/v1
       - DATABASE_URL=postgresql://postgres:PrLaCXPsZIAIkX25ZXQAC5E54LRo90uU@172.19.0.4:5432/postgres
       - REDIS_URL=redis://localhost:6380/0
+      - CLIENT_PARTIDO=${CLIENT_PARTIDO:-AC}
+      - CLIENT_NOMBRE=${CLIENT_NOMBRE:-Aliança Catalana}
+      - CLIENT_RIVALES=${CLIENT_RIVALES:-}
 
   # === Telegram Bot ===
   telegram:
@@ -55,6 +58,8 @@ services:
     network_mode: host
     environment:
       - API_URL=http://localhost:8050
+      - CLIENT_PARTIDO=${CLIENT_PARTIDO:-AC}
+      - CLIENT_NOMBRE=${CLIENT_NOMBRE:-Aliança Catalana}
 
   # === Web (Next.js) ===
   web:
@@ -64,12 +69,17 @@ services:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://85.215.105.45:8050}
         NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
         NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+        NEXT_PUBLIC_CLIENT_PARTIDO: ${CLIENT_PARTIDO:-AC}
+        NEXT_PUBLIC_CLIENT_NOMBRE: ${CLIENT_NOMBRE:-Aliança Catalana}
+        NEXT_PUBLIC_CLIENT_RIVALES: ${CLIENT_RIVALES:-}
     restart: unless-stopped
     ports:
       - "3100:3000"
     env_file: .env
     environment:
       - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://85.215.105.45:8050}
+      - NEXT_PUBLIC_CLIENT_PARTIDO=${CLIENT_PARTIDO:-AC}
+      - NEXT_PUBLIC_CLIENT_NOMBRE=${CLIENT_NOMBRE:-Aliança Catalana}
     depends_on:
       - api
 
