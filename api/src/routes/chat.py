@@ -61,6 +61,12 @@ Herramientas:
      · eco en prensa/Bluesky
      · stats agregados del periodo
      → Úsalo SIEMPRE para preguntas tipo "qué se dice de X", "qué se ha hablado de X en el mes Y", "resumen de X este mes", "X en marzo", "noticias de X", "monitoreo X", "actividad X en Y".
+22. narrativas_cruzadas(partido_objetivo, partido_emisor?, tema?, año?, mes?, dias_atras?) — ⭐⭐ ATAQUES PERSONA-A-PERSONA:
+     · confrontaciones directas: qué concejal de qué partido ATACA a quién de partido_objetivo
+     · extrae autor, persona atacada, texto, señales de ataque (mentira/fals/títol/acusa/etc.)
+     · agrupa narrativas REPLICADAS: misma tesis/keyword en 2+ municipios = ataque coordinado
+     → Úsalo SIEMPRE para preguntas tipo "quién ataca a X", "quién dijo qué de X", "quiénes critican a X",
+       "regidors que ataquen AC", "cruces contra X", "narrativas contra X", "qué dicen del concejal Y", "qué dicen los del PP sobre X".
 
 DETECCIÓN DE INTENCIÓN POLÍTICA (añade "intent" al JSON):
 - "atacar": "contra", "ataca", "dossier", "polémica", "contradicciones", "incoherencias", "punts dèbils", "cómo joder"
@@ -71,17 +77,28 @@ DETECCIÓN DE INTENCIÓN POLÍTICA (añade "intent" al JSON):
 - "consulta": default
 
 PATRONES:
-- "qué se dice/habla de PARTIDO [en MES/periodo]" → monitoring_partido(partido, mes/dias_atras) + citas_literales(partido, ...) + buscar_argumentos(query=label_partido, ...)
+- "qué se dice/habla de PARTIDO [en MES/periodo]" → monitoring_partido + narrativas_cruzadas + citas_literales
+- "quién ataca/critica a PARTIDO" → narrativas_cruzadas(partido_objetivo=X) + monitoring_partido
+- "qué dice PARTIDO_A del concejal/partido PARTIDO_B" → narrativas_cruzadas(partido_objetivo=B, partido_emisor=A)
+- "narratives/ataques coordinats contra X" → narrativas_cruzadas + monitoring_partido
 - "monitoring/actividad de PARTIDO en MES" → monitoring_partido + buscar_votaciones + citas_literales
 - "qué dice PARTIDO sobre TEMA en MES" → monitoring_partido(partido, tema, mes) + citas_literales + buscar_argumentos
-- "ataca/dossier contra PARTIDO" → dossier_adversario + monitoring_partido + contradicciones_partido
+- "ataca/dossier contra PARTIDO" → dossier_adversario + monitoring_partido + narrativas_cruzadas + contradicciones_partido
 - "P1 vs P2 sobre TEMA" → comparar_partidos + citas_literales(p1,tema) + citas_literales(p2,tema)
 
 Ejemplos:
 - "Qué se dice de Junts este mes?" → {"intent":"monitor","tools":[
     {"name":"monitoring_partido","args":{"partido":"JxCat","dias_atras":30}},
-    {"name":"citas_literales","args":{"partido":"JxCat","dias_atras":30}},
-    {"name":"buscar_argumentos","args":{"query":"Junts JxCat","dias_atras":30}}
+    {"name":"narrativas_cruzadas","args":{"partido_objetivo":"JxCat","dias_atras":60}},
+    {"name":"citas_literales","args":{"partido":"JxCat","dias_atras":30}}
+  ]}
+- "Qui ataca AC als darrers mesos?" → {"intent":"monitor","tools":[
+    {"name":"narrativas_cruzadas","args":{"partido_objetivo":"AC","dias_atras":120}},
+    {"name":"monitoring_partido","args":{"partido":"AC","dias_atras":120}}
+  ]}
+- "Què diuen del PP sobre AC?" → {"intent":"monitor","tools":[
+    {"name":"narrativas_cruzadas","args":{"partido_objetivo":"AC","partido_emisor":"PP","dias_atras":180}},
+    {"name":"citas_literales","args":{"partido":"PP","dias_atras":180}}
   ]}
 - "Qué ha pasado con ERC en marzo 2026?" → {"intent":"monitor","tools":[
     {"name":"monitoring_partido","args":{"partido":"ERC","año":2026,"mes":3}},
@@ -1137,6 +1154,237 @@ def tool_monitoring_partido(partido: str, tema: str = "", **time_kw) -> str:
     }, default=str, ensure_ascii=False)
 
 
+# Palabras señaladoras de ATAQUE/CONFRONTACIÓN en un argumento.
+_ATTACK_KEYWORDS = [
+    "mentida", "mentira", "mentides", "mentiras",
+    "fals", "falso", "falsa", "falses", "falsas",
+    "titol fals", "título falso", "títol fals",
+    "curriculum", "currículum", "titulació", "titulación",
+    "acusa", "acusar", "acusació", "acusación",
+    "desmentir", "desmento", "desmentit",
+    "no és veritat", "no es verdad", "no és cert", "no es cierto",
+    "enganya", "engaña", "engaño", "engany",
+    "impugna", "impugnar", "incompatibilitat", "incompatibilidad",
+    "conflicte d'interessos", "conflicto de intereses",
+    "denuncia", "denuncien", "denuncien",
+    "irregularitat", "irregularidad",
+    "nepotisme", "nepotismo",
+    "caradura", "cínic", "cínico", "hipòcrita", "hipócrita",
+    "miente", "minteix", "enganyoso", "engañoso",
+    "corrupció", "corrupción", "corrupte", "corrupto",
+    "fraude", "frau",
+    "no té competència", "no tiene competencia", "no està capacitat", "no está capacitado",
+]
+
+
+def _extract_author_name(text: str) -> str:
+    """Intenta extraer el nombre del concejal que HABLA al inicio del argumento.
+    Estilo habitual: 'Sílvia Orriols defiende que...', 'Chantal Pérez recuerda...'
+    Patrón: 2-4 palabras capitalizadas al inicio antes del verbo."""
+    if not text:
+        return ""
+    m = re.match(
+        r'^\s*((?:[A-ZÀ-ÚÇÑ][\wÀ-ÿçñ\'\-]+)(?:\s+(?:de\s+la\s+|del\s+|de\s+|d\')?[A-ZÀ-ÚÇÑ][\wÀ-ÿçñ\'\-]+){1,3})\s+(?:defensa|defiende|afirma|diu|dice|pregunta|recuerda|recorda|señala|assenyala|explica|comenta|intervé|interviene|replica|respon|responde|manifest|manifiesta|demana|pide|sol·licita|solicita|expressa|expresa|indica|anuncia|critica|rebutja|rechaza|acusa|atribueix|atribuye|sosté|sostiene)',
+        text[:250],
+        flags=re.UNICODE,
+    )
+    if m:
+        return m.group(1).strip()
+    return ""
+
+
+def _detect_attack_keywords(text: str) -> list[str]:
+    """Devuelve palabras de ataque presentes en el texto."""
+    tl = (text or "").lower()
+    return [k for k in _ATTACK_KEYWORDS if k in tl]
+
+
+def _top_keywords(text: str, limit: int = 5) -> list[str]:
+    """Tokens significativos (>=5 chars, no stopwords) más frecuentes en el texto."""
+    STOPWORDS = {
+        "sobre", "sobre", "també", "perquè", "porque", "entre", "sempre", "quan",
+        "cuando", "donde", "dónde", "hacia", "hasta", "este", "esta", "estos", "estas",
+        "aquest", "aquesta", "aquests", "aquestes", "alguns", "algunes", "algunos", "algunas",
+        "tanto", "tantos", "mateix", "mateixa", "mismo", "misma", "mismos", "mismas",
+        "molt", "mucho", "mucha", "poco", "poca", "tots", "todos", "totes", "todas",
+        "altres", "otros", "otras", "altre", "altra", "otro", "otra",
+        "regidor", "regidora", "alcalde", "alcaldessa", "alcaldesa", "partit", "partido",
+        "govern", "gobierno", "pleno", "ple", "ajuntament", "ayuntamiento",
+        "aprovar", "aprobar", "votar", "votació", "votación", "acord", "acuerdo",
+        "punto", "punt", "sessió", "sesión", "reunió", "reunión",
+    }
+    tokens = re.findall(r'\b[\wÀ-ÿçñ]{5,}\b', (text or "").lower())
+    freq: dict[str, int] = {}
+    for t in tokens:
+        if t in STOPWORDS or t.isdigit():
+            continue
+        freq[t] = freq.get(t, 0) + 1
+    return [w for w, _ in sorted(freq.items(), key=lambda kv: -kv[1])[:limit]]
+
+
+def tool_narrativas_cruzadas(
+    partido_objetivo: str,
+    partido_emisor: str = "",
+    tema: str = "",
+    **time_kw,
+) -> str:
+    """Detecta ATAQUES/MENCIONES persona-a-persona contra concejales del partido_objetivo.
+    Por cada argumento devuelve:
+      - autor_partido (del argumento)
+      - autor_nombre (extraído del inicio del texto)
+      - mencion_detectada (qué persona/alias del partido_objetivo aparece)
+      - argumento completo
+      - señales_ataque (palabras clave detectadas)
+      - palabras_clave (tokens significativos)
+    Luego AGRUPA por palabras clave comunes para identificar narrativas replicadas
+    (misma tesis en varios municipios).
+
+    Args:
+      partido_objetivo: partido contra el que buscar ataques (ej 'AC')
+      partido_emisor: partido desde el que buscar (opcional; vacío = cualquier rival)
+    """
+    tf, tp = _time_filter("p.fecha", **time_kw)
+    has_time = any(v for v in time_kw.values())
+    if not has_time:
+        tf = "p.fecha >= CURRENT_DATE - INTERVAL '180 days'"
+        tp = []
+    time_extra = f"AND {tf}" if tf else ""
+
+    part_target = _partido_where(partido_objetivo).replace("v.partido", "a.partido")
+    part_emisor_filter = ""
+    if partido_emisor:
+        part_emisor_filter = "AND " + _partido_where(partido_emisor).replace("v.partido", "a.partido")
+
+    with get_cursor() as cur:
+        concejales = _get_concejales_del_partido(cur, partido_objetivo, limit=60)
+        name_patterns = _build_name_patterns(concejales)
+        key = _party_key_for_mentions(partido_objetivo)
+        labels_search: list[str] = list(_PARTY_ALIASES.get(key, []))
+        labels_search.extend(name_patterns[:30])
+        labels_search = [l for l in labels_search if l and len(l.strip()) >= 3]
+        if not labels_search:
+            return json.dumps({
+                "error": "sin_patrones_busqueda",
+                "partido_objetivo": partido_objetivo,
+                "concejales_encontrados": len(concejales),
+            }, ensure_ascii=False)
+
+        like_clauses = []
+        like_params: list = []
+        for lab in labels_search[:30]:
+            like_clauses.append("a.argumento ILIKE %s")
+            like_params.append(f"%{lab}%")
+        like_clause = " OR ".join(like_clauses)
+
+        cur.execute(f"""
+            SELECT a.id, a.partido AS autor_partido, a.posicion, a.argumento,
+                   p.titulo AS punto_titulo, p.tema, p.fecha, p.resumen AS punto_resumen,
+                   m.nombre AS municipio, m.poblacion
+            FROM argumentos a
+            JOIN puntos_pleno p ON a.punto_id = p.id
+            JOIN municipios m ON p.municipio_id = m.id
+            WHERE ({like_clause})
+              AND NOT ({part_target})
+              AND a.partido IS NOT NULL
+              AND LENGTH(a.argumento) >= 40
+              {part_emisor_filter}
+              {time_extra}
+            ORDER BY
+                CASE WHEN m.poblacion > 20000 THEN 0 ELSE 1 END,
+                p.fecha DESC
+            LIMIT 40
+        """, like_params + tp)
+        rows = [dict(r) for r in cur.fetchall()]
+
+    # Post-procesado: identificar autor, mención concreta, keywords, ataques
+    ataques: list[dict] = []
+    for r in rows:
+        texto = r.get("argumento") or ""
+        # Detectar qué patrón del partido_objetivo aparece
+        mencion = ""
+        for lab in labels_search:
+            if lab.strip().lower() in texto.lower():
+                mencion = lab.strip()
+                break
+        autor_nombre = _extract_author_name(texto)
+        señales = _detect_attack_keywords(texto)
+        kw = _top_keywords(texto, limit=6)
+        ataques.append({
+            "autor_partido": r.get("autor_partido"),
+            "autor_nombre": autor_nombre or None,
+            "mencion_detectada": mencion,
+            "municipio": r.get("municipio"),
+            "fecha": r.get("fecha"),
+            "punto_titulo": r.get("punto_titulo"),
+            "tema": r.get("tema"),
+            "argumento": texto,
+            "señales_ataque": señales,
+            "palabras_clave": kw,
+            "es_confrontacional": bool(señales),
+        })
+
+    # Agrupar por palabras clave comunes → narrativas replicadas
+    # (si 2+ argumentos comparten >=2 palabras clave en varios municipios, probable narrativa)
+    narrativas_agrupadas: dict[str, dict] = {}
+    for a in ataques:
+        for kw in a["palabras_clave"][:3]:
+            entry = narrativas_agrupadas.setdefault(kw, {
+                "keyword": kw,
+                "municipios": set(),
+                "partidos_emisores": set(),
+                "apariciones": 0,
+                "ejemplos": [],
+            })
+            entry["municipios"].add(a["municipio"])
+            entry["partidos_emisores"].add(a["autor_partido"] or "desconegut")
+            entry["apariciones"] += 1
+            if len(entry["ejemplos"]) < 3:
+                entry["ejemplos"].append({
+                    "municipio": a["municipio"],
+                    "fecha": a["fecha"],
+                    "autor_partido": a["autor_partido"],
+                    "autor_nombre": a["autor_nombre"],
+                    "argumento": a["argumento"][:300],
+                })
+
+    # Solo narrativas que aparezcan en 2+ municipios
+    narrativas_replicadas = []
+    for v in narrativas_agrupadas.values():
+        if len(v["municipios"]) >= 2:
+            narrativas_replicadas.append({
+                "keyword": v["keyword"],
+                "municipios_cnt": len(v["municipios"]),
+                "municipios": sorted(v["municipios"]),
+                "partidos_emisores": sorted(v["partidos_emisores"]),
+                "apariciones": v["apariciones"],
+                "ejemplos": v["ejemplos"],
+            })
+    narrativas_replicadas.sort(key=lambda n: (n["municipios_cnt"], n["apariciones"]), reverse=True)
+
+    # Confrontaciones directas (con señales de ataque)
+    confrontaciones = sorted(
+        [a for a in ataques if a["es_confrontacional"]],
+        key=lambda a: a["fecha"] or "",
+        reverse=True,
+    )[:10]
+
+    return json.dumps({
+        "partido_objetivo": partido_objetivo,
+        "partido_emisor_filtro": partido_emisor or None,
+        "filtros_tiempo": {k: v for k, v in time_kw.items() if v},
+        "resumen": {
+            "ataques_totales": len(ataques),
+            "confrontaciones_detectadas": len(confrontaciones),
+            "narrativas_replicadas": len(narrativas_replicadas),
+            "municipios_implicados": len({a["municipio"] for a in ataques}),
+            "partidos_emisores": sorted({a["autor_partido"] for a in ataques if a["autor_partido"]}),
+        },
+        "confrontaciones_directas": confrontaciones,
+        "narrativas_replicadas": narrativas_replicadas[:8],
+        "todos_los_ataques": ataques[:20],
+    }, default=str, ensure_ascii=False)
+
+
 def tool_oportunidades_tema(tema: str = "") -> str:
     """Detecta temas en tendencia donde AC aún no ha tomado posición o rivales están divididos."""
     with get_cursor() as cur:
@@ -1239,6 +1487,12 @@ TOOL_MAP = {
     "dossier_adversario":  lambda a: tool_dossier_adversario(a.get("partido", ""), a.get("tema", ""), **_time_args(a)),
     "oportunidades_tema":  lambda a: tool_oportunidades_tema(a.get("tema", "")),
     "monitoring_partido":  lambda a: tool_monitoring_partido(a.get("partido", ""), a.get("tema", ""), **_time_args(a)),
+    "narrativas_cruzadas": lambda a: tool_narrativas_cruzadas(
+        a.get("partido_objetivo", "") or a.get("partido", ""),
+        a.get("partido_emisor", ""),
+        a.get("tema", ""),
+        **_time_args(a),
+    ),
 }
 
 
@@ -1385,15 +1639,18 @@ def chat(
         "comparar": "INTENCIÓN DETECTADA: COMPARAR. Objetivo: contraste entre partidos. La sección '¿Y ahora qué?' DEBE posicionar frente a los rivales con diferencia neta.",
         "monitor": (
             "INTENCIÓN DETECTADA: MONITOR. Objetivo: briefing ejecutivo sobre el partido en el periodo. "
-            "ESTRUCTURA OBLIGATORIA de Punts clau:\n"
+            "ESTRUCTURA OBLIGATORIA de Punts clau (usa estos emojis/labels tal cual):\n"
             "  1) 🗣️ Lo que ELLOS DIJERON (intervenciones_propias) — cita literal con blockquote si hay.\n"
             "  2) 🗳️ Cómo VOTARON (resumen_ejecutivo + votos_por_tema) — cifras % favor/contra/abstención.\n"
             "  3) 👥 Lo que DIJERON DE ELLOS los rivales (menciones_rivales) — OBLIGATORIO incluir al menos 1-2 citas literales textuales con formato `> \"cita\"` — partido y concejal que lo dijo. "
-            "Si NO hay menciones_rivales pero SÍ hay menciones_en_puntos (contexto en resumen de puntos), citar esos extractos como 'contexto institucional'.\n"
-            "  4) 📰 Eco en prensa (eco_social) si hay.\n"
+            "Si NO hay menciones_rivales pero SÍ hay menciones_en_puntos, cita esos extractos como 'contexto institucional'.\n"
+            "  4) ⚔️ Confrontaciones nominales (narrativas_cruzadas → confrontaciones_directas): si hay, DEDICA un bullet entero a ataques persona-a-persona: "
+            "«[Autor del ataque] (**partido**) va acusar [concejal objetivo] de [tesis] a [municipi] [data]» con la cita literal en blockquote. "
+            "Si hay narrativas_replicadas (misma tesis en 2+ municipios), señálalo como '🔁 narrativa coordinada: la misma acusación apareix a N municipis'.\n"
+            "  5) 📰 Eco en prensa (eco_social) si hay.\n"
             "En '¿Y ahora qué?': `**Temperatura política:** [baja/media/alta]. Lo que merece atención: X. Lo que hay que seguir: Y`. "
-            "NUNCA digas 'nadie habla de ellos' sin verificar: el sistema buscó el nombre del partido, sus alias (ej: 'extrema dreta', 'convergents') Y los apellidos de sus concejales activos. "
-            "Si realmente hay 0 menciones en argumentos y 0 en resúmenes, el patrón es silencio institucional — explícalo así."
+            "NUNCA digas 'nadie habla de ellos' sin verificar: el sistema buscó el nombre del partido, sus alias Y los patrones nombre+apellido de sus concejales activos. "
+            "Si realmente hay 0 menciones en argumentos Y 0 en resúmenes Y 0 confrontaciones, el patrón es silencio institucional — explícalo como munición política ('X no genera debate' es útil)."
         ),
         "oportunidad": "INTENCIÓN DETECTADA: OPORTUNIDAD. Objetivo: hueco comunicativo. La sección '¿Y ahora qué?' DEBE identificar el espacio concreto a ocupar.",
         "consulta": "INTENCIÓN: CONSULTA. Responde de forma útil e informada.",

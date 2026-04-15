@@ -29,9 +29,9 @@ const MODES: ModeCard[] = [
     accentBg: 'bg-[#16a34a]',
     questions: [
       "Què s'ha dit d'Aliança Catalana aquest mes?",
+      "Qui ataca els regidors d'AC als darrers mesos?",
       "Tot sobre ERC al març 2026",
-      "Activitat de Junts aquesta setmana",
-      "Què han parlat del PSC els últims 60 dies?",
+      "Què diuen del PP sobre els nostres regidors?",
     ],
   },
   {
