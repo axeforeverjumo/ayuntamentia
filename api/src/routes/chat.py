@@ -432,43 +432,37 @@ def _time_args(a: dict) -> dict:
 
 
 # === Matching expandido de partidos ===
+# IMPORTANTE: las cláusulas retornadas se insertan en strings SQL que se ejecutan
+# con cur.execute(sql, params) donde params puede contener placeholders %s.
+# Por eso todos los `%` literales dentro de patrones LIKE se escriben como `%%`,
+# que psycopg2 convierte a `%` después de sustituir los placeholders.
 def _partido_where(partido: str) -> str:
-    """Devuelve cláusula WHERE para v.partido con alias habituales del partido."""
+    """Devuelve cláusula WHERE para v.partido con alias habituales del partido.
+    Los % literales están escapados como %% para compatibilidad con cur.execute(sql, params)."""
     p = (partido or "").upper().strip()
-    # Aliança Catalana (cubre AC, ALIANÇA.CAT, AC-LOCAL, ERC-AC en confluencias)
     if p in ("AC", "ALIANÇA", "ALIANÇA CATALANA", "ALIANÇA.CAT", "ALIANCA", "ALIANCA CATALANA"):
-        return "(v.partido = 'AC' OR v.partido = 'ALIANÇA.CAT' OR v.partido LIKE 'AC-%' OR v.partido = 'ERC-AC')"
-    # ERC puro (excluye confluencias con AC)
+        return "(v.partido = 'AC' OR v.partido = 'ALIANÇA.CAT' OR v.partido LIKE 'AC-%%' OR v.partido = 'ERC-AC')"
     if p == "ERC":
-        return "(v.partido ILIKE '%ERC%' AND v.partido NOT LIKE '%ERC-AC%' AND v.partido NOT LIKE '%AC%')"
-    # Junts / JxCat / Convergència
+        return "(v.partido ILIKE '%%ERC%%' AND v.partido NOT LIKE '%%ERC-AC%%' AND v.partido NOT LIKE '%%AC%%')"
     if p in ("JUNTS", "JXCAT", "JXC", "JUNTS PER CATALUNYA", "JUNTSXCAT", "CONVERGÈNCIA",
              "CONVERGENCIA", "CIU", "CONVERGÈNCIA I UNIÓ", "JUNTS PEL"):
-        return ("(v.partido ILIKE '%JUNTS%' OR v.partido ILIKE '%JXCAT%' "
-                "OR v.partido ILIKE '%JxC%' OR v.partido ILIKE '%CIU%' "
-                "OR v.partido ILIKE '%CONVERGÈNCIA%' OR v.partido ILIKE '%CONVERGENCIA%')")
-    # CUP
+        return ("(v.partido ILIKE '%%JUNTS%%' OR v.partido ILIKE '%%JXCAT%%' "
+                "OR v.partido ILIKE '%%JxC%%' OR v.partido ILIKE '%%CIU%%' "
+                "OR v.partido ILIKE '%%CONVERGÈNCIA%%' OR v.partido ILIKE '%%CONVERGENCIA%%')")
     if p in ("CUP", "CANDIDATURA D'UNITAT POPULAR"):
-        return "(v.partido ILIKE 'CUP%' OR v.partido ILIKE '%CUP-%' OR v.partido ILIKE '%CUP %')"
-    # PSC / PSOE
+        return "(v.partido ILIKE 'CUP%%' OR v.partido ILIKE '%%CUP-%%' OR v.partido ILIKE '%%CUP %%')"
     if p in ("PSC", "PSOE", "PSC-PSOE"):
-        return "(v.partido ILIKE 'PSC%' OR v.partido ILIKE '%PSOE%' OR v.partido ILIKE 'PSC-%')"
-    # PP
+        return "(v.partido ILIKE 'PSC%%' OR v.partido ILIKE '%%PSOE%%' OR v.partido ILIKE 'PSC-%%')"
     if p in ("PP", "PARTIT POPULAR", "PARTIDO POPULAR"):
-        return "(v.partido = 'PP' OR v.partido ILIKE 'PP-%' OR v.partido ILIKE 'PP %')"
-    # VOX
+        return "(v.partido = 'PP' OR v.partido ILIKE 'PP-%%' OR v.partido ILIKE 'PP %%')"
     if p == "VOX":
-        return "(v.partido = 'VOX' OR v.partido ILIKE 'VOX-%' OR v.partido ILIKE 'VOX %')"
-    # Ciudadanos
+        return "(v.partido = 'VOX' OR v.partido ILIKE 'VOX-%%' OR v.partido ILIKE 'VOX %%')"
     if p in ("CS", "C'S", "CIUDADANOS", "CIUTADANS"):
-        return "(v.partido = 'CS' OR v.partido = \"C'S\" OR v.partido ILIKE 'CIUDADAN%' OR v.partido ILIKE 'CIUTADA%')"
-    # Comuns / Catalunya en Comú
+        return "(v.partido = 'CS' OR v.partido = \"C'S\" OR v.partido ILIKE 'CIUDADAN%%' OR v.partido ILIKE 'CIUTADA%%')"
     if p in ("COMUNS", "COMÚ", "EN COMÚ PODEM", "ECP", "CATCOMU", "ICV",
              "CATALUNYA EN COMÚ", "CATALUNYA EN COMU"):
-        return ("(v.partido ILIKE '%COMÚ%' OR v.partido ILIKE '%COMU%' "
-                "OR v.partido ILIKE '%ECP%' OR v.partido ILIKE '%ICV%')")
-    # Fallback: substring puro
-    # Escapar % del input para evitar pattern injection accidental
+        return ("(v.partido ILIKE '%%COMÚ%%' OR v.partido ILIKE '%%COMU%%' "
+                "OR v.partido ILIKE '%%ECP%%' OR v.partido ILIKE '%%ICV%%')")
     safe = (partido or "").replace("%", "").replace("'", "")
     return f"v.partido ILIKE '%%{safe}%%'"
 
