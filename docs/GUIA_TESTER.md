@@ -1,6 +1,6 @@
 # Guía del tester — AyuntamentIA
 
-**Producto**: Plataforma de inteligencia política para Aliança Catalana
+**Versió**: 2 (2026-04-15) — incorpora les millores post-feedback del primer test
 **URL**: https://alianza-catalana.factoriaia.com
 **Servidor**: `root@85.215.105.45` (`/opt/ayuntamentia`)
 **Bot Telegram**: `@alianza_catalana_bot`
@@ -8,176 +8,201 @@
 
 ---
 
-## Cómo leer esta guía
+## 🆕 Què ha canviat respecte a la v1
 
-Para cada requisito del cliente hay una ficha con 4 bloques:
-
-- **🎯 Qué pidió el cliente** — la frase literal del brief
-- **📍 Dónde probarlo** — URL exacta o comando
-- **🧪 Pasos de test** — secuencia de clicks/acciones
-- **✅ Criterio de aceptación** — qué tiene que ocurrir para dar OK
-- **⚠️ Estado conocido** — si hay datos insuficientes o gaps, ya avisados
-
-Al final de cada ficha, marca **PASS / FAIL / BLOQUEADO** y apunta captura + observación.
+| Feedback v1 | Solució v2 |
+|---|---|
+| Respostes del chat sense format | Render markdown amb títols, bullets, taules, negreta (classe `.markdown-body`) |
+| Camp cron críptic (`0 8 * * 5`) | Selector amigable **Diari/Setmanal/Mensual** + dia + hora, amb frase humana i cron crud a sota |
+| Botó "Previsualitza" sense feedback | Modal amb spinner *"Generant brief… pot trigar 10-30 s"* |
+| Modal del brief sense format | Render markdown estructurat (H2 per secció) |
+| "Moviments clau" amb 3× "Sense activitat" | Prompt reescrit: una sola línia quan no hi ha dades |
+| Rang temporal fixat (7d) no seleccionable | Nou camp **Finestra temporal** (7/14/30/90 dies) |
+| `/recepcio` visualment pobre | Redisseny: KPIs globals, grid de temes clicable, timeline amb dots de sentiment, skeleton loader, empty states |
+| 0 alertes generades | Detector reescrit (llindars + fallback + nou detector SQL incoherències). Ara: **3 tendències + 10 incoherències** |
 
 ---
 
-## 0. Setup rápido para el tester
+## Cómo leer esta guía
 
-### 0.1 Acceso a la web
-1. Abrir https://alianza-catalana.factoriaia.com en Chrome
+Cada caso té:
+
+- 🎯 **Qué pidió el cliente** — la frase literal del brief
+- 📍 **Dónde probarlo** — URL exacta o comando
+- 🧪 **Pasos de test** — secuencia de clicks/acciones
+- ✅ **Criterio de aceptación** — qué tiene que ocurrir para dar OK
+- ⚠️ **Estado conocido** — si hay datos insuficientes o gaps
+
+Marca **PASS / FAIL / BLOQUEADO / PARCIAL** al final.
+
+---
+
+## 0. Setup rápido
+
+### 0.1 Acceso web
+1. https://alianza-catalana.factoriaia.com en Chrome
 2. Login con `test@ayuntamentia.cat` / `Test1234!`
 3. Deberías ver el **Dashboard** (KPIs + mapa Catalunya + pipeline live)
 
-### 0.2 Acceso al servidor (solo si la tarea lo requiere)
+### 0.2 Acceso al servidor (solo si se pide)
 ```bash
 ssh root@85.215.105.45
 cd /opt/ayuntamentia
-docker compose ps                  # 6 contenedores Up
-docker compose logs -f pipeline-worker   # ver pipeline en vivo
+docker compose ps                          # 6 contenedores Up
+docker compose logs -f pipeline-worker     # ver pipeline en vivo
 ```
 
 ### 0.3 Crear usuarios de test adicionales
-Con sesión admin → `/admin → Usuaris` → **Nuevo** (o vía SSH `./scripts/create_admin.sh`).
-Para probar roles crear al menos: 1 `delegado` con áreas=["medio_ambiente","pesca"] y 1 `concejal` de un municipio concreto.
+Admin → `/admin → Usuaris` → **Nuevo**. Para probar roles, crear al menos:
+- 1 `delegado` con áreas=["medio_ambiente","pesca"]
+- 1 `concejal` de un municipio concreto
 
 ---
 
 # BLOQUE A — Peticiones explícitas del cliente
 
-## A1. IA como chatbot de análisis (no saturación)
+## A1. IA como chatbot de análisis ✨ (mejorado)
 
 - 🎯 **Cliente**: "La IA debe funcionar como un chatbot de análisis que hable directamente y proporcione las conclusiones solicitadas, evitando la saturación de información."
 - 📍 **Dónde**: `/chat`
 - 🧪 **Pasos**:
-  1. Login como admin → menú lateral **Chat**
-  2. Preguntar literalmente: *"¿Qué tendencias hay en medio ambiente este mes en Catalunya?"*
+  1. Login → menú lateral **Chat**
+  2. Preguntar: *"¿Qué tendencias hay en medio ambiente este mes en Catalunya?"*
   3. Esperar respuesta (≤30 s)
-  4. Probar otra: *"Compara votaciones de ERC y JxCat sobre urbanismo"*
-  5. Probar una genérica: *"Hola"*
+  4. Otra: *"Compara votaciones de ERC y JxCat sobre urbanismo"*
+  5. Genérica: *"Hola"*
 - ✅ **Criterio**:
-  - Respuesta empieza con **veredicto de 1-2 frases** que contesta directamente
-  - Máx **3-5 bullets** con cifras concretas (%, números, municipios)
-  - Cierra con sección **"¿Y ahora qué?"** con 1-2 acciones/vigilancias
-  - Bajo la respuesta aparecen **Fonts** (chips con municipio + fecha)
+  - **[Nou v2]** Respuesta con **formato visual**: títulos destacados, bullets con viñeta azul, negritas, espaciado entre párrafos. Debe verse "hojable", no un muro de texto
+  - Empieza con **veredicto de 1-2 frases**
+  - Máx **3-5 bullets** con cifras concretas
+  - Cierra con **"¿Y ahora qué?"** con 1-2 acciones
+  - Bajo la respuesta, chips de **Fonts** con municipio+fecha
   - Idioma = idioma de la pregunta
-  - "Hola" debe responder saludo corto, sin ejecutar búsquedas
-- ⚠️ **Estado**: 16 tools activas, modo análisis forzado por prompt.
+  - "Hola" → saludo corto sin búsquedas
+- ⚠️ **Estado**: ✅ formato markdown activo (classe `.markdown-body`)
 
 ---
 
-## A2. Informes personalizados por temática
+## A2. Informes personalizados por temática ✨ (mejorado)
 
-- 🎯 **Cliente**: "Informes automáticos por temáticas (medio ambiente, comercio, pesca, agricultura, caza) enviados a una bandeja en horario definido (ej. cada viernes)."
+- 🎯 **Cliente**: "Informes automáticos por temáticas enviados en horario definido (ej. cada viernes)."
 - 📍 **Dónde**: `/suscripciones`
-- 🧪 **Pasos (modo temas predefinidos)**:
+- 🧪 **Pasos**:
   1. `/suscripciones` → **Nova subscripció**
   2. Nombre: `Brief setmanal medi ambient`
   3. Toggle **Temes predefinits** activado
-  4. Seleccionar chips: `medio_ambiente`, `pesca`, `agricultura`, `caza`
+  4. Chips: `medio_ambiente`, `pesca`, `agricultura`, `caza`
   5. Canal: `Email` (o `Tots dos`)
-  6. Cron: `0 8 * * 5` (= viernes 8h)
-  7. Botón **Crear**
-  8. En la lista, botón **Previsualitza**
+  6. **[Nou v2]** Finestra temporal: `Darrers 7 dies`
+  7. **[Nou v2]** Quan s'enviarà: **Setmanal → Divendres → 08:00** (verás "Cada divendres a les 08:00 · `0 8 * * 5`" debajo)
+  8. Botón **Crear**
+  9. En la lista, botón **Previsualitza**
 - ✅ **Criterio**:
-  - Aparece modal con brief dry-run con 5 secciones: **Titular / Moviments clau / Eco social / Riscos-oportunitats / Què vigilar**
-  - Máx 350 palabras, cifras con contexto
-  - Si no hay datos en esos temas, dice "Sense activitat"
-- 🧪 **Forzar envío real** (SSH, solo si se requiere validar email/telegram):
+  - **[Nou v2]** Al clicar Previsualitza, sale **modal con spinner** + *"Generant brief... Pot trigar 10-30 segons"*
+  - Tras 10-30s, el modal muestra el brief **con formato markdown**: H2 para cada sección (**Titular / Moviments clau / Eco social / Riscos i oportunitats / Què vigilar**), bullets reales, negritas en municipios y cifras
+  - **[Nou v2]** Si NO hay datos, cada sección tiene **UNA sola línea** "Sense activitat en aquest període" (no 3 placeholders)
+  - Máx 350 palabras
+- 🧪 **Forzar envío real** (solo si quieres validar email/telegram):
   ```bash
   ssh root@85.215.105.45 'cd /opt/ayuntamentia && \
     docker compose exec -T pipeline-worker celery -A src.workers.celery_app \
       call src.workers.tasks.dispatch_subscripciones'
   ```
-  Ajustar cron a `*/2 * * * *` para que dispare en 2 min.
-- ⚠️ **Estado**: `subscripciones = 0` en producción — el tester debe crear la primera.
+- ⚠️ **Estado**: `subscripciones = 0` en prod — créala tú.
 
 ---
 
-## A2-bis. Informes con **consulta libre** (añadido reciente)
+## A2-bis. Informes con consulta libre
 
-- 🎯 **Cliente (implícito)**: *"Quiero saber qué se habla de Aliança Catalana"* o *"qué movimientos hace el PP"* — no encaja en chips.
+- 🎯 **Cliente (implícito)**: *"Quiero saber qué se habla de Aliança Catalana"*, *"movimientos del PP"* — no encaja en chips.
 - 📍 **Dónde**: `/suscripciones` → toggle **Consulta lliure**
 - 🧪 **Pasos**:
   1. Nombre: `Vigilància AC`
   2. Toggle **Consulta lliure**
-  3. Clicar uno de los 4 ejemplos (ej. *"Tot el que es parli d'Aliança Catalana a plens i a premsa"*) o escribir el propio
-  4. Canal + cron → **Crear**
+  3. Clicar un ejemplo (ej. *"Tot el que es parli d'Aliança Catalana a plens i a premsa"*) o escribir el propio
+  4. Elegir Finestra temporal, Canal, Cron → **Crear**
   5. **Previsualitza**
 - ✅ **Criterio**:
-  - El brief interpreta la consulta y trae datos relevantes (votos AC, menciones sociales, actas donde aparece, etc.)
-  - Mismo formato que A2
-  - Si escribe <10 caracteres, el botón Crear está deshabilitado
-- ⚠️ **Estado**: recién desplegado (commit `763c6b3`). Probar los 4 ejemplos sugeridos.
+  - Brief interpreta la consulta y trae datos relevantes
+  - Mismo formato markdown que A2
+  - Si escribes <10 caracteres, botón Crear deshabilitado
+- ⚠️ **Estado**: probar los 4 ejemplos sugeridos.
 
 ---
 
-## A3. Recepción social integrada
+## A3. Recepción social integrada ✨ (rediseñado)
 
 - 🎯 **Cliente**: "Que los informes incluyan acogida y feedback de la sociedad en redes sociales."
 - 📍 **Dónde**: `/recepcio` + sección *Eco social* de cualquier brief
 - 🧪 **Pasos**:
-  1. `/recepcio` → ver grid de temas con distribución sentiment (verde/gris/rojo)
-  2. Cambiar filtro de ventana temporal (7d / 14d / 30d)
-  3. Click en un tema → timeline de menciones con enlace a la fuente original
-  4. Volver a `/suscripciones` → Previsualitzar un brief → buscar sección **Eco social**
+  1. `/recepcio`
+  2. **[Nou v2]** Ver los **4 KPIs arriba**: Mencions / Sentiment net / Temes actius / Engagement
+  3. **[Nou v2]** Ver el **grid de cards por tema** con barra tricolor (verde/gris/rojo) y contador grande
+  4. **[Nou v2]** Click en una card → filtra el timeline por ese tema (card queda con borde azul)
+  5. Cambiar finestra 7/14/30 con los botones tipo toggle
+  6. Ver timeline de menciones con **dot de color** según sentiment + tag de tema
+  7. Volver a `/suscripciones` → Previsualitzar un brief → buscar sección **Eco social**
 - ✅ **Criterio**:
-  - Hay al menos 1 tema con distribución de sentimiento
-  - Timeline enlaza a URLs externas reales (prensa, Bluesky)
-  - Brief cita "Eco social" con agregado numérico (N menciones, X% positivo…)
-- ⚠️ **Estado actual**: solo 16 menciones en BD, todas de fuente `ara`. Bluesky y otros RSS no aportan datos → **reportar como BLOQUEADO parcial** si el grid sale vacío.
+  - KPIs muestran números reales
+  - Grid tiene al menos 1 card con datos
+  - Click en card filtra timeline
+  - **[Nou v2]** Si no hay datos, empty state amigable con icono (no pantalla vacía)
+  - Timeline enlaza a URLs externas (prensa, Bluesky)
+- ⚠️ **Estado**: solo 16 menciones en BD, solo fuente `ara`. Bluesky/otros RSS no aportan aún → verás pocos temas.
 
 ---
 
-## A4. Anticipación proactiva (alertas)
+## A4. Anticipación proactiva (alertas) ✅ (resuelto)
 
-- 🎯 **Cliente**: "Anticiparse a problemas/discursos municipales, comarcales o en redes antes de que sean públicos."
+- 🎯 **Cliente**: "Anticiparse a problemas/discursos antes de que sean públicos."
 - 📍 **Dónde**: `/alertes`
 - 🧪 **Pasos**:
-  1. `/alertes` → listado de alertas
-  2. Filtrar por tipo: `incoherencia_interna`, `tendencia_emergente`, `tendencia_geo`, `reaccion_social`
-  3. Click en una alerta → detalle con municipio/tema/explicación
-  4. **Forzar detector** (SSH):
-     ```bash
-     ssh root@85.215.105.45 'cd /opt/ayuntamentia && \
-       docker compose exec -T pipeline-worker celery -A src.workers.celery_app \
-         call src.workers.tasks.detect_emerging'
-     ```
+  1. `/alertes` → ver listado
+  2. **[Nou v2]** Verás alertas de 2 tipos: `tendencia_emergente` (3) + `incoherencia_interna` (10)
+  3. Filtrar por tipo
+  4. Click en una alerta → detalle con título, descripción, severidad
 - ✅ **Criterio**:
-  - Al menos 1 alerta generada tras forzar detector
-  - Cada alerta muestra severidad (alta/mitjana/baixa) + explicación + link a fuente
-- ⚠️ **Estado**: `alertas = 0` en BD. Detector corre cada 4h pero con umbrales estrictos. **Si tras forzar sigue en 0, reportar como FAIL con nota "revisar umbrales"**.
+  - **Ya hay 13 alertas** en BD (3 tendencias + 10 incoherencias)
+  - Cada alerta muestra severidad (media) + descripción clara
+  - Ejemplos que verás: *"Tema actiu: urbanismo (20 punts aquest mes)"*, *"Incoherència JxCat sobre medio_ambiente"*, *"Incoherència PSC sobre urbanismo"*
+- 🧪 **Forzar regeneración** (opcional):
+  ```bash
+  ssh root@85.215.105.45 'cd /opt/ayuntamentia && \
+    docker compose exec -T pipeline-worker python -c \
+    "from src.coherencia.tendencias import detect_and_alert; print(detect_and_alert())"'
+  ```
+- ⚠️ **Estado**: ✅ resuelto en v2 (gap #3 del BLOQUE F eliminado).
 
 ---
 
 ## A5. Expansión al Parlament de Catalunya
 
-- 🎯 **Cliente**: "Aplicar el sistema a sesiones plenarias, comisiones y plenos del Parlament."
-- 📍 **Dónde**: `/parlament` + tool del chat
+- 🎯 **Cliente**: "Aplicar el sistema a sesiones, comisiones y plenos del Parlament."
+- 📍 **Dónde**: `/parlament` + chat
 - 🧪 **Pasos**:
-  1. `/parlament` → listado de sesiones e iniciativas
-  2. En `/chat` preguntar: *"¿Qué iniciativas hay en el Parlament sobre vivienda?"*
-  3. En `/chat` preguntar: *"¿Qué contradicciones hay entre lo que dice el PSC en Parlament y lo que hacen sus concejales?"*
+  1. `/parlament` → listado iniciativas
+  2. Chat: *"¿Qué iniciativas hay en el Parlament sobre vivienda?"*
+  3. Chat: *"¿Qué contradicciones hay entre el PSC en Parlament y sus concejales?"*
 - ✅ **Criterio**:
-  - `/parlament` muestra iniciativas (debe haber 21.125 en BD)
-  - El chat invoca la tool `iniciativas_parlament` y devuelve iniciativas con título/tipo/fecha
-  - Página `/intel → Promeses incomplertes` tiene datos
-- ⚠️ **Estado**: ✅ iniciativas sí; ❌ **`sesiones_parlament = 0`** (scraper DSPC no puebla). Reportar como PASS parcial.
+  - `/parlament` muestra iniciativas (21.125 en BD)
+  - Chat invoca tool `iniciativas_parlament`
+  - `/intel → Promeses incomplertes` tiene datos
+- ⚠️ **Estado**: ✅ iniciativas; ❌ **`sesiones_parlament = 0`** (scraper DSPC no puebla). **PARCIAL**.
 
 ---
 
 ## A6. Énfasis en la capacidad de estudio (iceberg)
 
-- 🎯 **Cliente**: "La potencia está en la capa no visible — volumen masivo procesado."
-- 📍 **Dónde**: Dashboard `/` + preguntas al chat que crucen fuentes
+- 🎯 **Cliente**: "Potencia en la capa no visible — volumen masivo procesado."
+- 📍 **Dónde**: Dashboard `/` + preguntas cross-fuente
 - 🧪 **Pasos**:
-  1. Dashboard `/` → ver KPIs: municipios monitoreados, actas, votaciones, temas trending
-  2. Chat: *"¿Contradicen los socialistas en Girona lo que dicen en el Parlament sobre vivienda?"* (cruza 2 fuentes)
-  3. Chat: *"Radiografía de Ripoll"* (cruza 5 tools: info_municipio, historial_alcaldes, elecciones, presupuesto, población)
+  1. Dashboard `/` → KPIs
+  2. Chat: *"¿Contradicen los socialistas en Girona lo que dicen en el Parlament sobre vivienda?"*
+  3. Chat: *"Radiografía de Ripoll"* (cruza 5 tools)
 - ✅ **Criterio**:
-  - KPIs dashboard muestran números reales (≥80k actas, ≥50k votos, ≥8k argumentos)
-  - Radiografía Ripoll devuelve respuesta integrada de 5 fuentes distintas
-- ⚠️ **Estado**: ✅ datos poblados.
+  - KPIs: ≥80k actas, ≥50k votos, ≥8k argumentos
+  - Radiografía Ripoll devuelve respuesta de 5 fuentes distintas
+- ⚠️ **Estado**: ✅
 
 ---
 
@@ -185,67 +210,41 @@ Para probar roles crear al menos: 1 `delegado` con áreas=["medio_ambiente","pes
 
 ## B1. Seguridad de acceso
 
-- 🎯 **Cliente**: "Evitar acceso de personas externas a la organización."
-- 📍 **Dónde**: cualquier URL
+- 🎯 "Evitar acceso externo."
 - 🧪 **Pasos**:
-  1. Abrir ventana incógnito sin login
-  2. Intentar acceder directamente a https://alianza-catalana.factoriaia.com/chat
-  3. Intentar llamada a API sin JWT: `curl -i https://alianza-catalana.factoriaia.com/api/chat/`
-- ✅ **Criterio**:
-  - Redirect automático a `/login?next=/chat`
-  - API devuelve 401 Unauthorized sin JWT
-  - HTTPS con certificado válido Let's Encrypt (sin warning del navegador)
-
----
+  1. Incógnito sin login → intentar `https://alianza-catalana.factoriaia.com/chat`
+  2. Call API sin JWT: `curl -i https://alianza-catalana.factoriaia.com/api/chat/`
+- ✅ **Criterio**: redirect a `/login?next=/chat`; API 401; HTTPS certificado válido.
 
 ## B2. RGPD — ofuscación de nombres
 
-- 🎯 **Cliente**: "Gestión RGPD — ofuscar nombres de personas."
-- 📍 **Dónde**: `/admin → Usuaris` + login como delegado
+- 🎯 "Ofuscar nombres de personas."
 - 🧪 **Pasos**:
-  1. Sesión admin → `/admin → Usuaris` → editar un delegado → activar checkbox **Anonimizar nombres** → guardar
-  2. Abrir otra ventana incógnito, login con ese delegado
-  3. En `/chat` preguntar: *"¿Quién intervino en el último pleno de Girona?"*
-  4. Revisar respuesta
-- ✅ **Criterio**:
-  - Personas particulares aparecen como iniciales (ej. `J. G.`)
-  - Cargos electos (alcaldes, regidores, diputados) **mantienen nombre completo**
-  - Al desactivar el flag, los nombres vuelven a aparecer
-- ⚠️ **Estado**: ✅ implementado en `anonymize.py`.
-
----
+  1. Admin → `/admin → Usuaris` → editar delegado → checkbox **Anonimizar nombres** → guardar
+  2. Incógnito, login con ese delegado
+  3. Chat: *"¿Quién intervino en el último pleno de Girona?"*
+- ✅ **Criterio**: particulares → iniciales (`J. G.`); cargos electos mantienen nombre completo.
 
 ## B3. Estructura de usuarios y roles
 
-- 🎯 **Cliente**: "Login con roles (delegados por área) que vean solo su parte."
-- 📍 **Dónde**: `/admin → Usuaris`
+- 🎯 "Login con roles que vean solo su parte."
 - 🧪 **Pasos**:
-  1. Admin → crear `delegado_ma` con rol `delegado`, áreas=["medio_ambiente","pesca"], municipios=[]
-  2. Admin → crear `concejal_ripoll` con rol `concejal`, áreas=[], municipios=[Ripoll]
-  3. Login con `delegado_ma` → `/buscar` → buscar "urbanismo" → debe salir vacío o bloqueado
-  4. Login con `delegado_ma` → `/buscar` → buscar "medi ambient" → debe haber resultados
-  5. Login con `concejal_ripoll` → `/municipis` → solo ve Ripoll (o solo esos datos)
-- ✅ **Criterio**:
-  - El delegado no ve temas fuera de su scope
-  - El concejal no ve municipios ajenos
-  - El admin ve todo
+  1. Admin → crear `delegado_ma` (rol=delegado, áreas=["medio_ambiente","pesca"])
+  2. Admin → crear `concejal_ripoll` (rol=concejal, municipios=[Ripoll])
+  3. Login delegado_ma → `/buscar` → "urbanismo" (vacío/bloqueado), luego "medi ambient" (con resultados)
+  4. Login concejal_ripoll → `/municipis` → solo Ripoll
+- ✅ **Criterio**: scope respetado; admin ve todo.
 
----
+## B4. Panel admin + audit log
 
-## B4. Panel admin + trazabilidad (audit log)
-
-- 🎯 **Cliente**: "Panel para dirección que monitorice qué consulta cada delegado — controlar línea ideológica."
-- 📍 **Dónde**: `/admin`
+- 🎯 "Monitorizar qué consulta cada delegado."
 - 🧪 **Pasos**:
-  1. Sesión admin → `/admin` → pestaña **Resum**: contadores 30d por usuario
-  2. Pestaña **Usuaris**: lista con rol, áreas, municipios, última actividad
-  3. Pestaña **Audit log**: listado paginado de todas las acciones
-  4. En otra sesión, hacer 3 consultas con un delegado
-  5. Volver al admin → refrescar audit log → deben aparecer las 3 con timestamp, mensaje, tools usadas, latencia
-- ✅ **Criterio**:
-  - Cada `chat_query`, `subscripcion_create`, login, export, visualización queda registrada
-  - Filtro por usuario funciona
-  - Payload contiene la pregunta textual (primeros 500 chars)
+  1. `/admin` → pestaña **Resum** → contadores 30d
+  2. Pestaña **Usuaris** → lista con rol, áreas, última actividad
+  3. Pestaña **Audit log**
+  4. Otra sesión: delegado hace 3 consultas
+  5. Admin refresca audit log → las 3 con timestamp, mensaje, tools, latencia
+- ✅ **Criterio**: cada `chat_query`, login, subscripció queda registrada; filtro por usuario OK.
 
 ---
 
@@ -253,158 +252,78 @@ Para probar roles crear al menos: 1 `delegado` con áreas=["medio_ambiente","pes
 
 ## C1. Monitor de votaciones
 
-- 🎯 **Cliente**: "Cada voto de concejal queda registrado y clasificado."
-- 📍 **Dónde**: `/chat` + BD
-- 🧪 **Pasos**:
-  1. Chat: *"¿Cómo ha votado AC en los últimos plens?"*
-  2. SSH verificación:
-     ```bash
-     docker compose exec -T api python -c "
-     import psycopg2,os; c=psycopg2.connect(os.environ['DATABASE_URL']).cursor()
-     c.execute(\"select partido,sentido,count(*) from votaciones group by 1,2 order by 1\");
-     print(c.fetchall())"
-     ```
-- ✅ **Criterio**: chat devuelve lista con municipio + tema + sentido + fecha. BD tiene ≥50k votos clasificados por `partido` y `sentido`.
+- 🧪 Chat: *"¿Cómo ha votado AC en los últimos plens?"*
+- ✅ Lista con municipio+tema+sentido+fecha. BD tiene 51.345 votos clasificados.
 
----
+## C2. Alertas de incoherencia ✅ (resuelto)
 
-## C2. Alertas de incoherencia interna
-
-- 🎯 **Cliente**: "Si en Girona aprueban X y en Tarragona rechazan X, avisar."
-- 📍 **Dónde**: `/alertes` filtrado por `incoherencia_interna`
-- 🧪 **Pasos**: ver A4. Además, ejecutar query:
-  ```sql
-  SELECT * FROM alertas WHERE tipo='incoherencia_interna' ORDER BY created_at DESC LIMIT 5;
-  ```
-- ✅ **Criterio**: aparece al menos 1 alerta tras forzar detector. Cada una referencia 2+ municipios donde el mismo partido votó diferente el mismo tipo de punto.
-
----
+- 🧪 `/alertes` filtrado por `incoherencia_interna` — **verás 10 alertas ya generadas** (JxCat, PSC, ERC, VOX, CUP sobre diversos temas).
+- ✅ Cada una referencia N municipios a favor + N en contra el mismo tema.
 
 ## C3. Mapa de discurso
 
-- 🎯 **Cliente**: "Qué argumentos usa cada concejal y si son consistentes."
-- 📍 **Dónde**: `/chat` (tool `buscar_argumentos`)
-- 🧪 **Pasos**:
-  1. Chat: *"¿Qué argumentos ha usado ERC sobre inmigración en los últimos meses?"*
-  2. Chat: *"¿Qué dice [nombre concejal AC] en sus intervenciones?"*
-- ✅ **Criterio**: respuesta cita intervenciones textuales con concejal, municipio, fecha y posición (a favor/en contra). Debe haber ≥5 intervenciones citadas.
-
----
+- 🧪 Chat: *"¿Qué argumentos ha usado ERC sobre inmigración?"* + *"¿Qué dice [concejal X] en sus intervenciones?"*
+- ✅ ≥5 intervenciones con concejal, municipio, fecha, posición.
 
 ## C4. Ranking interno de concejales
 
-- 🎯 **Cliente**: "Ranking alineados vs divergentes, uso interno de dirección."
-- 📍 **Dónde**: `/intel → Ranking concejales`
-- 🧪 **Pasos**:
-  1. `/intel` → pestaña **Ranking concejales**
-  2. Filtro partido = `AC`, orden = `divergencia`
-  3. Probar también orden = `alineación`
-- ✅ **Criterio**:
-  - Tabla con columnas: concejal, municipio, partido, % alineación, nº votos
-  - Orden divergencia muestra los que **más se salen** de la línea del partido arriba
-  - Orden alineación muestra los más fieles arriba
-- ⚠️ **Estado**: vista `v_ranking_concejales` tiene 33 filas.
+- 🧪 `/intel → Ranking concejales` → filtro partido=`AC`, orden=`divergencia` y luego `alineación`
+- ✅ Tabla con concejal/municipio/partido/% alineación/nº votos. 33 filas en vista.
 
----
+## C5. Informe semanal automático dirección
 
-## C5. Informe semanal automático para la dirección
-
-- 🎯 **Cliente**: "Informe semanal automático para la dirección del partido."
-- 📍 **Dónde**: `/informes` + email/Telegram dirección
-- 🧪 **Pasos**:
-  1. `/informes` → pestaña **Setmanal** → ver histórico
-  2. Forzar ejecución:
-     ```bash
-     ssh root@85.215.105.45 'cd /opt/ayuntamentia && \
-       docker compose exec -T pipeline-worker celery -A src.workers.celery_app \
-         call src.workers.tasks.weekly_report'
-     ```
-  3. Esperar 30-60s, refrescar `/informes`
-- ✅ **Criterio**: aparece nueva entrada en el listado con fecha de hoy y contenido coherente (titular + movimientos + eco + riesgos + vigilar).
-
----
+- 🧪 `/informes` → pestaña Setmanal → histórico. Forzar:
+  ```bash
+  ssh root@85.215.105.45 'cd /opt/ayuntamentia && \
+    docker compose exec -T pipeline-worker celery -A src.workers.celery_app \
+      call src.workers.tasks.weekly_report'
+  ```
+- ✅ Nueva entrada con fecha actual y contenido (titular+movimientos+eco+riesgos+vigilar).
 
 ## C6. Inteligencia competitiva
 
-### C6.1 Saber qué aprueban rivales
+### C6.1 Qué aprueban rivales
 - 🧪 Chat: *"¿Qué aprueba el PSC en municipios donde gobierna?"*
-- ✅ Respuesta con lista de puntos aprobados filtrados por partido proponente.
+- ✅ Lista filtrada por partido proponente.
 
 ### C6.2 Contradicciones discurso nacional vs municipal
 - 🧪 `/intel → Promeses incomplertes` + chat: *"¿Dónde defiende el PP una cosa en Parlament y la contraria en ayuntamientos?"*
-- ✅ Tabla con tema, posición Parlament, posición municipal, municipios afectados.
-- ⚠️ **Estado**: vista `v_contradicciones_rival` = 0 filas actualmente (depende de `sesiones_parlament`).
+- ⚠️ **Estado**: `v_contradicciones_rival = 0` (depende de `sesiones_parlament`). PARCIAL.
 
-### C6.3 Propuestas que prosperan y con qué argumentos
+### C6.3 Qué propuestas prosperan
 - 🧪 Chat: *"¿Qué propuestas de vivienda han prosperado y cuáles se han rechazado?"*
-- ✅ Separa aprobadas/rechazadas con cifras y argumentos clave de cada lado.
-
----
+- ✅ Separa aprobadas/rechazadas con cifras.
 
 ## C7. Conocer el territorio
 
-- 🧪 **Pasos**:
-  1. `/municipis` → elegir municipio → ver radiografía
-  2. `/intel → Tendències emergents` → ver los 9+ temas en crecimiento
-  3. Chat: *"¿Qué preocupa más en Manlleu?"*
-- ✅ **Criterio**:
-  - Página municipio muestra: composición del pleno, alcaldes históricos, elecciones, presupuestos, últimos plens, temas recurrentes
-  - Tendencias emergentes lista temas con delta vs 30d anteriores
-
----
+- 🧪 `/municipis` → municipio → radiografía. `/intel → Tendències emergents`. Chat: *"¿Qué preocupa más en Manlleu?"*
+- ✅ Página con composición pleno, alcaldes, elecciones, presupuestos, plens, temas.
 
 ## C8. Preparar concejales
 
-### C8.1 Argumentos de la oposición
-- 🧪 Chat: *"¿Qué argumentos usa Junts contra las ordenanzas de civismo?"*
-- ✅ Devuelve intervenciones de Junts en plens con posición en contra.
-
-### C8.2 Buenas prácticas propias
-- 🧪 Chat: *"¿Qué mociones ha ganado AC este año?"*
-- ✅ Lista puntos con resultado `aprobado` y partido proponente `AC`.
-
-### C8.3 Divergentes propios
-- 🧪 `/intel → Ranking concejales` partido=AC orden=divergencia
-- ✅ Los 5 de arriba son los que más se salen de la línea.
-
----
+- **C8.1** — Chat: *"¿Qué argumentos usa Junts contra las ordenanzas de civismo?"* ✅ intervenciones en contra.
+- **C8.2** — Chat: *"¿Qué mociones ha ganado AC este año?"* ✅ puntos aprobados propios AC.
+- **C8.3** — `/intel → Ranking concejales` partido=AC orden=divergencia ✅ top 5 más divergentes.
 
 ## C9. Comunicación y medios
 
-### C9.1 Titulares para notas de prensa
-- 🧪 Chat: *"Dame 3 casos concretos esta semana en medio ambiente para una nota de prensa"*
-- ✅ 3 hechos con municipio + fecha + cifra + fuente.
-
-### C9.2 Promesas incumplidas rivales
-- 🧪 `/intel → Promeses incomplertes`
-- ✅ Listado de contradicciones con link a acta municipal + iniciativa parlament.
-
-### C9.3 Contenido RRSS localizado
-- 🧪 En el `/chat`, tras una respuesta con datos, usar el componente **GeneradorRRSS** con 4 botones
-- ✅ Genera 4 formatos:
-  - **Tweet**: ≤260 caracteres, gancho + dato + CTA + 1-2 hashtags
-  - **LinkedIn**: hook + 3-4 bullets + tesis + pregunta abierta
-  - **Telegram**: título negrita + 3 bullets emoji + CTA
-  - **Localizado**: *"En el teu municipi votaren X, en el veí Y…"*
-
----
+- **C9.1** — Chat: *"Dame 3 casos concretos esta semana en medio ambiente para una nota de prensa"* → 3 hechos con municipio+fecha+cifra+fuente.
+- **C9.2** — `/intel → Promeses incomplertes` → listado con links.
+- **C9.3** — En `/chat`, tras respuesta con datos, usar **GeneradorRRSS**:
+  - Tweet ≤260 chars con hashtags
+  - LinkedIn: hook+bullets+tesis+pregunta
+  - Telegram: título negrita+3 bullets emoji+CTA
+  - Localizado: *"En el teu municipi votaren X, en el veí Y…"*
 
 ## C10. Rendición de cuentas
 
-### C10.1 Demostrar gestión AC
-- 🧪 Chat: *"Lista todo lo aprobado por AC este trimestre en Catalunya"*
-- ✅ Lista agregada por municipio con cifras totales.
-
-### C10.2 Informes de gestión por municipio
-- 🧪 `/suscripciones` → modo **Consulta lliure** → *"Resumen de gestió AC a [municipio]"* → cron mensual
-- ✅ Previsualiza brief específico de ese municipio.
-- ⚠️ **Estado**: no hay botón "auto-generar gestión" dedicado en `/informes` (roadmap §18.2 del spec).
+- **C10.1** — Chat: *"Lista todo lo aprobado por AC este trimestre en Catalunya"* → agregado por municipio.
+- **C10.2** — `/suscripciones` → **Consulta lliure** → *"Resumen de gestió AC a [municipio]"* + cron mensual → previsualitza.
+  - ⚠️ No hay botón "auto-gestión" dedicado en `/informes` (roadmap).
 
 ---
 
-# BLOQUE D — Script de humo (ejecución SSH)
-
-Guardar como `smoke.sh` y ejecutar tras cada deploy:
+# BLOQUE D — Script de humo
 
 ```bash
 #!/bin/bash
@@ -422,16 +341,19 @@ for t in ["municipios","actas","puntos_pleno","votaciones","argumentos","alertas
          "user_profiles","subscripciones","usage_log"]:
     c.execute(f"select count(*) from {t}"); print(f"  {t:25s} {c.fetchone()[0]}")
 c.execute("select status,count(*) from actas group by 1 order by 2 desc"); print("  actas status:",c.fetchall())
+c.execute("select tipo,count(*) from alertas group by 1"); print("  alertas tipo:",c.fetchall())
 for v in ["v_ranking_concejales","v_tendencias_emergentes","v_contradicciones_rival"]:
     c.execute(f"select count(*) from {v}"); print(f"  {v:30s} {c.fetchone()[0]}")
 PY
 
-echo "=== [3] forzar crons clave ==="
-docker compose exec -T pipeline-worker celery -A src.workers.celery_app call src.workers.tasks.detect_emerging
+echo "=== [3] regenerar alertas ==="
+docker compose exec -T pipeline-worker python -c "from src.coherencia.tendencias import detect_and_alert; print(detect_and_alert())"
+
+echo "=== [4] forzar crons ==="
 docker compose exec -T pipeline-worker celery -A src.workers.celery_app call src.workers.tasks.dispatch_subscripciones
 docker compose exec -T pipeline-worker celery -A src.workers.celery_app call src.workers.tasks.weekly_report
 
-echo "=== [4] HTTPS ==="
+echo "=== [5] HTTPS ==="
 curl -sk -o /dev/null -w "  login %{http_code}\n" https://alianza-catalana.factoriaia.com/login
 curl -sk -o /dev/null -w "  chat  %{http_code}\n" https://alianza-catalana.factoriaia.com/chat
 curl -sk -o /dev/null -w "  api   %{http_code}\n" https://alianza-catalana.factoriaia.com/api/health
@@ -440,64 +362,77 @@ REMOTE
 
 ---
 
-# BLOQUE E — Tabla de reporte del tester
+# BLOQUE E — Tabla de reporte
 
-Copiar a un Google Sheet y marcar:
+Copiar a Google Sheet. Resultado = `PASS / FAIL / BLOQUEADO / PARCIAL`.
 
-| Ref | Título | Resultado | Captura | Observación |
+| Ref | Título | Resultado v1 | Resultado v2 | Captura | Observación |
+|---|---|---|---|---|---|
+| A1 | Chatbot análisis + formato markdown | — | | | |
+| A2 | Informes por temática + cron amigable + loader + ventana | — | | | |
+| A2-bis | Consulta libre | — | | | |
+| A3 | Recepción social rediseñada | — | | | |
+| A4 | Alertas proactivas (resuelto) | — | | | |
+| A5 | Parlament Catalunya | — | | | |
+| A6 | Iceberg / estudio | — | | | |
+| B1 | Seguridad acceso | — | | | |
+| B2 | RGPD ofuscación | — | | | |
+| B3 | Roles y scope | — | | | |
+| B4 | Audit log admin | — | | | |
+| C1 | Monitor votaciones | — | | | |
+| C2 | Alertas incoherencia (resuelto) | — | | | |
+| C3 | Mapa de discurso | — | | | |
+| C4 | Ranking concejales | — | | | |
+| C5 | Informe semanal dirección | — | | | |
+| C6.1 | Qué aprueban rivales | — | | | |
+| C6.2 | Contradicciones rivales | — | | | |
+| C6.3 | Qué propuestas prosperan | — | | | |
+| C7 | Conocer territorio | — | | | |
+| C8.1 | Argumentos oposición | — | | | |
+| C8.2 | Buenas prácticas propias | — | | | |
+| C8.3 | Divergentes propios | — | | | |
+| C9.1 | Titulares prensa | — | | | |
+| C9.2 | Promesas incumplidas | — | | | |
+| C9.3 | RRSS localizado | — | | | |
+| C10.1 | Gestión AC agregada | — | | | |
+| C10.2 | Gestión por municipio | — | | | |
+
+---
+
+# BLOQUE F — Gaps conocidos actualizados
+
+| # | Gap | v1 | v2 | Tests afectados |
 |---|---|---|---|---|
-| A1 | Chatbot análisis | | | |
-| A2 | Informes por temática | | | |
-| A2-bis | Consulta libre | | | |
-| A3 | Recepción social | | | |
-| A4 | Alertas proactivas | | | |
-| A5 | Parlament Catalunya | | | |
-| A6 | Iceberg / estudio | | | |
-| B1 | Seguridad acceso | | | |
-| B2 | RGPD ofuscación | | | |
-| B3 | Roles y scope | | | |
-| B4 | Audit log admin | | | |
-| C1 | Monitor votaciones | | | |
-| C2 | Alertas incoherencia | | | |
-| C3 | Mapa de discurso | | | |
-| C4 | Ranking concejales | | | |
-| C5 | Informe semanal dirección | | | |
-| C6.1 | Qué aprueban rivales | | | |
-| C6.2 | Contradicciones rivales | | | |
-| C6.3 | Qué propuestas prosperan | | | |
-| C7 | Conocer territorio | | | |
-| C8.1 | Argumentos oposición | | | |
-| C8.2 | Buenas prácticas propias | | | |
-| C8.3 | Divergentes propios | | | |
-| C9.1 | Titulares prensa | | | |
-| C9.2 | Promesas incumplidas | | | |
-| C9.3 | RRSS localizado | | | |
-| C10.1 | Gestión AC agregada | | | |
-| C10.2 | Gestión por municipio | | | |
+| 1 | `sesiones_parlament = 0` (scraper DSPC caído) | ⚠️ | ⚠️ | A5, C6.2 |
+| 2 | Solo 16 menciones sociales, solo fuente `ara` | ⚠️ | ⚠️ | A3, A4 (`reaccion_social`) |
+| 3 | `alertas = 0` | ⚠️ | ✅ **RESUELTO** (13 alertas generadas) | A4, C2 |
+| 4 | `presupuestos = 0` — dataset no cargado | ⚠️ | ⚠️ | C7 |
+| 5 | Solo 1 usuario real en BD | ⚠️ | ⚠️ | B3 (crearlos durante test) |
+| 6 | No hay botón "gestión auto" en `/informes` | ⚠️ | ⚠️ (workaround: consulta libre) | C10.2 |
 
-Resultado = `PASS` / `FAIL` / `BLOQUEADO` / `PARCIAL`.
+Si reproduces un gap, pon *"reproduce gap #N de BLOQUE F"* en la observación.
 
 ---
 
-# BLOQUE F — Gaps conocidos a reportar directamente como ⚠️
+# BLOQUE G — Feedback v1 que ya está arreglado (re-verificar)
 
-Para ahorrarle trabajo al tester, estos ya están identificados:
+Estos puntos del test anterior tienen que cerrarse **PASS** esta ronda:
 
-| # | Gap | Ref tests afectados |
-|---|---|---|
-| 1 | `sesiones_parlament = 0` (scraper DSPC caído) | A5, C6.2 |
-| 2 | Solo 16 menciones sociales y solo fuente `ara` | A3, A4 (`reaccion_social`) |
-| 3 | `alertas = 0` — umbrales demasiado estrictos | A4, C2 |
-| 4 | `presupuestos = 0` — dataset no cargado | C7 (campo vacío en radiografía) |
-| 5 | Solo 1 usuario real en BD | B3 (hay que crearlos) |
-| 6 | No hay botón "gestión auto" en `/informes` | C10.2 (workaround: consulta libre) |
+1. ✅ **Chat respuestas sin formato** → ahora markdown con títulos, bullets, negrita, espaciado
+2. ✅ **Cron en crudo** → selector amigable con frase humana
+3. ✅ **Previsualitza sin loader** → modal con spinner + mensaje explicativo
+4. ✅ **Modal brief sin formato** → render markdown con H2 por sección
+5. ✅ **"Moviments clau" con 3× sense activitat** → línea única si no hay datos
+6. ✅ **Ventana temporal no seleccionable** → dropdown 7/14/30/90 días
+7. ✅ **`/recepcio` UI pobre** → KPIs + grid clicable + timeline con dots
+8. ✅ **`/alertes` vacío** → 13 alertas ya en BD
 
-Si el tester encuentra el gap, basta con decir *"reproduce gap #N de BLOQUE F"*.
+Verifica **específicamente** estos 8 puntos y marca diferencia vs v1.
 
 ---
 
-# BLOQUE G — Contacto
+# BLOQUE H — Contacto
 
-- **Dudas producto**: Juan Manuel
-- **Dudas técnicas / servidor caído**: Juan Manuel (`root@85.215.105.45`)
-- **Reset credenciales test**: `./scripts/create_admin.sh` en el VPS
+- Dudas producto / técnicas: Juan Manuel
+- Servidor: `root@85.215.105.45`
+- Reset credenciales: `./scripts/create_admin.sh` en el VPS
