@@ -1,9 +1,9 @@
 'use client';
 
-import { Swords, Shield, Scale, Lightbulb, ArrowRight } from 'lucide-react';
+import { Swords, Shield, Scale, Lightbulb, Radar, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-export type PoliticalMode = 'atacar' | 'defender' | 'comparar' | 'oportunidad';
+export type PoliticalMode = 'atacar' | 'defender' | 'comparar' | 'oportunidad' | 'monitor';
 
 interface ModeCard {
   id: PoliticalMode;
@@ -18,6 +18,22 @@ interface ModeCard {
 }
 
 const MODES: ModeCard[] = [
+  {
+    id: 'monitor',
+    label: 'Monitoritzar',
+    description: 'Què es diu d\'un partit o tema',
+    icon: Radar,
+    gradient: 'from-[#052e16] via-[#0a1e26] to-[#0d1117]',
+    border: 'border-[#16a34a]/40',
+    iconColor: 'text-[#4ade80]',
+    accentBg: 'bg-[#16a34a]',
+    questions: [
+      "Què s'ha dit d'Aliança Catalana aquest mes?",
+      "Tot sobre ERC al març 2026",
+      "Activitat de Junts aquesta setmana",
+      "Què han parlat del PSC els últims 60 dies?",
+    ],
+  },
   {
     id: 'atacar',
     label: 'Atacar',
@@ -92,14 +108,16 @@ interface Props {
 export function PoliticalModes({ onAsk, disabled }: Props) {
   return (
     <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-3">
-      {MODES.map((mode) => {
+      {MODES.map((mode, i) => {
         const Icon = mode.icon;
+        const isLastOdd = i === MODES.length - 1 && MODES.length % 2 === 1;
         return (
           <div
             key={mode.id}
             className={cn(
               'relative overflow-hidden rounded-2xl border p-4 bg-gradient-to-br',
               mode.gradient, mode.border,
+              isLastOdd && 'md:col-span-2',
             )}
           >
             <div className={cn('absolute -top-8 -right-8 w-24 h-24 rounded-full opacity-20 blur-3xl pointer-events-none', mode.accentBg)} />
@@ -154,6 +172,7 @@ export function PoliticalModes({ onAsk, disabled }: Props) {
 export const INTENT_META: Record<PoliticalMode | 'consulta', {
   label: string; icon: typeof Swords; color: string; bg: string; border: string;
 }> = {
+  monitor:    { label: 'Monitor',     icon: Radar,     color: 'text-[#4ade80]', bg: 'bg-[#052e16]', border: 'border-[#16a34a]/40' },
   atacar:     { label: 'Atac',        icon: Swords,    color: 'text-[#f87171]', bg: 'bg-[#2a0a0a]', border: 'border-[#dc2626]/40' },
   defender:   { label: 'Defensa',     icon: Shield,    color: 'text-[#93c5fd]', bg: 'bg-[#0a1930]', border: 'border-[#1e40af]/40' },
   comparar:   { label: 'Comparació',  icon: Scale,     color: 'text-[#c4b5fd]', bg: 'bg-[#1a0b2e]', border: 'border-[#7c3aed]/40' },

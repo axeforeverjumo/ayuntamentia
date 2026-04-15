@@ -51,7 +51,7 @@ export interface SearchResponse {
 }
 
 // Chat types
-export type ChatIntent = 'atacar' | 'defender' | 'comparar' | 'oportunidad' | 'consulta';
+export type ChatIntent = 'atacar' | 'defender' | 'comparar' | 'oportunidad' | 'monitor' | 'consulta';
 
 export interface ChatMessage {
   id: string;
