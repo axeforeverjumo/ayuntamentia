@@ -1510,6 +1510,104 @@ def _extract_json(text: str) -> dict | None:
     return None
 
 
+def _llm_call(client, *, retries: int = 2, **kwargs):
+    """Llamada al LLM con reintentos automáticos. Espera 1s y 3s entre intentos."""
+    last_exc: Exception | None = None
+    delays = [0, 1.0, 3.0][: retries + 1]
+    for i, delay in enumerate(delays):
+        if delay:
+            time.sleep(delay)
+        try:
+            return client.chat.completions.create(**kwargs)
+        except Exception as e:
+            last_exc = e
+            # Si el prompt es demasiado largo, no sirve reintentar
+            msg = str(e).lower()
+            if "too long" in msg or "context length" in msg or "max_tokens" in msg:
+                raise
+            continue
+    raise last_exc if last_exc else RuntimeError("llm_call failed with no exception")
+
+
+# Detección rápida de partido mencionado en la query (para fallback si router falla)
+_PARTY_KEYWORDS: list[tuple[re.Pattern, str]] = [
+    (re.compile(r'\b(aliança\s+catalana|alianza\s+catalana|\bAC\b|aliança\.cat)\b', re.IGNORECASE), "AC"),
+    (re.compile(r'\b(junts|jxcat|jxc|convergència|convergencia)\b', re.IGNORECASE), "JxCat"),
+    (re.compile(r'\b(ERC|esquerra\s+republicana)\b', re.IGNORECASE), "ERC"),
+    (re.compile(r'\b(PSC|PSOE|socialistes?|socialistas?)\b', re.IGNORECASE), "PSC"),
+    (re.compile(r'\b(CUP)\b'), "CUP"),
+    (re.compile(r'\b(VOX)\b'), "VOX"),
+    (re.compile(r'\b(PP|partit\s+popular|partido\s+popular|populars?)\b', re.IGNORECASE), "PP"),
+    (re.compile(r'\b(ciutadans|ciudadanos|\bCs\b|C\'s)\b', re.IGNORECASE), "Cs"),
+    (re.compile(r'\b(comuns|en\s+comú|\bECP\b|catalunya\s+en\s+comú|ICV)\b', re.IGNORECASE), "Comuns"),
+]
+
+
+def _detect_partido_in_query(text: str) -> str:
+    """Devuelve la etiqueta canónica del partido detectado en el texto, o cadena vacía."""
+    for pat, label in _PARTY_KEYWORDS:
+        if pat.search(text):
+            return label
+    return ""
+
+
+def _build_emergency_answer(message: str, tool_results: list[str]) -> str:
+    """Respuesta de emergencia si el LLM no contesta. Usa formato estructurado y un
+    resumen textual de los datos disponibles sin volcar JSON al usuario."""
+    summary_lines: list[str] = []
+    total_rows = _count_useful_rows(tool_results)
+    partido_q = _detect_partido_in_query(message)
+    mode_label = f"**{partido_q}**" if partido_q else "la teva consulta"
+
+    summary_lines.append(f"## Veredicto")
+    summary_lines.append(
+        f"No he pogut generar l'anàlisi complet perquè el servei d'IA ha fallat temporalment, "
+        f"però he trobat **{total_rows} dades** relacionades amb {mode_label}."
+    )
+    summary_lines.append("")
+    summary_lines.append(f"## Punts clau")
+
+    # Extraer hasta 5 items útiles de los tool_results
+    extracted = 0
+    for tr in tool_results:
+        if extracted >= 5:
+            break
+        try:
+            payload = tr.split("]:\n", 1)[1] if "]:\n" in tr else tr
+            parsed = json.loads(payload)
+            items = parsed if isinstance(parsed, list) else (
+                parsed.get("detalle")
+                or parsed.get("intervenciones_propias")
+                or parsed.get("confrontaciones_directas")
+                or parsed.get("menciones_rivales")
+                or []
+            )
+            for item in items[:3]:
+                if extracted >= 5 or not isinstance(item, dict):
+                    continue
+                titulo = item.get("titulo") or item.get("argumento") or item.get("punto_titulo") or ""
+                municipio = item.get("municipio") or ""
+                fecha = item.get("fecha") or ""
+                if titulo and len(titulo) > 150:
+                    titulo = titulo[:147] + "…"
+                if titulo:
+                    summary_lines.append(f"- {titulo} [{municipio} · {fecha}]")
+                    extracted += 1
+        except Exception:
+            continue
+
+    if extracted == 0:
+        summary_lines.append("- No he pogut extreure resultats útils dels tools consultats.")
+
+    summary_lines.append("")
+    summary_lines.append("## I ara què?")
+    summary_lines.append(
+        "Torna-ho a intentar en uns segons. Si el problema persisteix, prova una pregunta més específica "
+        "(afegeix partit i periode, p. ex. «activitat de **PSC** al març 2026»)."
+    )
+    return "\n".join(summary_lines)
+
+
 def _count_useful_rows(tool_results: list[str]) -> int:
     """Suma aproximada de filas útiles en los resultados de tools."""
     total = 0
@@ -1590,7 +1688,7 @@ def chat(
     router_msgs.append({"role": "user", "content": user_input})
 
     try:
-        r1 = client.chat.completions.create(model=MODEL, messages=router_msgs, temperature=0, max_tokens=700)
+        r1 = _llm_call(client, retries=2, model=MODEL, messages=router_msgs, temperature=0, max_tokens=700)
         plan = _extract_json(r1.choices[0].message.content)
     except Exception:
         plan = None
@@ -1599,6 +1697,21 @@ def chat(
         return {"answer": plan["direct_answer"], "sources": [], "follow_ups": [], "intent": "consulta"}
 
     intent = (plan.get("intent", "consulta") if plan else "consulta") or "consulta"
+
+    # Fallback inteligente: si el router falló pero detectamos un partido en la pregunta,
+    # construimos un plan mínimo con monitoring_partido (útil para "qué hablan del PSC")
+    if not plan or not plan.get("tools"):
+        detected = _detect_partido_in_query(req.message)
+        if detected:
+            plan = {
+                "intent": "monitor",
+                "tools": [
+                    {"name": "monitoring_partido", "args": {"partido": detected, "dias_atras": 90}},
+                    {"name": "narrativas_cruzadas", "args": {"partido_objetivo": detected, "dias_atras": 120}},
+                    {"name": "citas_literales", "args": {"partido": detected, "dias_atras": 90, "limit": 10}},
+                ],
+            }
+            intent = "monitor"
 
     # Step 2: Execute initial plan
     _execute_plan(plan or {}, tool_results, sources, tools_used)
@@ -1617,7 +1730,8 @@ def chat(
                     f"Resultados útiles acumulados: {useful} filas."
                 )},
             ]
-            r_retry = client.chat.completions.create(
+            r_retry = _llm_call(
+                client, retries=1,
                 model=MODEL, messages=retry_msgs, temperature=0.2, max_tokens=500,
             )
             retry_plan = _extract_json(r_retry.choices[0].message.content)
@@ -1660,11 +1774,12 @@ def chat(
         msgs.append({"role": h.get("role", "user"), "content": h.get("content", "")})
     msgs.append({"role": "user", "content": f"Dades consultades:\n\n{data[:14000]}\n\nPregunta: {req.message}"})
 
+    answer = ""
     try:
-        r2 = client.chat.completions.create(model=MODEL, messages=msgs, temperature=0.3, max_tokens=4000)
-        answer = r2.choices[0].message.content
-    except Exception as e:
-        answer = f"Error: {str(e)[:300]}\n\nDades trobades:\n{data[:2000]}"
+        r2 = _llm_call(client, retries=2, model=MODEL, messages=msgs, temperature=0.3, max_tokens=4000)
+        answer = r2.choices[0].message.content or ""
+    except Exception:
+        answer = _build_emergency_answer(req.message, tool_results)
 
     # Step 4: Follow-ups (best-effort, no bloquea)
     follow_ups: list[str] = []
@@ -1673,7 +1788,8 @@ def chat(
             {"role": "system", "content": FOLLOWUP_PROMPT},
             {"role": "user", "content": f"Pregunta: {req.message}\n\nResposta: {(answer or '')[:1500]}"},
         ]
-        r_fu = client.chat.completions.create(
+        r_fu = _llm_call(
+            client, retries=1,
             model=MODEL, messages=fu_msgs, temperature=0.5, max_tokens=250,
         )
         fu = _extract_json(r_fu.choices[0].message.content)
