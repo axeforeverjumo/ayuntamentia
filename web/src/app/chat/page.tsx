@@ -2,21 +2,22 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import {
-  Send, Bot, RotateCcw, Loader2, Sparkles, MessageSquare,
-  Plus, Trash2, Clock,
+  Send, Loader2, Sparkles, MessageSquare,
+  Plus, Trash2,
 } from "lucide-react";
 import { ChatMessage } from "@/components/ui/ChatMessage";
+import { ProgressiveLoader } from "@/components/ui/ProgressiveLoader";
 import { apiClient } from "@/lib/ApiClient";
 import type { ChatMessage as ChatMessageType, ChatResponse } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const SUGGESTION_CHIPS = [
-  "Què s'ha aprovat recentment a Ripoll?",
-  "Com vota Aliança Catalana?",
-  "Quins temes es debaten més als plens?",
-  "Pressupostos aprovats a Ripoll",
-  "Resum de l'activitat municipal recent",
-  "Mocions sobre urbanisme",
+  { icon: "🏛", text: "Què s'ha aprovat recentment a Ripoll?" },
+  { icon: "🗳", text: "Com vota Aliança Catalana?" },
+  { icon: "🔥", text: "Quins temes es debaten més als plens?" },
+  { icon: "💶", text: "Pressupostos aprovats a Ripoll" },
+  { icon: "📰", text: "Resum de l'activitat municipal recent" },
+  { icon: "🏗", text: "Mocions sobre urbanisme" },
 ];
 
 interface Conversation {
@@ -165,6 +166,7 @@ export default function ChatPage() {
         role: "assistant",
         content: response.answer,
         sources: response.sources,
+        followUps: response.follow_ups,
         timestamp: new Date().toISOString(),
       };
 
@@ -184,16 +186,26 @@ export default function ChatPage() {
     }
   };
 
-  const isEmpty = messages.length === 0 && !activeId;
-
   return (
-    <div className="flex h-screen">
+    <div className="flex h-screen relative">
+      {/* Ambient background glow */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -top-40 -left-40 w-[500px] h-[500px] rounded-full bg-[#7c3aed] opacity-[0.06] blur-[120px]" />
+        <div className="absolute -bottom-40 -right-40 w-[500px] h-[500px] rounded-full bg-[#06b6d4] opacity-[0.05] blur-[120px]" />
+      </div>
+
       {/* Sidebar - conversation history */}
-      <div className="w-64 border-r border-[#21262d] bg-[#0d1117] flex flex-col">
+      <div className="w-64 border-r border-[#21262d] bg-[#0a0d12]/80 backdrop-blur-sm flex flex-col relative z-10">
         <div className="p-3">
           <button
             onClick={newConversation}
-            className="w-full flex items-center gap-2 px-3 py-2 text-xs rounded-lg border border-[#30363d] text-[#8b949e] hover:bg-[#161b22] hover:text-[#e6edf3] transition-colors"
+            className={cn(
+              "w-full flex items-center gap-2 px-3 py-2 text-xs rounded-xl",
+              "bg-gradient-to-r from-[#1a0b2e]/50 to-[#0a1e26]/50",
+              "border border-[#7c3aed]/30 text-[#c4b5fd]",
+              "hover:border-[#7c3aed]/60 hover:from-[#1a0b2e] hover:to-[#0a1e26] hover:text-[#e6edf3]",
+              "transition-all duration-200",
+            )}
           >
             <Plus className="w-3.5 h-3.5" />
             Nova conversa
@@ -210,9 +222,9 @@ export default function ChatPage() {
               <div
                 key={conv.id}
                 className={cn(
-                  "group flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors",
+                  "group flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-all",
                   activeId === conv.id
-                    ? "bg-[#161b22] text-[#e6edf3]"
+                    ? "bg-gradient-to-r from-[#1a0b2e]/60 to-[#0a1e26]/60 text-[#e6edf3] border-l-2 border-[#7c3aed]"
                     : "text-[#8b949e] hover:bg-[#161b22] hover:text-[#e6edf3]"
                 )}
                 onClick={() => { setActiveId(conv.id); setError(null); }}
@@ -237,19 +249,24 @@ export default function ChatPage() {
       </div>
 
       {/* Main chat area */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col relative z-10">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#21262d] bg-[#0d1117]">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#21262d] bg-[#0a0d12]/80 backdrop-blur-sm">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-[#1c2128] border border-[#30363d] flex items-center justify-center">
-              <Bot className="w-4 h-4 text-[#8b949e]" />
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#7c3aed]/20 to-[#06b6d4]/20 border border-[#7c3aed]/30 flex items-center justify-center relative">
+              <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-[#7c3aed]/10 to-[#06b6d4]/10 blur-md" />
+              <Sparkles className="w-4 h-4 text-[#c4b5fd] relative" />
             </div>
             <div>
-              <h1 className="text-sm font-bold text-[#e6edf3]">
-                {activeConv?.title || "Chat IA"}
+              <h1 className="text-sm font-bold text-[#e6edf3] flex items-center gap-2">
+                {activeConv?.title || "AyuntamentIA"}
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[#052e16] border border-[#16a34a]/30 text-[9px] font-semibold uppercase tracking-wider text-[#4ade80]">
+                  <span className="w-1 h-1 rounded-full bg-[#4ade80] animate-pulse" />
+                  Live
+                </span>
               </h1>
-              <p className="text-xs text-[#8b949e]">
-                Intel·ligència política municipal
+              <p className="text-[11px] text-[#8b949e]">
+                Intel·ligència política · 947 municipis de Catalunya
               </p>
             </div>
           </div>
@@ -258,22 +275,37 @@ export default function ChatPage() {
         {/* Messages */}
         <div className="flex-1 overflow-y-auto px-6 py-6">
           {messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-center max-w-lg mx-auto">
-              <div className="w-16 h-16 rounded-2xl bg-[#1c2128] border border-[#30363d] flex items-center justify-center mb-5">
-                <Sparkles className="w-7 h-7 text-[#2563eb]" />
+            <div className="flex flex-col items-center justify-center h-full text-center max-w-xl mx-auto">
+              <div className="relative mb-6">
+                <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-[#7c3aed] to-[#06b6d4] blur-2xl opacity-40" />
+                <div className="relative w-20 h-20 rounded-3xl bg-gradient-to-br from-[#1a0b2e] to-[#0a1e26] border border-[#7c3aed]/40 flex items-center justify-center">
+                  <Sparkles className="w-9 h-9 text-[#c4b5fd]" />
+                </div>
               </div>
-              <h2 className="text-lg font-bold text-[#e6edf3] mb-2">Com puc ajudar-te?</h2>
-              <p className="text-sm text-[#8b949e] leading-relaxed mb-8">
-                Pregunta sobre actes, votacions o qualsevol aspecte dels plens municipals.
+              <h2 className="text-2xl font-bold bg-gradient-to-r from-[#c4b5fd] via-[#f3f6fa] to-[#67e8f9] bg-clip-text text-transparent mb-2">
+                Com puc ajudar-te avui?
+              </h2>
+              <p className="text-sm text-[#8b949e] leading-relaxed mb-8 max-w-md">
+                Pregunta sobre actes, votacions, pressupostos o qualsevol aspecte
+                de la política municipal catalana.
               </p>
-              <div className="w-full grid grid-cols-2 gap-2">
+              <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {SUGGESTION_CHIPS.map((chip) => (
                   <button
-                    key={chip}
-                    onClick={() => sendMessage(chip)}
-                    className="px-3 py-2.5 text-xs text-left rounded-lg bg-[#161b22] border border-[#30363d] text-[#8b949e] hover:border-[#484f58] hover:text-[#e6edf3] transition-all"
+                    key={chip.text}
+                    onClick={() => sendMessage(chip.text)}
+                    className={cn(
+                      "group flex items-center gap-2.5 px-3 py-2.5 text-[12px] text-left rounded-xl",
+                      "bg-gradient-to-br from-[#0f141b] to-[#161b22]",
+                      "border border-[#21262d] text-[#c9d1d9]",
+                      "hover:border-[#7c3aed]/40 hover:from-[#1a0b2e]/40 hover:to-[#0a1e26]/40 hover:text-[#f3f6fa]",
+                      "transition-all duration-200",
+                    )}
                   >
-                    {chip}
+                    <span className="text-base opacity-80 group-hover:opacity-100 transition-opacity">
+                      {chip.icon}
+                    </span>
+                    <span className="flex-1">{chip.text}</span>
                   </button>
                 ))}
               </div>
@@ -281,25 +313,18 @@ export default function ChatPage() {
           ) : (
             <div className="max-w-3xl mx-auto space-y-6">
               {messages.map((message) => (
-                <ChatMessage key={message.id} message={message} />
+                <ChatMessage
+                  key={message.id}
+                  message={message}
+                  onFollowUp={sendMessage}
+                  followUpDisabled={isLoading}
+                />
               ))}
-              {isLoading && (
-                <div className="flex gap-3">
-                  <div className="w-8 h-8 rounded-full bg-[#1c2128] border border-[#30363d] flex items-center justify-center flex-shrink-0">
-                    <Bot className="w-4 h-4 text-[#8b949e]" />
-                  </div>
-                  <div className="bg-[#161b22] border border-[#30363d] rounded-xl rounded-tl-sm px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <Loader2 className="w-3 h-3 text-[#8b949e] animate-spin" />
-                      <span className="text-xs text-[#8b949e]">Generant resposta...</span>
-                    </div>
-                  </div>
-                </div>
-              )}
+              {isLoading && <ProgressiveLoader />}
               {error && (
-                <div className="flex items-center gap-3 p-3 rounded-lg bg-[#450a0a] border border-[#7f1d1d]">
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-[#450a0a] to-[#2a0a0a] border border-[#dc2626]/40">
                   <MessageSquare className="w-4 h-4 text-[#f87171] flex-shrink-0" />
-                  <p className="text-sm text-[#f87171]">{error}</p>
+                  <p className="text-sm text-[#fca5a5]">{error}</p>
                 </div>
               )}
               <div ref={messagesEndRef} />
@@ -308,11 +333,13 @@ export default function ChatPage() {
         </div>
 
         {/* Input */}
-        <div className="px-6 py-4 border-t border-[#21262d] bg-[#0d1117]">
+        <div className="px-6 py-4 border-t border-[#21262d] bg-[#0a0d12]/80 backdrop-blur-sm">
           <div className="max-w-3xl mx-auto">
             <div className={cn(
-              "flex items-end gap-3 p-3 rounded-xl border transition-colors",
-              "bg-[#161b22] border-[#30363d] focus-within:border-[#2563eb]",
+              "flex items-end gap-3 p-3 rounded-2xl border transition-all relative",
+              "bg-gradient-to-br from-[#0f141b] to-[#161b22]",
+              "border-[#21262d] focus-within:border-[#7c3aed]/50",
+              "focus-within:shadow-[0_0_32px_-8px_rgba(124,58,237,0.35)]",
             )}>
               <textarea
                 ref={textareaRef}
@@ -323,25 +350,26 @@ export default function ChatPage() {
                   if (el) { el.style.height = "auto"; el.style.height = `${Math.min(el.scrollHeight, 160)}px`; }
                 }}
                 onKeyDown={handleKeyDown}
-                placeholder="Fes una pregunta sobre els plens municipals..."
+                placeholder="Pregunta sobre política municipal…"
                 rows={1}
-                className="flex-1 bg-transparent text-sm text-[#e6edf3] placeholder:text-[#6e7681] resize-none focus:outline-none leading-relaxed"
+                className="flex-1 bg-transparent text-[13px] text-[#f3f6fa] placeholder:text-[#6e7681] resize-none focus:outline-none leading-relaxed"
               />
               <button
                 onClick={() => sendMessage(input)}
                 disabled={!input.trim() || isLoading}
                 className={cn(
-                  "flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-all",
+                  "flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-all",
                   input.trim() && !isLoading
-                    ? "bg-[#2563eb] text-white hover:bg-[#1d4ed8]"
+                    ? "bg-gradient-to-br from-[#7c3aed] to-[#06b6d4] text-white hover:from-[#8b5cf6] hover:to-[#22d3ee] shadow-lg shadow-[#7c3aed]/30"
                     : "bg-[#1c2128] text-[#6e7681] cursor-not-allowed",
                 )}
               >
-                {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
               </button>
             </div>
             <p className="text-[10px] text-[#6e7681] mt-2 text-center">
-              Enter per enviar · Shift+Enter per nova línia
+              <kbd className="px-1 py-0.5 rounded bg-[#1c2128] border border-[#30363d] text-[9px]">Enter</kbd> enviar ·{" "}
+              <kbd className="px-1 py-0.5 rounded bg-[#1c2128] border border-[#30363d] text-[9px]">Shift+Enter</kbd> nova línia
             </p>
           </div>
         </div>

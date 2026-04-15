@@ -56,13 +56,15 @@ export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   sources?: Source[];
+  followUps?: string[];
   timestamp: string;
 }
 
 export interface Source {
-  id: string;
-  tipo: string;
-  titulo: string;
+  id?: string;
+  tipo?: string;
+  titulo?: string;
+  tema?: string;
   municipio?: string;
   fecha?: string;
   url?: string;
@@ -76,6 +78,7 @@ export interface ChatRequest {
 export interface ChatResponse {
   answer: string;
   sources?: Source[];
+  follow_ups?: string[];
 }
 
 // Alerts types

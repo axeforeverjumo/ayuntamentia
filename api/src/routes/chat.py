@@ -16,63 +16,82 @@ router = APIRouter()
 PROXY_URL = os.getenv("OPENCLAW_BASE_URL", "http://localhost:10531/v1")
 MODEL = os.getenv("OPENCLAW_MODEL_FULL", "gpt-5.4")
 
-ROUTER_PROMPT = """Eres un router. El usuario pregunta sobre política municipal de Catalunya.
-Decide qué herramientas usar. Responde SOLO con JSON.
+ROUTER_PROMPT = """Eres un router AGRESIVO para política municipal catalana. Tu trabajo: lanzar SUFICIENTES búsquedas para que la respuesta sea sólida. Responde SOLO JSON.
+
+REGLA DE ORO: ante la duda, pide MÁS herramientas, no menos. 3-5 tools es normal.
+REGLA BILINGÜE: los datos están en catalán. Si la pregunta es en español, incluye SIEMPRE los términos catalanes en las queries (ej: "inmigración" → query "immigració immigració acollida estrangeria inmigración").
 
 Herramientas:
-1. buscar_actas(query) — busca texto libre en actas de plenos municipales
-2. buscar_votaciones(partido) — historial de votaciones. Valores: AC, ERC, PSC, CUP, JxCat, PP, VOX, Cs
-3. info_municipio(nombre) — composición pleno, concejales, plenos, temas
-4. estadisticas() — stats generales del sistema
-5. buscar_argumentos(query) — intervenciones y argumentos en debates
-6. buscar_por_tema(tema) — puntos por tema: urbanismo, hacienda, seguridad, medio_ambiente, cultura, transporte, servicios_sociales, vivienda, educacion, salud, comercio, mociones
-7. comparar_partidos(partido1, partido2) — compara votaciones de 2 partidos
-8. elecciones_municipio(nombre) — resultados electorales históricos (desde 1979) de un municipio
-9. historial_alcaldes(nombre) — todos los alcaldes de un municipio desde 1979
-10. mociones_govern(query) — mociones municipales dirigidas al Govern de la Generalitat
-11. presupuesto_municipio(nombre) — presupuestos por año de un municipio
-12. poblacion_municipio(nombre) — evolución demográfica histórica
-13. iniciativas_parlament(query) — iniciativas parlamentarias (propuestas, mociones, interpelaciones)
-14. recepcion_social(tema?, municipio?, dias?) — eco social (RSS prensa, Bluesky) por tema/municipio
-15. tendencias_emergentes() — temas con mayor crecimiento en plenos últimos 30 días
-16. ranking_concejales(partido?, municipio?) — ranking de alineación de concejales con la línea del partido
+1. buscar_actas(query) — texto libre en actas
+2. buscar_votaciones(partido) — AC, ERC, PSC, CUP, JxCat/Junts, PP, VOX, Cs, Comuns
+3. info_municipio(nombre) — composición + plenos + concejales AC
+4. estadisticas() — stats generales
+5. buscar_argumentos(query) — intervenciones/argumentos en debates (USA esta para "qué dice X sobre Y")
+6. buscar_por_tema(tema) — urbanismo, hacienda, seguridad, medio_ambiente, cultura, transporte, servicios_sociales, vivienda, educacion, salud, comercio, mociones
+7. comparar_partidos(p1, p2) — compara 2 partidos
+8. elecciones_municipio(nombre) — resultados desde 1979
+9. historial_alcaldes(nombre) — alcaldes desde 1979
+10. mociones_govern(query) — mociones municipales al Govern
+11. presupuesto_municipio(nombre) — presupuestos por año
+12. poblacion_municipio(nombre) — demografía histórica
+13. iniciativas_parlament(query) — propuestas/mociones/interpelaciones parlamentàries
+14. recepcion_social(tema?, municipio?, dias?) — eco en prensa/Bluesky
+15. tendencias_emergentes() — temas en crecimiento 30d
+16. ranking_concejales(partido?, municipio?) — alineación con línea del partido
 
-Puedes pedir VARIAS herramientas.
+PATRÓN OBLIGATORIO para "qué dice/argumenta/opina PARTIDO sobre TEMA":
+→ MÍNIMO 3 tools en paralelo: buscar_argumentos (query con sinónimos CA+ES del tema) + buscar_votaciones (partido) + buscar_actas (partido+tema CA+ES)
 
 Ejemplos:
-- "que hablan de aliança catalana?" → {"tools": [{"name": "buscar_votaciones", "args": {"partido": "AC"}}, {"name": "buscar_actas", "args": {"query": "Aliança Catalana"}}]}
-- "hola" → {"tools": [], "direct_answer": "Hola! Sóc AyuntamentIA, el teu assistent de política municipal. Pregunta'm sobre plens, votacions, eleccions o qualsevol cosa de Catalunya!"}
+- "argumentos de Junts contra ordenanzas de civismo" → {"tools": [
+    {"name": "buscar_argumentos", "args": {"query": "civisme convivència incivisme espai públic sorolls botellot neteja ordenança civismo convivencia incivismo"}},
+    {"name": "buscar_votaciones", "args": {"partido": "JxCat"}},
+    {"name": "buscar_actas", "args": {"query": "Junts JxCat civisme convivència ordenança"}}
+  ]}
+- "qué dice ERC sobre inmigración últimos meses" → {"tools": [
+    {"name": "buscar_argumentos", "args": {"query": "immigració immigrants acollida estrangeria refugiats MENA menors asil inmigración inmigrantes acogida extranjería refugiados"}},
+    {"name": "buscar_votaciones", "args": {"partido": "ERC"}},
+    {"name": "buscar_actas", "args": {"query": "ERC immigració acollida"}}
+  ]}
+- "aliança catalana" → {"tools": [{"name": "buscar_votaciones", "args": {"partido": "AC"}}, {"name": "buscar_actas", "args": {"query": "Aliança Catalana"}}, {"name": "buscar_argumentos", "args": {"query": "Aliança Catalana"}}]}
 - "historia política de Ripoll" → {"tools": [{"name": "historial_alcaldes", "args": {"nombre": "Ripoll"}}, {"name": "elecciones_municipio", "args": {"nombre": "Ripoll"}}, {"name": "info_municipio", "args": {"nombre": "Ripoll"}}]}
-- "presupuesto de Girona" → {"tools": [{"name": "presupuesto_municipio", "args": {"nombre": "Girona"}}]}
-- "mociones sobre inmigración" → {"tools": [{"name": "mociones_govern", "args": {"query": "immigració immigracion"}}]}
-- "que se debate sobre urbanismo?" → {"tools": [{"name": "buscar_por_tema", "args": {"tema": "urbanismo"}}]}
+- "presupuesto Girona" → {"tools": [{"name": "presupuesto_municipio", "args": {"nombre": "Girona"}}]}
+- "que se debate sobre urbanismo" → {"tools": [{"name": "buscar_por_tema", "args": {"tema": "urbanismo"}}, {"name": "buscar_argumentos", "args": {"query": "urbanisme POUM planejament llicències urbanismo planeamiento"}}]}
 - "radiografía de Manlleu" → {"tools": [{"name": "info_municipio", "args": {"nombre": "Manlleu"}}, {"name": "historial_alcaldes", "args": {"nombre": "Manlleu"}}, {"name": "elecciones_municipio", "args": {"nombre": "Manlleu"}}, {"name": "presupuesto_municipio", "args": {"nombre": "Manlleu"}}, {"name": "poblacion_municipio", "args": {"nombre": "Manlleu"}}]}
-- "que pasa en el parlament sobre vivienda?" → {"tools": [{"name": "iniciativas_parlament", "args": {"query": "habitatge vivienda"}}]}
-- "gracias" → {"tools": [], "direct_answer": "De res! Si tens més preguntes, aquí estic."}
+- "hola" → {"tools": [], "direct_answer": "Hola! Sóc AyuntamentIA, el teu assistent de política municipal. Pregunta'm sobre plens, votacions, eleccions o qualsevol cosa de Catalunya!"}
+- "gracias" → {"tools": [], "direct_answer": "De res!"}
 
 Responde SOLO JSON."""
 
 ANSWER_PROMPT = """Eres AyuntamentIA, jefe de gabinete analítico para política municipal catalana.
-Hablas a un político ocupado: dale CONCLUSIONES, no listados crudos.
+Hablas a un político ocupado: dale CONCLUSIONES accionables, no listados crudos.
 
-PRIORIDAD ABSOLUTA — MODO ANÁLISIS:
-1. Empieza con un **veredicto en 1-2 frases** que responda directamente a la pregunta.
-2. Después, máximo 3-5 puntos clave que sustentan el veredicto (con cifras concretas).
-3. Termina con un "**¿Y ahora qué?**" — implicación accionable o riesgo a vigilar.
+ESTRUCTURA OBLIGATORIA (markdown EXACTO, sin desviaciones):
 
-REGLAS DE FORMA:
-- Idioma: el de la pregunta (catalán o español).
-- Evita listados largos y volcados de datos. Si hay muchas filas, dame el patrón, no el dump.
-- Cifras siempre con contexto (% o comparativa).
-- Cita municipio + fecha solo cuando refuerce la conclusión.
-- Si los datos no permiten conclusión, dilo en 1 línea y propón qué preguntar.
-- Markdown limitado: títulos solo si la respuesta supera 200 palabras.
+## Veredicto
+1-2 frases directas que responden a la pregunta. Firme, sin hedging inútil. Si hay evidencia fuerte, afirma. Si hay ambigüedad, explícala en 1 línea.
 
-REGLAS DE FONDO:
-- Detecta patrones cross-municipio (incoherencias, alineaciones, tendencias).
-- Señala oportunidades comunicativas o riesgos políticos.
-- No inventes. Si una cifra no está en los datos, no la digas.
-- Lectura útil en <30 segundos."""
+## Punts clau
+- 3-5 bullets con **cifras** (número de votos, % alineación, municipios) y **patrones** (no listas crudas).
+- Menciona partidos como **JxCat**, **ERC**, **AC**, **PSC**, **CUP**, **PP**, **VOX**, **Cs** (negrita) — el frontend los resalta con color.
+- Cita como `[Municipi · DD/MM/YYYY]` al final de cada bullet que use un dato concreto.
+
+## I ara què?
+1 frase: implicación accionable, oportunidad comunicativa o riesgo político concreto. Punto final.
+
+REGLAS:
+- Idioma: el de la pregunta (catalán si es en catalán, español si es en español).
+- NO digas "no hay datos suficientes" si tienes ALGO. Extrae el patrón del poco material disponible y sé honesto sobre la muestra ("sobre 4 intervencions indexades…").
+- Solo di "sin evidencia" si realmente *todas* las herramientas devolvieron vacío. En ese caso usa el formato:
+  ## Veredicto
+  No hi ha constància documental de [X] en les actes indexades.
+  ## Punts clau
+  - Volum total consultat: [Y tools, Z resultats]
+  - Possible causa: [tema no debatit recentment / termes de cerca necessiten afinar-se]
+  ## I ara què?
+  Suggeriment: [reformulació concreta amb 2-3 termes nous].
+- Cifras SIEMPRE con contexto (% o comparativa).
+- No inventes cifras. Solo las que estén en los datos."""
 
 
 def get_llm():
@@ -84,13 +103,217 @@ class ChatRequest(BaseModel):
     history: list[dict] = []
 
 
+# === Expansión bilingüe CA↔ES ===
+# Sinónimos/variantes que se inyectan en las queries para que búsquedas en español
+# encuentren términos catalanes y viceversa (los datos están en catalán).
+TERMS_EXPANSION: dict[str, list[str]] = {
+    # civismo
+    "civismo": ["civisme", "convivencia", "convivència", "incivismo", "incivisme",
+                "ordenanza civismo", "ordenança civisme", "ordre públic", "orden público",
+                "botellón", "botellot", "soroll", "sorolls", "ruido"],
+    "civisme": ["civismo", "convivència", "convivencia", "incivisme", "incivismo", "sorolls", "botellot"],
+    "convivencia": ["convivència", "civisme", "civismo", "incivisme"],
+    "convivència": ["convivencia", "civisme", "civismo", "incivisme"],
+    "incivismo": ["incivisme", "civismo", "civisme", "convivència"],
+    "incivisme": ["incivismo", "civismo", "civisme", "convivència"],
+    # inmigración
+    "inmigración": ["immigració", "immigrants", "inmigrantes", "acollida", "acogida",
+                    "estrangeria", "extranjería", "refugiats", "refugiados", "asil", "asilo",
+                    "MENA", "menors no acompanyats", "menores no acompañados"],
+    "immigració": ["inmigración", "immigrants", "inmigrantes", "acollida", "estrangeria", "MENA"],
+    "migración": ["migració", "migrants", "migrantes", "immigració", "inmigración"],
+    "migrantes": ["migrants", "immigrants", "inmigración", "immigració"],
+    "refugiados": ["refugiats", "asil", "asilo", "acollida"],
+    "refugiats": ["refugiados", "asil", "acollida"],
+    "extranjería": ["estrangeria", "immigració", "estrangers", "extranjeros"],
+    "estrangeria": ["extranjería", "immigració", "estrangers"],
+    "acogida": ["acollida", "refugiats", "immigració"],
+    "acollida": ["acogida", "refugiats", "immigració"],
+    "MENA": ["menors no acompanyats", "menores no acompañados", "immigració"],
+    # vivienda
+    "vivienda": ["habitatge", "habitatges", "lloguer", "alquiler", "okupació", "okupación",
+                 "desnonament", "desahucio", "pisos"],
+    "habitatge": ["vivienda", "lloguer", "alquiler", "desnonament"],
+    "alquiler": ["lloguer", "habitatge", "vivienda"],
+    "lloguer": ["alquiler", "habitatge", "vivienda"],
+    "desahucio": ["desnonament", "habitatge", "vivienda"],
+    "desnonament": ["desahucio", "habitatge"],
+    "okupación": ["okupació", "ocupació", "ocupación", "habitatge"],
+    "okupació": ["okupación", "ocupació"],
+    # seguridad
+    "seguridad": ["seguretat", "policia", "policía", "guàrdia urbana", "guardia urbana",
+                  "delinqüència", "delincuencia", "vigilància", "vigilancia", "càmeres", "cámaras"],
+    "seguretat": ["seguridad", "policia", "guàrdia urbana", "delinqüència"],
+    "policía": ["policia", "guàrdia urbana", "guardia urbana", "mossos"],
+    "policia": ["policía", "guàrdia urbana", "mossos"],
+    "delincuencia": ["delinqüència", "seguretat", "seguridad"],
+    "delinqüència": ["delincuencia", "seguretat"],
+    # urbanismo
+    "urbanismo": ["urbanisme", "POUM", "PGM", "planejament", "planeamiento", "llicències",
+                  "licencias", "edificabilitat", "edificabilidad"],
+    "urbanisme": ["urbanismo", "POUM", "planejament", "llicències"],
+    "planeamiento": ["planejament", "urbanisme", "POUM"],
+    "licencias": ["llicències", "urbanisme", "urbanismo"],
+    # hacienda
+    "hacienda": ["hisenda", "impostos", "impuestos", "IBI", "plusvàlua", "plusvalía",
+                 "taxes", "tasas", "ordenança fiscal", "ordenanza fiscal", "pressupost", "presupuesto"],
+    "hisenda": ["hacienda", "impostos", "IBI", "pressupost"],
+    "impuestos": ["impostos", "IBI", "hisenda"],
+    "impostos": ["impuestos", "IBI", "hisenda"],
+    "presupuesto": ["pressupost", "hisenda", "impostos"],
+    "pressupost": ["presupuesto", "hisenda"],
+    # cultura
+    "cultura": ["cultura", "festes", "fiestas", "festa major", "patrimoni", "patrimonio",
+                "biblioteca", "biblioteques"],
+    "fiestas": ["festes", "festa major", "cultura"],
+    "festes": ["fiestas", "festa major", "cultura"],
+    # educación
+    "educación": ["educació", "escola", "escuela", "institut", "instituto", "beca", "beques",
+                  "escola bressol", "guardería", "llar d'infants"],
+    "educació": ["educación", "escola", "institut", "beques"],
+    "escuela": ["escola", "educació", "educación"],
+    "escola": ["escuela", "educació"],
+    # salud
+    "salud": ["salut", "CAP", "centre salut", "centro salud", "hospital", "farmàcia", "farmacia"],
+    "salut": ["salud", "CAP", "hospital", "farmàcia"],
+    # transporte
+    "transporte": ["transport", "autobús", "bus", "carril bici", "aparcament", "aparcamiento",
+                   "zona blava", "zona azul", "TRAM", "rodalies"],
+    "transport": ["transporte", "autobús", "carril bici", "aparcament"],
+    # medio ambiente
+    "medio ambiente": ["medi ambient", "residus", "residuos", "reciclatge", "reciclaje",
+                       "neteja", "limpieza", "contaminació", "contaminación", "sostenibilitat"],
+    "medi ambient": ["medio ambiente", "residus", "reciclatge", "neteja"],
+    "residuos": ["residus", "reciclatge", "neteja"],
+    "residus": ["residuos", "reciclatge"],
+    "reciclaje": ["reciclatge", "residus", "residuos"],
+    "reciclatge": ["reciclaje", "residus"],
+    "limpieza": ["neteja", "residus", "residuos"],
+    "neteja": ["limpieza", "residus"],
+    # comercio
+    "comercio": ["comerç", "botigues", "tiendas", "mercat", "mercado"],
+    "comerç": ["comercio", "botigues", "mercat"],
+    # ruido
+    "ruido": ["soroll", "sorolls", "contaminació acústica", "contaminación acústica", "botellot", "botellón"],
+    "soroll": ["ruido", "sorolls", "contaminació acústica", "botellot"],
+    # social
+    "servicios sociales": ["serveis socials", "benestar social", "bienestar social"],
+    "serveis socials": ["servicios sociales", "benestar social"],
+}
+
+
+def _expand_terms(query: str) -> list[str]:
+    """Devuelve una lista ampliada de términos a partir de la query original.
+    Detecta frases clave y añade sinónimos CA↔ES. No duplica."""
+    q = (query or "").strip().lower()
+    if not q:
+        return []
+    terms: list[str] = []
+    seen: set[str] = set()
+
+    def _add(t: str):
+        tl = t.strip().lower()
+        if tl and tl not in seen and len(tl) >= 3:
+            seen.add(tl)
+            terms.append(t.strip())
+
+    # Frases enteras primero (multi-palabra)
+    for key, syns in TERMS_EXPANSION.items():
+        if " " in key and key in q:
+            _add(key)
+            for s in syns:
+                _add(s)
+
+    # Palabras sueltas de la query
+    for w in re.findall(r'\w{3,}', q):
+        _add(w)
+        syns = TERMS_EXPANSION.get(w.lower())
+        if syns:
+            for s in syns:
+                _add(s)
+
+    return terms
+
+
+def _build_tsquery(query: str) -> str:
+    """Construye tsquery Postgres con OR entre todos los términos expandidos.
+    Limita a 20 términos para que no explote el planner."""
+    terms = _expand_terms(query)
+    if not terms:
+        return ""
+    parts: list[str] = []
+    for t in terms[:20]:
+        # Frases multi-palabra → AND entre palabras (tsquery con &)
+        words = re.findall(r'\w{3,}', t)
+        if len(words) > 1:
+            parts.append("(" + " & ".join(words) + ")")
+        elif words:
+            parts.append(words[0])
+    return " | ".join(parts)
+
+
+def _build_like_params(query: str, max_terms: int = 6) -> tuple[str, list[str]]:
+    """Para tools que usan ILIKE: devuelve (clausula_OR, params) expandidos."""
+    terms = _expand_terms(query)[:max_terms]
+    if not terms:
+        return "", []
+    # Usar placeholder genérico para la columna (se completa en el caller con .format)
+    clause_parts: list[str] = []
+    params: list[str] = []
+    for t in terms:
+        clause_parts.append("{col} ILIKE %s")
+        params.append(f"%{t}%")
+    return " OR ".join(clause_parts), params
+
+
+# === Matching expandido de partidos ===
+def _partido_where(partido: str) -> str:
+    """Devuelve cláusula WHERE para v.partido con alias habituales del partido."""
+    p = (partido or "").upper().strip()
+    # Aliança Catalana (cubre AC, ALIANÇA.CAT, AC-LOCAL, ERC-AC en confluencias)
+    if p in ("AC", "ALIANÇA", "ALIANÇA CATALANA", "ALIANÇA.CAT", "ALIANCA", "ALIANCA CATALANA"):
+        return "(v.partido = 'AC' OR v.partido = 'ALIANÇA.CAT' OR v.partido LIKE 'AC-%' OR v.partido = 'ERC-AC')"
+    # ERC puro (excluye confluencias con AC)
+    if p == "ERC":
+        return "(v.partido ILIKE '%ERC%' AND v.partido NOT LIKE '%ERC-AC%' AND v.partido NOT LIKE '%AC%')"
+    # Junts / JxCat / Convergència
+    if p in ("JUNTS", "JXCAT", "JXC", "JUNTS PER CATALUNYA", "JUNTSXCAT", "CONVERGÈNCIA",
+             "CONVERGENCIA", "CIU", "CONVERGÈNCIA I UNIÓ", "JUNTS PEL"):
+        return ("(v.partido ILIKE '%JUNTS%' OR v.partido ILIKE '%JXCAT%' "
+                "OR v.partido ILIKE '%JxC%' OR v.partido ILIKE '%CIU%' "
+                "OR v.partido ILIKE '%CONVERGÈNCIA%' OR v.partido ILIKE '%CONVERGENCIA%')")
+    # CUP
+    if p in ("CUP", "CANDIDATURA D'UNITAT POPULAR"):
+        return "(v.partido ILIKE 'CUP%' OR v.partido ILIKE '%CUP-%' OR v.partido ILIKE '%CUP %')"
+    # PSC / PSOE
+    if p in ("PSC", "PSOE", "PSC-PSOE"):
+        return "(v.partido ILIKE 'PSC%' OR v.partido ILIKE '%PSOE%' OR v.partido ILIKE 'PSC-%')"
+    # PP
+    if p in ("PP", "PARTIT POPULAR", "PARTIDO POPULAR"):
+        return "(v.partido = 'PP' OR v.partido ILIKE 'PP-%' OR v.partido ILIKE 'PP %')"
+    # VOX
+    if p == "VOX":
+        return "(v.partido = 'VOX' OR v.partido ILIKE 'VOX-%' OR v.partido ILIKE 'VOX %')"
+    # Ciudadanos
+    if p in ("CS", "C'S", "CIUDADANOS", "CIUTADANS"):
+        return "(v.partido = 'CS' OR v.partido = \"C'S\" OR v.partido ILIKE 'CIUDADAN%' OR v.partido ILIKE 'CIUTADA%')"
+    # Comuns / Catalunya en Comú
+    if p in ("COMUNS", "COMÚ", "EN COMÚ PODEM", "ECP", "CATCOMU", "ICV",
+             "CATALUNYA EN COMÚ", "CATALUNYA EN COMU"):
+        return ("(v.partido ILIKE '%COMÚ%' OR v.partido ILIKE '%COMU%' "
+                "OR v.partido ILIKE '%ECP%' OR v.partido ILIKE '%ICV%')")
+    # Fallback: substring puro
+    # Escapar % del input para evitar pattern injection accidental
+    safe = (partido or "").replace("%", "").replace("'", "")
+    return f"v.partido ILIKE '%%{safe}%%'"
+
+
 # === Tools ===
 
 def tool_buscar_actas(query: str) -> str:
-    words = re.findall(r'\w{3,}', query)
-    if not words:
+    tsquery = _build_tsquery(query)
+    if not tsquery:
         return "[]"
-    tsquery = " | ".join(words[:8])
     with get_cursor() as cur:
         cur.execute("""
             SELECT p.titulo, p.tema, p.resumen, p.resultado, p.fecha,
@@ -109,13 +332,7 @@ def tool_buscar_actas(query: str) -> str:
 
 
 def tool_buscar_votaciones(partido: str) -> str:
-    p = partido.upper().strip()
-    if p in ("AC", "ALIANÇA", "ALIANÇA CATALANA", "ALIANÇA.CAT"):
-        where = "(v.partido = 'AC' OR v.partido = 'ALIANÇA.CAT' OR v.partido LIKE 'AC-%' OR v.partido = 'ERC-AC')"
-    elif p == "ERC":
-        where = "(v.partido ILIKE '%ERC%' AND v.partido NOT LIKE '%ERC-AC%')"
-    else:
-        where = f"v.partido ILIKE '%%{partido}%%'"
+    where = _partido_where(partido)
 
     with get_cursor() as cur:
         cur.execute(f"""
@@ -171,11 +388,10 @@ def tool_estadisticas() -> str:
 
 
 def tool_buscar_argumentos(query: str) -> str:
-    words = re.findall(r'\w{3,}', query)
-    if not words:
+    clause_tpl, params = _build_like_params(query, max_terms=8)
+    if not params:
         return "[]"
-    like_clauses = " OR ".join(["a.argumento ILIKE %s"] * min(4, len(words)))
-    params = [f"%{w}%" for w in words[:4]]
+    like_clauses = clause_tpl.format(col="a.argumento")
     with get_cursor() as cur:
         cur.execute(f"""
             SELECT a.partido, a.posicion, a.argumento, p.titulo, p.tema, p.fecha,
@@ -184,7 +400,7 @@ def tool_buscar_argumentos(query: str) -> str:
             JOIN puntos_pleno p ON a.punto_id = p.id
             JOIN municipios m ON p.municipio_id = m.id
             WHERE {like_clauses}
-            ORDER BY p.fecha DESC LIMIT 15
+            ORDER BY p.fecha DESC LIMIT 20
         """, params)
         return json.dumps([dict(r) for r in cur.fetchall()], default=str, ensure_ascii=False)
 
@@ -234,16 +450,15 @@ def tool_historial_alcaldes(nombre: str) -> str:
 
 
 def tool_mociones_govern(query: str) -> str:
-    words = re.findall(r'\w{3,}', query)
-    if not words:
+    clause_tpl, params = _build_like_params(query, max_terms=6)
+    if not params:
         return "[]"
-    like_clauses = " OR ".join(["titulo ILIKE %s"] * min(4, len(words)))
-    params = [f"%{w}%" for w in words[:4]]
+    like_clauses = clause_tpl.format(col="titulo")
     with get_cursor() as cur:
         cur.execute(f"""
             SELECT titulo, municipio, vegueria, fecha, tema
             FROM mociones WHERE {like_clauses}
-            ORDER BY fecha DESC LIMIT 20
+            ORDER BY fecha DESC LIMIT 25
         """, params)
         return json.dumps([dict(r) for r in cur.fetchall()], default=str, ensure_ascii=False)
 
@@ -306,16 +521,15 @@ def tool_ranking_concejales(partido: str = "", municipio: str = "", limit: int =
 
 
 def tool_iniciativas_parlament(query: str) -> str:
-    words = re.findall(r'\w{3,}', query)
-    if not words:
+    clause_tpl, params = _build_like_params(query, max_terms=6)
+    if not params:
         return "[]"
-    like_clauses = " OR ".join(["titulo ILIKE %s"] * min(4, len(words)))
-    params = [f"%{w}%" for w in words[:4]]
+    like_clauses = clause_tpl.format(col="titulo")
     with get_cursor() as cur:
         cur.execute(f"""
             SELECT tipo, numero, titulo, proponentes, grupo, fecha
             FROM iniciativas_parlament WHERE {like_clauses}
-            ORDER BY fecha DESC LIMIT 15
+            ORDER BY fecha DESC LIMIT 20
         """, params)
         return json.dumps([dict(r) for r in cur.fetchall()], default=str, ensure_ascii=False)
 
@@ -354,6 +568,65 @@ def _extract_json(text: str) -> dict | None:
     return None
 
 
+def _count_useful_rows(tool_results: list[str]) -> int:
+    """Suma aproximada de filas útiles en los resultados de tools."""
+    total = 0
+    for tr in tool_results:
+        try:
+            payload = tr.split("]:\n", 1)[1] if "]:\n" in tr else tr
+            parsed = json.loads(payload)
+            if isinstance(parsed, list):
+                total += len(parsed)
+            elif isinstance(parsed, dict):
+                if parsed.get("detalle"):
+                    total += len(parsed["detalle"])
+                elif parsed.get("total"):
+                    total += int(parsed["total"])
+                elif not parsed.get("error"):
+                    total += 1
+        except Exception:
+            continue
+    return total
+
+
+def _execute_plan(plan: dict, tool_results: list[str], sources: list[dict], tools_used: list[str]) -> None:
+    """Ejecuta un plan de tools y acumula resultados + fuentes. Mutación in-place."""
+    if not plan or not plan.get("tools"):
+        return
+    for tc in plan["tools"]:
+        name = tc.get("name", "")
+        args = tc.get("args", {}) or {}
+        fn = TOOL_MAP.get(name)
+        if not fn:
+            continue
+        try:
+            result = fn(args)
+            tool_results.append(f"[{name}({json.dumps(args, ensure_ascii=False)})]:\n{result}")
+            tools_used.append(name)
+            parsed = json.loads(result) if isinstance(result, str) else result
+            items = parsed if isinstance(parsed, list) else (parsed.get("detalle") or parsed.get("votaciones") or [])
+            for item in items[:5]:
+                if isinstance(item, dict) and item.get("municipio"):
+                    src = {"municipio": item["municipio"], "fecha": str(item.get("fecha", "")),
+                           "tema": item.get("tema"), "titulo": item.get("titulo")}
+                    if src not in sources:
+                        sources.append(src)
+        except Exception:
+            continue
+
+
+REFORMULATE_PROMPT = """La primera ronda de búsqueda devolvió pocos resultados. Reformula con términos DIFERENTES.
+Genera hasta 3 nuevas llamadas a tools con queries distintas (sinónimos, variantes CA/ES, términos más específicos).
+No repitas queries ya probadas. Si la consulta previa usaba "inmigración", prueba "immigració acollida estrangeria MENA".
+Si usaba un partido, prueba argumentos/actas con el nombre del partido + tema.
+Responde SOLO JSON {"tools": [...]}."""
+
+
+FOLLOWUP_PROMPT = """A partir de la pregunta del usuario y la respuesta del asistente, propone 3 preguntas de seguimiento útiles para un político.
+Deben ser concretas, cortas (<90 caracteres), en el idioma de la pregunta, y que aporten una nueva perspectiva (no reformulaciones).
+Responde SOLO JSON: {"followups": ["...", "...", "..."]}"""
+
+
 @router.post("/")
 def chat(
     req: ChatRequest,
@@ -362,7 +635,9 @@ def chat(
 ):
     t0 = time.time()
     client = get_llm()
-    sources = []
+    sources: list[dict] = []
+    tool_results: list[str] = []
+    tools_used: list[str] = []
 
     # Step 1: Route — LLM decides tools
     router_msgs = [{"role": "system", "content": ROUTER_PROMPT}]
@@ -373,47 +648,51 @@ def chat(
     router_msgs.append({"role": "user", "content": user_input})
 
     try:
-        r1 = client.chat.completions.create(model=MODEL, messages=router_msgs, temperature=0, max_tokens=500)
+        r1 = client.chat.completions.create(model=MODEL, messages=router_msgs, temperature=0, max_tokens=700)
         plan = _extract_json(r1.choices[0].message.content)
     except Exception:
         plan = None
 
     if plan and plan.get("direct_answer"):
-        return {"answer": plan["direct_answer"], "sources": []}
+        return {"answer": plan["direct_answer"], "sources": [], "follow_ups": []}
 
-    # Step 2: Execute tools
-    tool_results = []
-    if plan and plan.get("tools"):
-        for tc in plan["tools"]:
-            name = tc.get("name", "")
-            args = tc.get("args", {})
-            fn = TOOL_MAP.get(name)
-            if fn:
-                try:
-                    result = fn(args)
-                    tool_results.append(f"[{name}({json.dumps(args, ensure_ascii=False)})]:\n{result}")
-                    # Extract sources
-                    parsed = json.loads(result) if isinstance(result, str) else result
-                    items = parsed if isinstance(parsed, list) else (parsed.get("detalle") or parsed.get("votaciones") or [])
-                    for item in items[:5]:
-                        if isinstance(item, dict) and item.get("municipio"):
-                            src = {"municipio": item["municipio"], "fecha": str(item.get("fecha", "")),
-                                   "tema": item.get("tema"), "titulo": item.get("titulo")}
-                            if src not in sources:
-                                sources.append(src)
-                except Exception:
-                    pass
+    # Step 2: Execute initial plan
+    _execute_plan(plan or {}, tool_results, sources, tools_used)
+
+    # Step 2b: Re-try loop — si hay <3 filas útiles, reformular y relanzar (máx 1 iteración extra)
+    useful = _count_useful_rows(tool_results)
+    retried = False
+    if useful < 3 and plan and plan.get("tools"):
+        retried = True
+        try:
+            retry_msgs = [
+                {"role": "system", "content": REFORMULATE_PROMPT},
+                {"role": "user", "content": (
+                    f"Pregunta original: {req.message}\n"
+                    f"Tools ya ejecutadas (pocos resultados): {json.dumps(plan['tools'], ensure_ascii=False)}\n"
+                    f"Resultados útiles acumulados: {useful} filas."
+                )},
+            ]
+            r_retry = client.chat.completions.create(
+                model=MODEL, messages=retry_msgs, temperature=0.2, max_tokens=500,
+            )
+            retry_plan = _extract_json(r_retry.choices[0].message.content)
+            if retry_plan:
+                _execute_plan(retry_plan, tool_results, sources, tools_used)
+        except Exception:
+            pass
 
     if not tool_results:
         result = tool_buscar_actas(req.message)
         tool_results.append(f"[buscar_actas fallback]:\n{result}")
+        tools_used.append("buscar_actas")
 
     # Step 3: Answer with data
     data = "\n\n---\n\n".join(tool_results)
     msgs = [{"role": "system", "content": ANSWER_PROMPT}]
     for h in req.history[-6:]:
         msgs.append({"role": h.get("role", "user"), "content": h.get("content", "")})
-    msgs.append({"role": "user", "content": f"Dades consultades:\n\n{data[:12000]}\n\nPregunta: {req.message}"})
+    msgs.append({"role": "user", "content": f"Dades consultades:\n\n{data[:14000]}\n\nPregunta: {req.message}"})
 
     try:
         r2 = client.chat.completions.create(model=MODEL, messages=msgs, temperature=0.3, max_tokens=4000)
@@ -421,14 +700,36 @@ def chat(
     except Exception as e:
         answer = f"Error: {str(e)[:300]}\n\nDades trobades:\n{data[:2000]}"
 
+    # Step 4: Follow-ups (best-effort, no bloquea)
+    follow_ups: list[str] = []
+    try:
+        fu_msgs = [
+            {"role": "system", "content": FOLLOWUP_PROMPT},
+            {"role": "user", "content": f"Pregunta: {req.message}\n\nResposta: {(answer or '')[:1500]}"},
+        ]
+        r_fu = client.chat.completions.create(
+            model=MODEL, messages=fu_msgs, temperature=0.5, max_tokens=250,
+        )
+        fu = _extract_json(r_fu.choices[0].message.content)
+        if fu and isinstance(fu.get("followups"), list):
+            follow_ups = [str(q).strip() for q in fu["followups"] if str(q).strip()][:3]
+    except Exception:
+        pass
+
     log_usage(
         user, "chat_query",
         payload={"message": req.message[:500]},
         response_meta={
-            "tools_used": [t.get("name") for t in (plan.get("tools") if plan else []) or []],
+            "tools_used": tools_used,
             "n_sources": len(sources),
+            "useful_rows": useful,
+            "retried": retried,
             "latency_ms": int((time.time() - t0) * 1000),
         },
         request=request,
     )
-    return {"answer": answer or "Sense resposta.", "sources": sources[:5]}
+    return {
+        "answer": answer or "Sense resposta.",
+        "sources": sources[:6],
+        "follow_ups": follow_ups,
+    }

@@ -57,17 +57,36 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--color-surface);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-border);
+  background: linear-gradient(180deg, #7c3aed33, #06b6d433);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-foreground-subtle);
+  background: linear-gradient(180deg, #7c3aed66, #06b6d466);
 }
+
+/* Animations for chat components */
+@keyframes shimmer {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 0 0 20px -8px rgba(124, 58, 237, 0.25); }
+  50%      { box-shadow: 0 0 32px -4px rgba(124, 58, 237, 0.45); }
+}
+
+.animate-fade-in-up { animation: fadeInUp 0.3s ease-out; }
+.animate-glow-pulse { animation: glowPulse 2.5s ease-in-out infinite; }
 
 /* Custom utility classes */
 .bg-background { background-color: var(--color-background); }

@@ -1,98 +1,70 @@
 'use client';
 
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import { User, Bot, ExternalLink } from 'lucide-react';
+import { User, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { type ChatMessage as ChatMessageType } from '@/lib/types';
 import { formatDateShort } from '@/lib/utils';
+import { AssistantAnswerCard } from './AssistantAnswerCard';
+import { SourcesGrid } from './SourceCard';
+import { FollowUpChips } from './FollowUpChips';
 
 interface ChatMessageProps {
   message: ChatMessageType;
+  onFollowUp?: (q: string) => void;
+  followUpDisabled?: boolean;
 }
 
-export function ChatMessage({ message }: ChatMessageProps) {
+export function ChatMessage({ message, onFollowUp, followUpDisabled }: ChatMessageProps) {
   const isUser = message.role === 'user';
 
-  return (
-    <div
-      className={cn(
-        'flex gap-3 group',
-        isUser ? 'flex-row-reverse' : 'flex-row',
-      )}
-    >
-      {/* Avatar */}
-      <div
-        className={cn(
-          'flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center',
-          isUser
-            ? 'bg-[#2563eb]'
-            : 'bg-[#1c2128] border border-[#30363d]',
-        )}
-      >
-        {isUser ? (
+  if (isUser) {
+    return (
+      <div className="flex gap-3 flex-row-reverse group">
+        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-[#7c3aed] to-[#06b6d4] flex items-center justify-center shadow-lg shadow-[#7c3aed]/20">
           <User className="w-4 h-4 text-white" />
-        ) : (
-          <Bot className="w-4 h-4 text-[#8b949e]" />
-        )}
+        </div>
+        <div className="flex flex-col gap-1.5 max-w-[80%] items-end">
+          <div
+            className={cn(
+              'rounded-2xl rounded-tr-sm px-4 py-2.5 text-[13px] leading-relaxed',
+              'bg-gradient-to-br from-[#1a0b2e] to-[#0a1e26]',
+              'border border-[#7c3aed]/30 text-[#f3f6fa]',
+              'shadow-[0_0_24px_-8px_rgba(124,58,237,0.35)]',
+            )}
+          >
+            <p className="whitespace-pre-wrap">{message.content}</p>
+          </div>
+          <p className="text-[10px] text-[#6e7681] px-1">
+            {formatDateShort(message.timestamp)}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex gap-3 flex-row group">
+      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-[#161b22] to-[#0f141b] border border-[#30363d] flex items-center justify-center relative">
+        <div className="absolute inset-0 rounded-full bg-gradient-to-br from-[#7c3aed]/20 to-[#06b6d4]/20 opacity-60" />
+        <Sparkles className="w-4 h-4 text-[#c4b5fd] relative" />
       </div>
 
-      {/* Content */}
-      <div
-        className={cn(
-          'flex flex-col gap-2 max-w-[80%]',
-          isUser ? 'items-end' : 'items-start',
-        )}
-      >
-        <div
-          className={cn(
-            'rounded-xl px-4 py-3 text-sm',
-            isUser
-              ? 'bg-[#2563eb] text-white rounded-tr-sm'
-              : 'bg-[#161b22] border border-[#30363d] text-[#e6edf3] rounded-tl-sm',
-          )}
-        >
-          {isUser ? (
-            <p className="whitespace-pre-wrap">{message.content}</p>
-          ) : (
-            <div className="markdown-body">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {message.content}
-              </ReactMarkdown>
-            </div>
-          )}
-        </div>
+      <div className="flex flex-col gap-2 w-full max-w-[min(720px,calc(100%-3rem))]">
+        <AssistantAnswerCard content={message.content} />
 
-        {/* Sources */}
-        {!isUser && message.sources && message.sources.length > 0 && (
-          <div className="w-full">
-            <p className="text-xs text-[#6e7681] mb-1.5 font-medium">
-              Fonts consultades:
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {message.sources.map((source, i) => (
-                <a
-                  key={`${source.municipio}-${source.fecha}-${i}`}
-                  href={`/buscar?q=${encodeURIComponent(source.municipio || source.titulo || '')}`}
-                  className={cn(
-                    'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs',
-                    'bg-[#1c2128] border border-[#30363d] text-[#8b949e]',
-                    'hover:border-[#484f58] hover:text-[#e6edf3] transition-colors',
-                  )}
-                >
-                  <ExternalLink className="w-3 h-3 flex-shrink-0" />
-                  <span className="truncate max-w-[200px]">
-                    {source.titulo || source.tema || 'Acta'}
-                    {source.municipio && ` · ${source.municipio}`}
-                    {source.fecha && ` (${source.fecha})`}
-                  </span>
-                </a>
-              ))}
-            </div>
-          </div>
+        {message.sources && message.sources.length > 0 && (
+          <SourcesGrid sources={message.sources} />
         )}
 
-        <p className="text-[10px] text-[#6e7681]">
+        {onFollowUp && message.followUps && message.followUps.length > 0 && (
+          <FollowUpChips
+            items={message.followUps}
+            onSelect={onFollowUp}
+            disabled={followUpDisabled}
+          />
+        )}
+
+        <p className="text-[10px] text-[#6e7681] px-1">
           {formatDateShort(message.timestamp)}
         </p>
       </div>
