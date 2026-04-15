@@ -877,17 +877,78 @@ def _get_concejales_del_partido(cur, partido: str, limit: int = 30) -> list[dict
     return [dict(r) for r in cur.fetchall()]
 
 
+# Apellidos catalanes/españoles demasiado comunes → excluir para evitar falsos positivos.
+_COMMON_SURNAMES = {
+    "SERRA", "MAS", "PUIG", "FONT", "ROIG", "SOLER", "PI", "RIBAS", "RIBA", "VILA",
+    "MARTÍ", "MARTI", "MARTÍN", "MARTIN", "GARCÍA", "GARCIA", "PÉREZ", "PEREZ",
+    "LÓPEZ", "LOPEZ", "SÁNCHEZ", "SANCHEZ", "RUIZ", "GONZÁLEZ", "GONZALEZ",
+    "FERNÁNDEZ", "FERNANDEZ", "RODRÍGUEZ", "RODRIGUEZ", "ALONSO", "DÍAZ", "DIAZ",
+    "CASAS", "CASTELLS", "TORRES", "SANTOS", "JIMÉNEZ", "JIMENEZ", "GÓMEZ", "GOMEZ",
+    "HERNÁNDEZ", "HERNANDEZ", "MORALES", "ROMERO", "NAVARRO", "DOMÍNGUEZ", "DOMINGUEZ",
+    "GIL", "VARGAS", "CANO", "MOLINA", "REYES", "IGLESIAS", "MORENO",
+    "SOLÉ", "SOLE", "ROCA", "COSTA", "CAMPS", "PRAT", "BOSCH", "CARBONELL", "BELTRÁN", "BELTRAN",
+    "EXPÓSITO", "EXPOSITO",  # común y presente en alguna lista oficial
+}
+
+
 def _extract_surnames(nombre: str) -> list[str]:
-    """Extrae apellidos (>=4 chars) excluyendo conectores. De 'SÍLVIA ORRIOLS SERRA' → ['ORRIOLS','SERRA']."""
+    """Extrae los 2 últimos apellidos válidos de un nombre completo.
+    De 'SÍLVIA ORRIOLS SERRA' → ['ORRIOLS'] (SERRA descartado por común)."""
     SKIP = {"DE", "DEL", "LA", "LAS", "LOS", "EL", "I", "Y", "VAN", "VON", "SAN"}
     parts = re.split(r'\s+', (nombre or "").strip())
-    # Apellidos = partes a partir del 2º, excluyendo conectores y con longitud mínima
-    surnames = []
-    for p in parts[1:]:
+    if len(parts) < 2:
+        return []
+    # Tomar las 2 últimas palabras (estructura típica: NOMBRE [SEGUNDO_NOMBRE] APELLIDO1 APELLIDO2)
+    candidates = parts[-2:]
+    result = []
+    for p in candidates:
         clean = p.strip(",.;")
-        if len(clean) >= 4 and clean.upper() not in SKIP:
-            surnames.append(clean)
-    return surnames[:2]  # máx 2 apellidos por concejal
+        up = clean.upper()
+        if (len(clean) >= 5
+            and up not in SKIP
+            and up not in _COMMON_SURNAMES):
+            result.append(clean)
+    return result
+
+
+def _build_name_patterns(concejales: list[dict]) -> list[str]:
+    """Para cada concejal genera patrones ESPECÍFICOS que reducen falsos positivos:
+      - nombre_pila + apellido1 (ej: 'Sílvia Orriols')
+      - apellido1 + apellido2 (ej: 'Orriols Barranqueras')
+    Evita buscar apellidos sueltos que sean comunes."""
+    SKIP = {"DE", "DEL", "LA", "LAS", "LOS", "EL", "I", "Y", "VAN", "VON", "SAN"}
+    patterns: list[str] = []
+    for c in concejales:
+        nombre = c.get("nombre", "").strip()
+        if not nombre:
+            continue
+        parts = re.split(r'\s+', nombre)
+        if len(parts) < 2:
+            continue
+        # primer token = nombre de pila (tal cual, con tilde); puede ser compuesto con 2º
+        # apellidos = 2 últimas palabras
+        first = parts[0].title()
+        apellidos = [p.title() for p in parts[-2:]
+                     if len(p) >= 4 and p.upper() not in SKIP]
+        if not apellidos:
+            continue
+        # Pattern 1: primer_nombre + primer_apellido (muy específico)
+        patterns.append(f"{first} {apellidos[0]}")
+        # Pattern 2: los 2 apellidos juntos (también específico)
+        if len(apellidos) == 2:
+            patterns.append(f"{apellidos[0]} {apellidos[1]}")
+        # Si apellido no es común, también lo añadimos solo (con bordes de palabra)
+        if apellidos[0].upper() not in _COMMON_SURNAMES and len(apellidos[0]) >= 6:
+            patterns.append(f" {apellidos[0]} ")
+    # dedup preservando orden
+    seen: set[str] = set()
+    out = []
+    for p in patterns:
+        k = p.upper()
+        if k not in seen:
+            seen.add(k)
+            out.append(p)
+    return out
 
 
 def tool_monitoring_partido(partido: str, tema: str = "", **time_kw) -> str:
@@ -910,18 +971,9 @@ def tool_monitoring_partido(partido: str, tema: str = "", **time_kw) -> str:
             tema_filter_a = "AND (" + clause_tpl.format(col="a.argumento") + ")"
 
     with get_cursor() as cur:
-        # 0. Cargar concejales del partido (para buscar menciones por nombre propio)
+        # 0. Cargar concejales del partido y generar patrones específicos de búsqueda
         concejales = _get_concejales_del_partido(cur, partido, limit=50)
-        apellidos = []
-        for c in concejales:
-            apellidos.extend(_extract_surnames(c.get("nombre", "")))
-        # dedup manteniendo orden
-        seen: set[str] = set()
-        apellidos_unicos = []
-        for a in apellidos:
-            if a.upper() not in seen:
-                seen.add(a.upper())
-                apellidos_unicos.append(a)
+        name_patterns = _build_name_patterns(concejales)
 
         # 1. Intervenciones propias
         cur.execute(f"""
@@ -975,18 +1027,11 @@ def tool_monitoring_partido(partido: str, tema: str = "", **time_kw) -> str:
         """, tp)
         votaciones_detalle = [dict(r) for r in cur.fetchall()]
 
-        # 3. Menciones — TRES fuentes:
-        #    a) argumentos de rivales que nombran al partido (o sus alias, o apellidos de concejales)
-        #    b) resúmenes de puntos donde aparezca el partido
-        #    c) títulos de puntos donde aparezca el partido
+        # 3. Menciones — argumentos/resúmenes externos que nombran al partido
         key = _party_key_for_mentions(partido)
         labels_search: list[str] = list(_PARTY_ALIASES.get(key, [partido or ""]))
-        # Añadir apellidos de concejales (>=5 chars para evitar ruido)
-        for a in apellidos_unicos[:15]:
-            if len(a) >= 5:
-                labels_search.append(f" {a} ")  # rodeado de espacios para coincidir como palabra
-                labels_search.append(f" {a},")
-                labels_search.append(f" {a}.")
+        # Añadir patrones específicos de concejales (nombre+apellido o apellidos juntos)
+        labels_search.extend(name_patterns[:25])
         labels_search = [l for l in labels_search if l and len(l.strip()) >= 3]
 
         # a) Argumentos externos que mencionan
@@ -1006,6 +1051,7 @@ def tool_monitoring_partido(partido: str, tema: str = "", **time_kw) -> str:
                 JOIN municipios m ON p.municipio_id = m.id
                 WHERE ({like_clause})
                   AND NOT ({part_where_a})
+                  AND a.partido IS NOT NULL
                   AND LENGTH(a.argumento) >= 30
                   {time_extra}
                 ORDER BY p.fecha DESC LIMIT 15
@@ -1079,7 +1125,7 @@ def tool_monitoring_partido(partido: str, tema: str = "", **time_kw) -> str:
             "total_menciones_en_rivales": len(menciones_rivales),
             "total_menciones_en_puntos": len(menciones_puntos),
             "concejales_activos": len(concejales),
-            "apellidos_buscados": apellidos_unicos[:10],
+            "patrones_busqueda": labels_search[:12],
         },
         "concejales_del_partido": concejales[:20],
         "intervenciones_propias": intervenciones_propias,
