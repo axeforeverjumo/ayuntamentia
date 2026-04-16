@@ -3,12 +3,14 @@
 import { useState, useEffect, useTransition, useMemo } from 'react';
 import {
   Bell, AlertTriangle, AlertCircle, Info, CheckCircle2,
-  Filter, Loader2, RefreshCw, MapPin, Clock, X, Eye, Sparkles,
-  TrendingUp, Building2, Tag,
+  Filter, Loader2, RefreshCw, Clock, X, Eye, Sparkles,
+  TrendingUp, Building2, Tag, Plus, Zap, Edit2, Trash2,
 } from 'lucide-react';
 import { apiClient } from '@/lib/ApiClient';
 import { PartidoChip } from '@/components/ui/PartidoChip';
-import type { Alerta, AlertasStats, AlertSeverity, AlertEstado } from '@/lib/types';
+import { AlertaDetailModal } from '@/components/ui/AlertaDetailModal';
+import { ReglaFormModal } from '@/components/ui/ReglaFormModal';
+import type { Alerta, AlertasStats, AlertSeverity, AlertEstado, AlertaRegla } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 type ListResponse = { total: number; page: number; results: Alerta[] } | Alerta[];
@@ -70,24 +72,33 @@ function extractPartido(titulo: string): string | null {
 export default function AlertasPage() {
   const [alertas, setAlertas] = useState<Alerta[]>([]);
   const [stats, setStats] = useState<AlertasStats | null>(null);
+  const [reglas, setReglas] = useState<AlertaRegla[]>([]);
+  const [tab, setTab] = useState<'alertas' | 'reglas'>('alertas');
   const [filter, setFilter] = useState<AlertSeverity | 'totes'>('totes');
   const [estadoFilter, setEstadoFilter] = useState<'nueva' | 'todas'>('nueva');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
+  // Modales
+  const [selectedAlertaId, setSelectedAlertaId] = useState<number | null>(null);
+  const [reglaFormOpen, setReglaFormOpen] = useState(false);
+  const [reglaEditing, setReglaEditing] = useState<AlertaRegla | null>(null);
+
   const loadData = async () => {
     setLoading(true);
     setError(null);
     try {
       const params = estadoFilter === 'nueva' ? '?estado=nueva' : '';
-      const [listResp, statsData] = await Promise.all([
+      const [listResp, statsData, reglasData] = await Promise.all([
         apiClient.get<ListResponse>(`/api/alertas/${params}`),
         apiClient.get<AlertasStats>('/api/alertas/stats/resumen'),
+        apiClient.get<AlertaRegla[]>('/api/alertas/reglas/').catch(() => [] as AlertaRegla[]),
       ]);
       const list = Array.isArray(listResp) ? listResp : (listResp.results || []);
       setAlertas(list);
       setStats(statsData);
+      setReglas(reglasData);
     } catch {
       setError('No s\'han pogut carregar les alertes.');
     } finally {
@@ -98,6 +109,29 @@ export default function AlertasPage() {
   useEffect(() => {
     loadData();
   }, [estadoFilter]);
+
+  const openNewRegla = () => { setReglaEditing(null); setReglaFormOpen(true); };
+  const openEditRegla = (r: AlertaRegla) => { setReglaEditing(r); setReglaFormOpen(true); };
+  const onReglaSaved = () => { setReglaFormOpen(false); loadData(); };
+
+  const deleteRegla = async (id: number) => {
+    if (!confirm('Eliminar aquesta regla? Les alertes generades es mantenen.')) return;
+    try {
+      await apiClient.delete(`/api/alertas/reglas/${id}`);
+      loadData();
+    } catch {
+      // silently fail
+    }
+  };
+
+  const toggleRegla = async (r: AlertaRegla) => {
+    try {
+      await apiClient.put(`/api/alertas/reglas/${r.id}`, {
+        ...r, activa: !r.activa,
+      });
+      loadData();
+    } catch {}
+  };
 
   const updateEstado = (id: number, estado: AlertEstado) => {
     startTransition(async () => {
@@ -162,20 +196,62 @@ export default function AlertasPage() {
               </p>
             </div>
           </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={openNewRegla}
+              className={cn(
+                'flex items-center gap-2 px-3 py-2 text-xs rounded-xl',
+                'bg-gradient-to-r from-[#7c3aed] to-[#06b6d4] text-white',
+                'hover:from-[#8b5cf6] hover:to-[#22d3ee]',
+                'shadow-lg shadow-[#7c3aed]/20 transition-all',
+              )}
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Nova regla
+            </button>
+            <button
+              onClick={loadData}
+              disabled={loading}
+              className={cn(
+                'flex items-center gap-2 px-3 py-2 text-xs rounded-xl',
+                'bg-gradient-to-r from-[#1a0b2e]/50 to-[#0a1e26]/50',
+                'border border-[#7c3aed]/30 text-[#c4b5fd]',
+                'hover:border-[#7c3aed]/60 hover:text-[#e6edf3]',
+                'transition-all duration-200',
+                'disabled:opacity-50',
+              )}
+            >
+              <RefreshCw className={cn('w-3.5 h-3.5', loading && 'animate-spin')} />
+              Actualitzar
+            </button>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex bg-gradient-to-r from-[#0f141b] to-[#161b22] border border-[#21262d] rounded-xl p-1 gap-1 w-fit">
           <button
-            onClick={loadData}
-            disabled={loading}
+            onClick={() => setTab('alertas')}
             className={cn(
-              'flex items-center gap-2 px-3 py-2 text-xs rounded-xl',
-              'bg-gradient-to-r from-[#1a0b2e]/50 to-[#0a1e26]/50',
-              'border border-[#7c3aed]/30 text-[#c4b5fd]',
-              'hover:border-[#7c3aed]/60 hover:text-[#e6edf3]',
-              'transition-all duration-200',
-              'disabled:opacity-50',
+              'inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-medium transition-all',
+              tab === 'alertas'
+                ? 'bg-gradient-to-r from-[#1a0b2e] to-[#0a1e26] text-[#e6edf3] border border-[#7c3aed]/40'
+                : 'text-[#8b949e] hover:text-[#e6edf3]',
             )}
           >
-            <RefreshCw className={cn('w-3.5 h-3.5', loading && 'animate-spin')} />
-            Actualitzar
+            <Bell className="w-3 h-3" />
+            Alertes {stats && <span className="text-[10px] text-[#6e7681]">({stats.nuevas})</span>}
+          </button>
+          <button
+            onClick={() => setTab('reglas')}
+            className={cn(
+              'inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-medium transition-all',
+              tab === 'reglas'
+                ? 'bg-gradient-to-r from-[#1a0b2e] to-[#0a1e26] text-[#e6edf3] border border-[#7c3aed]/40'
+                : 'text-[#8b949e] hover:text-[#e6edf3]',
+            )}
+          >
+            <Zap className="w-3 h-3" />
+            Les meves regles <span className="text-[10px] text-[#6e7681]">({reglas.length})</span>
           </button>
         </div>
 
@@ -209,6 +285,7 @@ export default function AlertasPage() {
           </div>
         )}
 
+        {tab === 'alertas' && (<>
         {/* Filters */}
         <div className="flex items-center gap-3 flex-wrap">
           <Filter className="w-4 h-4 text-[#8b949e]" />
@@ -297,6 +374,7 @@ export default function AlertasPage() {
                 <AlertaCard
                   key={alerta.id}
                   alerta={alerta}
+                  onClick={() => setSelectedAlertaId(alerta.id)}
                   onMarkViewed={(id) => updateEstado(id, 'vista')}
                   onDismiss={(id) => updateEstado(id, 'descartada')}
                   onResolve={(id) => updateEstado(id, 'resuelta')}
@@ -306,6 +384,180 @@ export default function AlertasPage() {
             )}
           </div>
         )}
+        </>)}
+
+        {tab === 'reglas' && (
+          <ReglasList
+            reglas={reglas}
+            loading={loading}
+            onCreate={openNewRegla}
+            onEdit={openEditRegla}
+            onDelete={deleteRegla}
+            onToggle={toggleRegla}
+          />
+        )}
+      </div>
+
+      <AlertaDetailModal
+        alertaId={selectedAlertaId}
+        onClose={() => setSelectedAlertaId(null)}
+        onUpdated={loadData}
+      />
+      <ReglaFormModal
+        open={reglaFormOpen}
+        initial={reglaEditing}
+        onClose={() => setReglaFormOpen(false)}
+        onSaved={onReglaSaved}
+      />
+    </div>
+  );
+}
+
+function ReglasList({
+  reglas, loading, onCreate, onEdit, onDelete, onToggle,
+}: {
+  reglas: AlertaRegla[];
+  loading: boolean;
+  onCreate: () => void;
+  onEdit: (r: AlertaRegla) => void;
+  onDelete: (id: number) => void;
+  onToggle: (r: AlertaRegla) => void;
+}) {
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <Loader2 className="w-5 h-5 text-[#c4b5fd] animate-spin" />
+      </div>
+    );
+  }
+  if (reglas.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 bg-gradient-to-br from-[#0f141b] to-[#161b22] border border-[#21262d] rounded-2xl">
+        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#7c3aed]/20 to-[#06b6d4]/20 border border-[#7c3aed]/30 flex items-center justify-center mb-3">
+          <Zap className="w-6 h-6 text-[#c4b5fd]" />
+        </div>
+        <p className="text-sm font-medium text-[#e6edf3]">Cap regla configurada</p>
+        <p className="text-xs text-[#6e7681] mt-1 max-w-md text-center">
+          Crea regles per vigilar partits, temes, regidors o paraules clau.
+          T'avisarem quan hi hagi coincidències noves als plens.
+        </p>
+        <button
+          onClick={onCreate}
+          className="mt-4 inline-flex items-center gap-2 px-4 py-2 text-xs rounded-xl bg-gradient-to-r from-[#7c3aed] to-[#06b6d4] text-white hover:from-[#8b5cf6] hover:to-[#22d3ee] transition-colors shadow-lg shadow-[#7c3aed]/20"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          Crea la primera regla
+        </button>
+      </div>
+    );
+  }
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      {reglas.map((r) => (
+        <ReglaCard key={r.id} regla={r} onEdit={onEdit} onDelete={onDelete} onToggle={onToggle} />
+      ))}
+    </div>
+  );
+}
+
+function ReglaCard({
+  regla, onEdit, onDelete, onToggle,
+}: {
+  regla: AlertaRegla;
+  onEdit: (r: AlertaRegla) => void;
+  onDelete: (id: number) => void;
+  onToggle: (r: AlertaRegla) => void;
+}) {
+  const hasAny = (regla.partidos?.length || 0) + (regla.temas?.length || 0) +
+                  (regla.concejales?.length || 0) + (regla.palabras_clave?.length || 0);
+  return (
+    <div className={cn(
+      'relative rounded-2xl border p-4 transition-all overflow-hidden',
+      'bg-gradient-to-br from-[#0f141b] to-[#161b22]',
+      regla.activa ? 'border-[#7c3aed]/30' : 'border-[#21262d] opacity-70',
+    )}>
+      {regla.activa && (
+        <div className="absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl opacity-10 bg-[#7c3aed] pointer-events-none" />
+      )}
+      <div className="relative">
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h3 className="text-[13px] font-semibold text-[#e6edf3]">{regla.nombre}</h3>
+            <span className={cn(
+              'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium',
+              regla.activa ? 'bg-[#052e16] text-[#4ade80] border border-[#16a34a]/30' : 'bg-[#1c2128] text-[#6e7681] border border-[#30363d]',
+            )}>
+              <span className={cn('w-1 h-1 rounded-full', regla.activa ? 'bg-[#4ade80] animate-pulse' : 'bg-[#6e7681]')} />
+              {regla.activa ? 'Activa' : 'Pausada'}
+            </span>
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => onToggle(regla)}
+              title={regla.activa ? 'Pausar' : 'Activar'}
+              className="w-7 h-7 rounded-lg border border-[#30363d] text-[#8b949e] hover:text-[#c4b5fd] hover:border-[#484f58] flex items-center justify-center transition-colors"
+            >
+              {regla.activa ? <X className="w-3 h-3" /> : <Zap className="w-3 h-3" />}
+            </button>
+            <button
+              onClick={() => onEdit(regla)}
+              title="Editar"
+              className="w-7 h-7 rounded-lg border border-[#30363d] text-[#8b949e] hover:text-[#e6edf3] hover:border-[#484f58] flex items-center justify-center transition-colors"
+            >
+              <Edit2 className="w-3 h-3" />
+            </button>
+            <button
+              onClick={() => onDelete(regla.id)}
+              title="Eliminar"
+              className="w-7 h-7 rounded-lg border border-[#30363d] text-[#8b949e] hover:text-[#f87171] hover:border-[#dc2626]/50 flex items-center justify-center transition-colors"
+            >
+              <Trash2 className="w-3 h-3" />
+            </button>
+          </div>
+        </div>
+
+        {regla.descripcion && (
+          <p className="text-[11px] text-[#c9d1d9] mb-2 leading-relaxed">{regla.descripcion}</p>
+        )}
+
+        <div className="flex flex-wrap gap-1 mb-2.5">
+          {regla.partidos?.map((p) => <PartidoChip key={`p-${p}`} partido={p} size="xs" />)}
+          {regla.temas?.map((t) => (
+            <span key={`t-${t}`} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-[#2a1f04] border border-[#d97706]/30 text-[#fbbf24]">
+              <Tag className="w-2.5 h-2.5" />
+              {t.replace(/_/g, ' ')}
+            </span>
+          ))}
+          {regla.concejales?.map((c) => (
+            <span key={`c-${c}`} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-[#0a1930] border border-[#1e40af]/30 text-[#93c5fd]">
+              👤 {c}
+            </span>
+          ))}
+          {regla.palabras_clave?.map((k) => (
+            <span key={`k-${k}`} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-[#1a0b2e] border border-[#7c3aed]/30 text-[#c4b5fd]">
+              💬 {k}
+            </span>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-3 text-[10px] text-[#8b949e]">
+          <span className="inline-flex items-center gap-1">
+            <Bell className="w-2.5 h-2.5" />
+            {regla.total_alertas ?? 0} alertes
+            {(regla.alertas_nuevas ?? 0) > 0 && (
+              <span className="ml-0.5 text-[#fbbf24]">({regla.alertas_nuevas} noves)</span>
+            )}
+          </span>
+          {regla.last_run_at && (
+            <span className="inline-flex items-center gap-1">
+              <Clock className="w-2.5 h-2.5" />
+              Última: {new Date(regla.last_run_at).toLocaleString('ca-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+            </span>
+          )}
+          {hasAny === 0 && (
+            <span className="text-[#f87171] ml-auto">⚠️ Sense filtres</span>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -334,9 +586,10 @@ function StatCard({ icon: Icon, label, value, sub, gradient, border, iconColor }
 }
 
 function AlertaCard({
-  alerta, onMarkViewed, onDismiss, onResolve, isPending,
+  alerta, onClick, onMarkViewed, onDismiss, onResolve, isPending,
 }: {
   alerta: Alerta;
+  onClick: () => void;
   onMarkViewed: (id: number) => void;
   onDismiss: (id: number) => void;
   onResolve: (id: number) => void;
@@ -350,9 +603,11 @@ function AlertaCard({
 
   return (
     <div
+      onClick={onClick}
       className={cn(
-        'relative overflow-hidden rounded-2xl border border-l-2 p-4 transition-all',
+        'relative overflow-hidden rounded-2xl border border-l-2 p-4 transition-all cursor-pointer',
         'bg-gradient-to-br from-[#0f141b] to-[#161b22]',
+        'hover:border-[#484f58] hover:shadow-lg',
         meta.border, meta.borderL, meta.glow,
         isResolved && 'opacity-50',
       )}
@@ -427,7 +682,7 @@ function AlertaCard({
           <div className="flex-shrink-0 flex flex-col gap-1.5">
             {alerta.estado === 'nueva' && (
               <button
-                onClick={() => onMarkViewed(alerta.id)}
+                onClick={(e) => { e.stopPropagation(); onMarkViewed(alerta.id); }}
                 disabled={isPending}
                 title="Marcar com a vista"
                 className="w-8 h-8 rounded-lg flex items-center justify-center bg-[#0f141b] border border-[#21262d] text-[#8b949e] hover:border-[#1e40af]/50 hover:text-[#93c5fd] transition-colors disabled:opacity-50"
@@ -436,7 +691,7 @@ function AlertaCard({
               </button>
             )}
             <button
-              onClick={() => onResolve(alerta.id)}
+              onClick={(e) => { e.stopPropagation(); onResolve(alerta.id); }}
               disabled={isPending}
               title="Marcar com a resolta"
               className="w-8 h-8 rounded-lg flex items-center justify-center bg-[#0f141b] border border-[#21262d] text-[#8b949e] hover:border-[#16a34a]/50 hover:text-[#4ade80] transition-colors disabled:opacity-50"
@@ -444,7 +699,7 @@ function AlertaCard({
               <CheckCircle2 className="w-3.5 h-3.5" />
             </button>
             <button
-              onClick={() => onDismiss(alerta.id)}
+              onClick={(e) => { e.stopPropagation(); onDismiss(alerta.id); }}
               disabled={isPending}
               title="Descartar"
               className="w-8 h-8 rounded-lg flex items-center justify-center bg-[#0f141b] border border-[#21262d] text-[#8b949e] hover:border-[#dc2626]/50 hover:text-[#f87171] transition-colors disabled:opacity-50"

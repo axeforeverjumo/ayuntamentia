@@ -99,6 +99,8 @@ export interface Alerta {
   punto_id?: number | null;
   municipio_id?: number | null;
   cargo_electo_id?: number | null;
+  regla_id?: number | null;
+  regla_nombre?: string | null;
   contexto?: Record<string, unknown> | null;
   puntos_comparados?: unknown | null;
   created_at: string;
@@ -106,9 +108,57 @@ export interface Alerta {
   resolved_at?: string | null;
   resolved_by?: string | null;
   municipio?: string | null;
+  comarca?: string | null;
+  provincia?: string | null;
+  poblacion?: number | null;
   concejal?: string | null;
+  cargo?: string | null;
   punto_titulo?: string | null;
   punto_tema?: string | null;
+  punto_resumen?: string | null;
+  punto_resultado?: string | null;
+  punto_fecha?: string | null;
+  votaciones?: Array<{ partido: string; sentido: string; n: number }>;
+  argumentos?: Array<{ partido: string; posicion: string; argumento: string }>;
+}
+
+export interface AlertaRegla {
+  id: number;
+  user_id: string;
+  nombre: string;
+  descripcion?: string | null;
+  partidos: string[];
+  temas: string[];
+  concejales: string[];
+  palabras_clave: string[];
+  municipios: number[];
+  fuentes: string[];
+  severidad: AlertSeverity;
+  canal: 'web' | 'email' | 'telegram' | 'all';
+  min_coincidencias: number;
+  activa: boolean;
+  last_run_at?: string | null;
+  last_match_at?: string | null;
+  match_count: number;
+  total_alertas?: number;
+  alertas_nuevas?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AlertaReglaIn {
+  nombre: string;
+  descripcion?: string;
+  partidos?: string[];
+  temas?: string[];
+  concejales?: string[];
+  palabras_clave?: string[];
+  municipios?: number[];
+  fuentes?: string[];
+  severidad?: AlertSeverity;
+  canal?: 'web' | 'email' | 'telegram' | 'all';
+  min_coincidencias?: number;
+  activa?: boolean;
 }
 
 export interface AlertasStats {

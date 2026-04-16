@@ -59,5 +59,9 @@ app.conf.update(
             "task": "src.workers.tasks.generate_weekly_report",
             "schedule": crontab(minute=0, hour=8, day_of_week=1),  # Monday 8am
         },
+        "evaluate-alert-rules": {
+            "task": "src.workers.tasks.evaluate_alert_rules",
+            "schedule": crontab(minute="*/30"),  # cada 30 minutos
+        },
     },
 )

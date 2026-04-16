@@ -189,3 +189,38 @@ def generate_weekly_report():
     report = gen_report(data)
     logger.info(f"Weekly report generated: {len(report)} chars")
     return report
+
+
+@app.task
+def evaluate_alert_rules():
+    """Evalúa todas las reglas de alerta activas y crea alertas por coincidencias.
+
+    Cada regla tiene un last_run_at que funciona como cursor para no procesar
+    actas ya evaluadas. El evaluator usa UNIQUE (regla_id, punto_id) para
+    evitar duplicados en carreras.
+    """
+    # Importación diferida: el pipeline no necesita cargar el módulo completo del API.
+    # Si el pipeline está en contenedor separado, necesita acceso al código api/.
+    import sys, os
+    api_src = os.path.join(os.path.dirname(__file__), "..", "..", "..", "api", "src")
+    if api_src not in sys.path:
+        sys.path.insert(0, api_src)
+
+    try:
+        from services.alertas_evaluator import run_all_active_rules  # noqa: E402
+    except Exception:
+        # En el setup actual, el pipeline y el API están en contenedores separados.
+        # Como fallback, llamamos al endpoint HTTP interno.
+        import httpx
+        api_url = os.getenv("API_INTERNAL_URL", "http://localhost:8050")
+        token = os.getenv("ALERT_RULES_CRON_TOKEN", "")
+        headers = {"Authorization": f"Bearer {token}"} if token else {}
+        r = httpx.post(f"{api_url}/api/alertas/reglas/_run_all", headers=headers, timeout=300)
+        r.raise_for_status()
+        result = r.json()
+        logger.info(f"Reglas evaluadas via HTTP: {result}")
+        return result
+
+    result = run_all_active_rules()
+    logger.info(f"Reglas evaluadas: {result}")
+    return result
