@@ -12,10 +12,11 @@ import {
   FileText,
   Settings,
   Building2,
-  ChevronRight,
   LogOut,
   ShieldCheck,
   Mail,
+  Crosshair,
+  Radar,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getSupabaseBrowser } from '@/lib/supabaseBrowser';
@@ -24,19 +25,21 @@ interface NavItem {
   href: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
+  hint?: string;
+  badge?: number;
 }
 
 const navItems: NavItem[] = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/buscar', label: 'Buscar', icon: Search },
-  { href: '/chat', label: 'Chat IA', icon: MessageSquare },
-  { href: '/alertas', label: 'Alertes', icon: Bell },
-  { href: '/municipios', label: 'Municipis', icon: MapPin },
-  { href: '/informes', label: 'Informes', icon: FileText },
-  { href: '/intel', label: 'Intel·ligència', icon: ShieldCheck },
-  { href: '/parlament', label: 'Parlament', icon: Building2 },
-  { href: '/recepcion', label: 'Recepció social', icon: Bell },
-  { href: '/suscripciones', label: 'Subscripcions', icon: Mail },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, hint: 'Visió general' },
+  { href: '/chat', label: 'War Room', icon: Crosshair, hint: 'Chat multi-mode' },
+  { href: '/buscar', label: 'Buscar', icon: Search, hint: 'Actes i punts' },
+  { href: '/alertas', label: 'Alertes', icon: Bell, hint: 'Regles actives' },
+  { href: '/municipios', label: 'Municipis', icon: MapPin, hint: '947 municipis' },
+  { href: '/informes', label: 'Informes', icon: FileText, hint: 'Setmanals' },
+  { href: '/intel', label: 'Intel·ligència', icon: Radar, hint: 'Tendències' },
+  { href: '/parlament', label: 'Parlament', icon: Building2, hint: 'DSPC · sessions' },
+  { href: '/recepcion', label: 'Recepció social', icon: Bell, hint: 'Eco social' },
+  { href: '/suscripciones', label: 'Subscripcions', icon: Mail, hint: 'Briefs' },
 ];
 
 export function Sidebar() {
@@ -68,37 +71,58 @@ export function Sidebar() {
 
   async function handleLogout() {
     await getSupabaseBrowser().auth.signOut();
-    window.location.href = '/login';
+    window.location.href = '/';
   }
 
-  if (pathname === '/login') return null;
+  if (pathname === '/login' || pathname === '/') return null;
 
   return (
-    <aside className="fixed left-0 top-0 h-full w-60 bg-[#0d1117] border-r border-[#21262d] flex flex-col z-40">
-      {/* Logo */}
-      <div className="flex items-center gap-2.5 px-5 py-4 border-b border-[#21262d]">
-        <div className="w-8 h-8 rounded-lg bg-[#2563eb] flex items-center justify-center flex-shrink-0">
-          <Building2 className="w-4 h-4 text-white" />
-        </div>
-        <div className="min-w-0">
-          <p className="text-sm font-bold text-[#e6edf3] truncate">
-            AyuntamentIA
-          </p>
-          <p className="text-[10px] text-[#6e7681] truncate">
-            947 municipis · Catalunya
-          </p>
+    <aside
+      className="fixed left-0 top-0 h-full w-60 flex flex-col z-40"
+      style={{ background: '#0a0a0a', borderRight: '1px solid var(--line)' }}
+    >
+      {/* Brand */}
+      <div className="px-4 py-3.5" style={{ borderBottom: '1px solid var(--line)' }}>
+        <Link href="/" className="flex items-center gap-2.5 no-underline">
+          <div
+            style={{
+              width: 34, height: 34, display: 'grid', placeItems: 'center',
+              border: '1px solid var(--paper)', background: 'var(--paper)', color: 'var(--ink)',
+            }}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M4 20 L12 3 L20 20 Z" stroke="currentColor" strokeWidth="1.8" />
+              <path d="M8 20 L12 12 L16 20" stroke="currentColor" strokeWidth="1.8" />
+            </svg>
+          </div>
+          <div>
+            <div style={{ fontFamily: 'var(--font-serif)', fontSize: 18, lineHeight: 1, color: 'var(--paper)' }}>AyuntamentIA</div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--fog)', letterSpacing: '.12em', textTransform: 'uppercase', marginTop: 2 }}>
+              war room · v2.0
+            </div>
+          </div>
+        </Link>
+        <div
+          className="mt-2.5 flex items-center gap-2"
+          style={{ padding: '7px 10px', background: '#111', border: '1px solid var(--line)' }}
+        >
+          <span className="pulse-dot" style={{ width: 7, height: 7, borderRadius: 7, background: 'var(--wr-phosphor)', boxShadow: '0 0 6px var(--wr-phosphor)' }} />
+          <div style={{ lineHeight: 1.1 }}>
+            <div style={{ fontSize: 11, color: 'var(--paper)' }}>Aliança Catalana</div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--fog)' }}>tenant actiu · operatiu</div>
+          </div>
         </div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-        <p className="text-[10px] font-semibold text-[#6e7681] uppercase tracking-wider px-2 mb-2">
-          Navegació
+      <nav className="flex-1 px-2.5 py-3 overflow-y-auto thin-scroll">
+        <p style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--fog)', letterSpacing: '.16em', textTransform: 'uppercase', padding: '6px 8px 8px' }}>
+          Operacions
         </p>
         {navItems.map((item) => {
           const isActive =
-            item.href === '/'
-              ? pathname === '/'
+            item.href === '/dashboard'
+              ? pathname === '/dashboard'
               : pathname.startsWith(item.href);
           const Icon = item.icon;
 
@@ -106,22 +130,31 @@ export function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
-              className={cn(
-                'flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-all group',
-                isActive
-                  ? 'bg-[#1c2128] text-[#e6edf3] font-medium'
-                  : 'text-[#8b949e] hover:bg-[#161b22] hover:text-[#e6edf3]',
-              )}
+              className="no-underline"
+              style={{
+                display: 'flex', alignItems: 'center', gap: 11, width: '100%',
+                background: isActive ? 'var(--paper)' : 'transparent',
+                color: isActive ? 'var(--ink)' : 'var(--paper)',
+                textAlign: 'left', padding: '9px 10px', marginBottom: 1,
+                fontFamily: 'var(--font-sans)', fontSize: 13,
+                borderLeft: isActive ? '3px solid var(--wr-red)' : '3px solid transparent',
+                textDecoration: 'none',
+              }}
             >
-              <Icon
-                className={cn(
-                  'w-4 h-4 flex-shrink-0 transition-colors',
-                  isActive ? 'text-[#2563eb]' : 'text-current',
+              <Icon className="w-4 h-4" style={{ opacity: isActive ? 1 : .7 }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: isActive ? 700 : 500 }}>{item.label}</div>
+                {item.hint && (
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '.06em', opacity: .6, marginTop: 1 }}>
+                    {item.hint}
+                  </div>
                 )}
-              />
-              <span className="flex-1 truncate">{item.label}</span>
-              {isActive && (
-                <ChevronRight className="w-3 h-3 text-[#2563eb] flex-shrink-0" />
+              </div>
+              {item.badge && (
+                <span style={{
+                  background: 'var(--wr-red)', color: 'var(--paper)', fontFamily: 'var(--font-mono)',
+                  fontSize: 10, padding: '2px 6px', minWidth: 18, textAlign: 'center',
+                }}>{item.badge}</span>
               )}
             </Link>
           );
@@ -129,46 +162,48 @@ export function Sidebar() {
       </nav>
 
       {/* Footer */}
-      <div className="px-3 py-3 border-t border-[#21262d] space-y-0.5">
+      <div style={{ borderTop: '1px solid var(--line)', padding: '10px 12px' }}>
         {user?.rol === 'admin' && (
           <Link
             href="/admin"
-            className={cn(
-              'flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-all',
-              pathname.startsWith('/admin')
-                ? 'bg-[#1c2128] text-[#e6edf3] font-medium'
-                : 'text-[#8b949e] hover:bg-[#161b22] hover:text-[#e6edf3]',
-            )}
+            className="no-underline"
+            style={{
+              display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px',
+              marginBottom: 4, fontSize: 13, color: 'var(--paper)', textDecoration: 'none',
+              background: pathname.startsWith('/admin') ? 'var(--ink-4)' : 'transparent',
+            }}
           >
-            <ShieldCheck className="w-4 h-4 flex-shrink-0" />
+            <ShieldCheck className="w-4 h-4" />
             <span>Admin</span>
           </Link>
         )}
         <Link
           href="/settings"
-          className={cn(
-            'flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-all',
-            pathname === '/settings'
-              ? 'bg-[#1c2128] text-[#e6edf3] font-medium'
-              : 'text-[#8b949e] hover:bg-[#161b22] hover:text-[#e6edf3]',
-          )}
+          className="no-underline"
+          style={{
+            display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px',
+            marginBottom: 4, fontSize: 13, color: 'var(--bone)', textDecoration: 'none',
+          }}
         >
-          <Settings className="w-4 h-4 flex-shrink-0" />
+          <Settings className="w-4 h-4" />
           <span>Configuració</span>
         </Link>
         {user && (
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm text-[#8b949e] hover:bg-[#161b22] hover:text-[#e6edf3]"
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', gap: 8,
+              padding: '8px 10px', background: 'transparent', border: 'none',
+              color: 'var(--fog)', fontSize: 12, cursor: 'pointer',
+              fontFamily: 'var(--font-mono)',
+            }}
           >
-            <LogOut className="w-4 h-4 flex-shrink-0" />
+            <LogOut className="w-4 h-4" />
             <span className="truncate">{user.email}</span>
           </button>
         )}
-        <div className="mt-3 px-2.5">
-          <p className="text-[10px] text-[#6e7681]">
-            v1.0.0 · Ajuntaments de Catalunya
-          </p>
+        <div style={{ marginTop: 8, padding: '0 10px', fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--fog)', letterSpacing: '.08em' }}>
+          v2.0 · Factoria IA
         </div>
       </div>
     </aside>

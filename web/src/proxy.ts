@@ -34,11 +34,6 @@ export async function proxy(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser();
 
-  // Logged in user on landing → go to dashboard
-  if (user && pathname === '/') {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
-  }
-
   // Logged in user on login page → go to dashboard
   if (user && pathname === '/login') {
     return NextResponse.redirect(new URL('/dashboard', request.url));
