@@ -1,165 +1,240 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import {
-  Building2,
-  FileText,
-  Vote,
-  Bell,
-  Clock,
-  TrendingUp,
-  BarChart2,
-  Users,
-  AlertCircle,
-} from "lucide-react";
-import { StatCard } from "@/components/ui/StatCard";
-import { MapaCatalunya } from "@/components/features/MapaCatalunya";
-import { PipelineDashboard } from "@/components/features/PipelineDashboard";
-import { GeneradorRRSS } from "@/components/features/GeneradorRRSS";
-import { formatDate } from "@/lib/utils";
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { PageHeader } from '@/components/warroom/PageHeader';
+import { KPICard, KPIGrid } from '@/components/warroom/KPICard';
+import { PanelBox } from '@/components/warroom/PanelBox';
+import { StatusLine, StatusBadge } from '@/components/warroom/StatusBadge';
+import { AlertFeed, TrendingBar } from '@/components/warroom/AlertFeed';
+import { TacticalRadar } from '@/components/landing/TacticalRadar';
+import { Gauge, DotGrid, CornerBrack } from '@/components/landing/primitives';
 
-const API = process.env.NEXT_PUBLIC_API_URL || "";
+const API = process.env.NEXT_PUBLIC_API_URL || '';
 
 export default function DashboardPage() {
-  const [stats, setStats] = useState<any>({
-    total_municipios: 0,
-    total_actas: 0,
-    actas_procesadas: 0,
-    total_votaciones: 0,
-    alertas_pendientes: 0,
-    cargos_activos: 0,
-  });
+  const [stats, setStats] = useState<any>({});
   const [temas, setTemas] = useState<any[]>([]);
-  const [coherencia, setCoherencia] = useState<any[]>([]);
   const [actividad, setActividad] = useState<any[]>([]);
+  const [alertas, setAlertas] = useState<any>({ total: 0, nuevas: 0, altas_nuevas: 0 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     Promise.allSettled([
-      fetch(`${API}/api/dashboard/stats`).then((r) => r.json()),
-      fetch(`${API}/api/dashboard/temas`).then((r) => r.json()),
-      fetch(`${API}/api/dashboard/coherencia`).then((r) => r.json()),
-      fetch(`${API}/api/dashboard/actividad-reciente`).then((r) => r.json()),
-    ]).then(([s, t, c, a]) => {
-      if (s.status === "fulfilled") setStats(s.value);
-      if (t.status === "fulfilled") setTemas(Array.isArray(t.value) ? t.value : []);
-      if (c.status === "fulfilled") setCoherencia(Array.isArray(c.value) ? c.value : []);
-      if (a.status === "fulfilled") setActividad(Array.isArray(a.value) ? a.value : []);
+      fetch(`${API}/api/dashboard/stats`).then(r => r.json()),
+      fetch(`${API}/api/dashboard/temas`).then(r => r.json()),
+      fetch(`${API}/api/dashboard/actividad-reciente`).then(r => r.json()),
+      fetch(`${API}/api/alertas/stats`).then(r => r.json()),
+    ]).then(([s, t, a, al]) => {
+      if (s.status === 'fulfilled') setStats(s.value);
+      if (t.status === 'fulfilled') setTemas(Array.isArray(t.value) ? t.value : []);
+      if (a.status === 'fulfilled') setActividad(Array.isArray(a.value) ? a.value : []);
+      if (al.status === 'fulfilled') setAlertas(al.value);
       setLoading(false);
     });
   }, []);
 
-  const maxMenciones =
-    temas.length > 0 ? Math.max(...temas.map((t: any) => t.count || t.menciones || 1)) : 1;
+  const maxMenciones = temas.length > 0 ? Math.max(...temas.map((t: any) => t.count || t.menciones || 1)) : 1;
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
+      <div style={{
+        minHeight: '100vh', background: 'var(--ink)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div className="pulse-dot" style={{
+            width: 12, height: 12, borderRadius: 12,
+            background: 'var(--wr-phosphor)', boxShadow: '0 0 20px var(--wr-phosphor)',
+            margin: '0 auto 16px',
+          }} />
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--fog)', letterSpacing: '.14em', textTransform: 'uppercase' }}>
+            Carregant intel·ligència...
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-[#e6edf3]">Dashboard</h1>
-          <p className="text-sm text-[#8b949e] mt-0.5">
-            Visió general de l&apos;activitat municipal a Catalunya
-          </p>
-        </div>
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#161b22] border border-[#30363d]">
-          <div className="w-2 h-2 rounded-full bg-[#4ade80] animate-pulse" />
-          <span className="text-xs text-[#8b949e]">En temps real</span>
-        </div>
-      </div>
+    <div style={{ minHeight: '100vh', background: 'var(--ink)' }}>
+      <PageHeader
+        crumb="Operacions / Dashboard"
+        title={<>Visió <em style={{ color: 'var(--fog)', fontWeight: 400 }}>executiva.</em></>}
+        actions={
+          <StatusLine color="var(--wr-phosphor)">
+            Pipeline actiu · {(stats.actas_procesadas || 0).toLocaleString('es-ES')} actes
+          </StatusLine>
+        }
+      />
 
-      <div className="grid grid-cols-4 gap-4">
-        <StatCard label="Municipis monitorats" value={stats.total_municipios || 0} icon={Building2} variant="primary" />
-        <StatCard label="Actes processades" value={stats.actas_procesadas || 0} icon={FileText} variant="default" />
-        <StatCard label="Votacions" value={stats.total_votaciones || 0} icon={Vote} variant="green" />
-        <StatCard label="Alertes pendents" value={stats.alertas_pendientes || 0} icon={Bell} variant={stats.alertas_pendientes > 0 ? "red" : "default"} />
-      </div>
+      <div style={{ padding: '20px 26px', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-      {/* Map + Pipeline */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="col-span-2">
-          <MapaCatalunya />
-        </div>
-        <PipelineDashboard />
-      </div>
+        {/* KPIs */}
+        <KPIGrid>
+          <KPICard label="Municipis monitorats" value={stats.total_municipios || 947} tone="phos" />
+          <KPICard label="Actes processades" value={stats.actas_procesadas || 0} tone="default" />
+          <KPICard label="Votacions registrades" value={stats.total_votaciones || 0} tone="default" />
+          <KPICard
+            label="Alertes pendents"
+            value={alertas.nuevas || stats.alertas_pendientes || 0}
+            tone={(alertas.altas_nuevas || 0) > 0 ? 'red' : 'phos'}
+            sublabel={(alertas.altas_nuevas || 0) > 0 ? `${alertas.altas_nuevas} crítiques` : 'Cap alerta crítica'}
+          />
+        </KPIGrid>
 
-      {/* Activity + RRSS */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="col-span-2 bg-[#161b22] border border-[#30363d] rounded-lg">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-[#30363d]">
-            <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-[#8b949e]" />
-              <h2 className="text-sm font-semibold text-[#e6edf3]">Activitat recent</h2>
+        {/* Main grid: Radar + Alertes + Temes */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr 1fr', gap: 12 }}>
+
+          {/* Radar tàctic */}
+          <PanelBox title="Radar territorial" subtitle="947 municipis" tone="phos">
+            <div style={{
+              background: 'radial-gradient(circle at center, #0b1409 0%, #050505 70%)',
+              padding: 12, border: '1px solid var(--line-soft)', position: 'relative',
+            }}>
+              <TacticalRadar />
+              <div style={{
+                fontFamily: 'var(--font-mono)', fontSize: 8, color: 'var(--wr-phosphor-dim)',
+                letterSpacing: '.18em', marginTop: 6, textAlign: 'center', textTransform: 'uppercase',
+              }}>
+                SWEEP · LIVE · 947 TARGETS
+              </div>
             </div>
-            <Link href="/buscar" className="text-xs text-[#2563eb] hover:text-[#60a5fa] transition-colors">
-              Veure tot
-            </Link>
-          </div>
-          <div className="divide-y divide-[#21262d]">
-            {actividad.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <FileText className="w-8 h-8 text-[#6e7681] mb-3" />
-                <p className="text-sm text-[#8b949e]">No hi ha activitat recent</p>
-                <p className="text-xs text-[#6e7681] mt-1">Les actes processades apareixeran aquí</p>
+            <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <Gauge label="Cobertura territorial" value={100} tone="phos" />
+              <Gauge label="Actes últims 30d" value={stats.actas_procesadas > 0 ? 78 : 0} tone="amber" />
+            </div>
+          </PanelBox>
+
+          {/* Feed alertes / activitat */}
+          <PanelBox title="Intel stream" subtitle="últimes 24h" tone="red">
+            {actividad.length > 0 ? (
+              <AlertFeed items={actividad.slice(0, 8).map((a: any) => ({
+                time: a.fecha?.slice(5, 10) || '',
+                severity: 'media' as const,
+                type: a.tipo || 'ACTA',
+                text: `${a.municipio} — ${a.tipo || 'Ordinària'} · ${a.num_puntos || 0} punts`,
+                municipio: a.municipio,
+              }))} maxVisible={6} />
+            ) : (
+              <div style={{ padding: '30px 0', textAlign: 'center' }}>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--fog)', letterSpacing: '.1em', textTransform: 'uppercase' }}>
+                  Esperant noves actes...
+                </div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--fog)', marginTop: 8 }}>
+                  El pipeline processa actes cada 15 minuts
+                </div>
+              </div>
+            )}
+          </PanelBox>
+
+          {/* Temes trending */}
+          <PanelBox title="Temes en tendència" subtitle={`top ${Math.min(temas.length, 8)}`} tone="amber">
+            {temas.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {temas.slice(0, 8).map((tema: any, i: number) => (
+                  <TrendingBar
+                    key={i}
+                    label={tema.tema || tema.nombre || '—'}
+                    value={tema.count || tema.menciones || 0}
+                    max={maxMenciones}
+                    tone={i < 2 ? 'red' : i < 5 ? 'amber' : 'phos'}
+                  />
+                ))}
               </div>
             ) : (
-              actividad.slice(0, 8).map((acta: any) => (
-                <Link
-                  key={acta.id}
-                  href={`/actas/${acta.id}`}
-                  className="flex items-center justify-between px-5 py-3 hover:bg-[#1c2128] transition-colors group"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-8 h-8 rounded-lg bg-[#1c2128] border border-[#30363d] flex items-center justify-center flex-shrink-0">
-                      <FileText className="w-4 h-4 text-[#8b949e]" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm text-[#e6edf3] font-medium truncate group-hover:text-[#60a5fa] transition-colors">
-                        {acta.municipio}
-                      </p>
-                      <p className="text-xs text-[#8b949e] truncate">
-                        {acta.tipo} · {acta.num_puntos} punts
-                      </p>
-                    </div>
-                  </div>
-                  <p className="text-xs text-[#8b949e] flex-shrink-0 ml-4">{acta.fecha}</p>
-                </Link>
-              ))
+              <div style={{ padding: '30px 0', textAlign: 'center', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--fog)', letterSpacing: '.1em', textTransform: 'uppercase' }}>
+                Processant temes...
+              </div>
             )}
-          </div>
+          </PanelBox>
         </div>
 
-        <div className="space-y-4">
-          {/* Temas trending compact */}
-          <div className="bg-[#161b22] border border-[#30363d] rounded-lg">
-            <div className="flex items-center gap-2 px-5 py-4 border-b border-[#30363d]">
-              <TrendingUp className="w-4 h-4 text-[#8b949e]" />
-              <h2 className="text-sm font-semibold text-[#e6edf3]">Temes tendència</h2>
-            </div>
-            <div className="px-5 py-4 space-y-2">
-              {temas.length === 0 ? (
-                <p className="text-xs text-[#8b949e] text-center py-4">Processant actes...</p>
-              ) : (
-                temas.slice(0, 7).map((tema: any) => (
-                  <div key={tema.tema || tema.nombre} className="flex items-center justify-between">
-                    <span className="text-xs text-[#e6edf3]">{tema.tema || tema.nombre}</span>
-                    <span className="text-xs text-[#6e7681] bg-[#1c2128] px-2 py-0.5 rounded">{tema.count || tema.menciones}</span>
-                  </div>
-                ))
-              )}
+        {/* Bottom: War Room access + últims plens */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: 12 }}>
+
+          {/* War Room quick access */}
+          <div style={{
+            background: '#050505', border: '1px solid var(--line)',
+            padding: '28px 24px', position: 'relative', overflow: 'hidden',
+          }}>
+            <CornerBrack />
+            <DotGrid size={24} opacity={0.06} />
+            <div style={{ position: 'relative' }}>
+              <StatusBadge tone="red">◼ WAR ROOM · 5 MODES</StatusBadge>
+              <h2 style={{
+                fontFamily: 'var(--font-serif)', fontSize: 36, margin: '16px 0 12px',
+                lineHeight: 1, letterSpacing: '-.01em', color: 'var(--paper)', fontWeight: 400,
+              }}>
+                Pregunta. <em style={{ color: 'var(--wr-red-2)' }}>Dispara.</em>
+              </h2>
+              <p style={{ fontSize: 13, color: 'var(--bone)', lineHeight: 1.5, margin: '0 0 20px', maxWidth: 400 }}>
+                Monitor · Atacar · Defensar · Comparar · Oportunitat. Cada mode preparat per donar-te munició política amb cita literal.
+              </p>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 20 }}>
+                {[
+                  'Què han dit sobre habitatge el darrer mes?',
+                  'Dossier contradiccions Partit A · civisme',
+                  'Prepara speech pel proper ple de Vic',
+                ].map((q, i) => (
+                  <Link key={i} href={`/chat?q=${encodeURIComponent(q)}`} style={{
+                    display: 'block', padding: '8px 12px', textDecoration: 'none',
+                    background: 'transparent', border: '1px dashed var(--line)',
+                    color: 'var(--bone)', fontFamily: 'var(--font-sans)', fontSize: 12,
+                  }}>
+                    → {q}
+                  </Link>
+                ))}
+              </div>
+
+              <Link href="/chat" style={{
+                display: 'inline-flex', alignItems: 'center', gap: 8,
+                background: 'var(--wr-red)', color: 'var(--paper)', border: '1px solid var(--wr-red)',
+                padding: '12px 18px', fontFamily: 'var(--font-mono)', fontSize: 12,
+                letterSpacing: '.1em', textTransform: 'uppercase', fontWeight: 700,
+                textDecoration: 'none',
+                boxShadow: '0 0 24px -6px rgba(255,90,60,.4)',
+              }}>
+                ◼ OBRIR WAR ROOM →
+              </Link>
             </div>
           </div>
 
-          {/* RRSS Generator */}
-          <GeneradorRRSS />
+          {/* Últims plens */}
+          <PanelBox title="Últims plens processats" subtitle={`${actividad.length} recents`} tone="phos">
+            {actividad.length > 0 ? (
+              <div>
+                {actividad.slice(0, 6).map((acta: any, i: number) => (
+                  <Link key={i} href={`/actas/${acta.id}`} style={{
+                    display: 'grid', gridTemplateColumns: '1fr auto',
+                    gap: 10, padding: '10px 0',
+                    borderBottom: i < 5 ? '1px dashed var(--line-soft)' : 'none',
+                    textDecoration: 'none', color: 'inherit',
+                  }}>
+                    <div>
+                      <div style={{ fontSize: 13, color: 'var(--paper)', fontWeight: 500 }}>{acta.municipio}</div>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--fog)', marginTop: 2 }}>
+                        {acta.tipo || 'Ordinària'} · {acta.num_puntos || 0} punts
+                      </div>
+                    </div>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--fog)', textAlign: 'right' }}>
+                      {acta.fecha}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <div style={{ padding: '40px 0', textAlign: 'center' }}>
+                <div style={{ fontFamily: 'var(--font-serif)', fontSize: 24, color: 'var(--paper)', marginBottom: 8 }}>
+                  Properament
+                </div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--fog)', letterSpacing: '.1em', textTransform: 'uppercase' }}>
+                  Els plens processats apareixeran aquí
+                </div>
+              </div>
+            )}
+          </PanelBox>
         </div>
       </div>
     </div>
