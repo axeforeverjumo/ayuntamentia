@@ -17,6 +17,7 @@ import {
   Mail,
   Crosshair,
   Radar,
+  Users,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getSupabaseBrowser } from '@/lib/supabaseBrowser';
