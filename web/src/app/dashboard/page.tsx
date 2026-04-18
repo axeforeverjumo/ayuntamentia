@@ -8,6 +8,7 @@ import { PanelBox } from '@/components/warroom/PanelBox';
 import { StatusLine, StatusBadge } from '@/components/warroom/StatusBadge';
 import { AlertFeed, TrendingBar } from '@/components/warroom/AlertFeed';
 import { TacticalRadar } from '@/components/landing/TacticalRadar';
+import { traduirTema } from '@/lib/temesCatala';
 import { Gauge, DotGrid, CornerBrack } from '@/components/landing/primitives';
 
 const API = process.env.NEXT_PUBLIC_API_URL || '';
@@ -136,7 +137,7 @@ export default function DashboardPage() {
                 {temas.slice(0, 8).map((tema: any, i: number) => (
                   <TrendingBar
                     key={i}
-                    label={tema.tema || tema.nombre || '—'}
+                    label={traduirTema(tema.tema || tema.nombre || '—')}
                     value={tema.count || tema.menciones || 0}
                     max={maxMenciones}
                     tone={i < 2 ? 'red' : i < 5 ? 'amber' : 'phos'}

@@ -1,13 +1,25 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import {
-  FileText, TrendingUp, Bell, BarChart2, Loader2, Users, RefreshCw,
-} from "lucide-react";
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { Loader2, RefreshCw, FileText, Users } from 'lucide-react';
+import { PageHeader } from '@/components/warroom/PageHeader';
+import { PanelBox } from '@/components/warroom/PanelBox';
+import { StatusLine, StatusBadge } from '@/components/warroom/StatusBadge';
+import { TrendingBar } from '@/components/warroom/AlertFeed';
+import { traduirTema } from '@/lib/temesCatala';
 
-const API = process.env.NEXT_PUBLIC_API_URL || "";
+const API = process.env.NEXT_PUBLIC_API_URL || '';
+
+const TABS = [
+  { id: 'biblioteca', label: 'Biblioteca', color: 'var(--bone)' },
+  { id: 'subscripcions', label: 'Subscripcions', color: 'var(--wr-amber)' },
+  { id: 'generar', label: 'Generar amb IA', color: 'var(--wr-red-2)' },
+] as const;
 
 export default function InformesPage() {
+  const params = useSearchParams();
+  const [tab, setTab] = useState(params.get('tab') || 'biblioteca');
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -15,9 +27,7 @@ export default function InformesPage() {
 
   useEffect(() => {
     fetch(`${API}/api/informes/semanal`)
-      .then((r) => r.json())
-      .then(setData)
-      .catch(() => {})
+      .then(r => r.json()).then(setData).catch(() => {})
       .finally(() => setLoading(false));
   }, []);
 
@@ -25,8 +35,7 @@ export default function InformesPage() {
     setGenerating(true);
     try {
       const res = await fetch(`${API}/api/chat/`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: "Genera un informe semanal executiu sobre l'activitat als plens municipals. Inclou: resum, temes principals, votacions destacades d'AC, i recomanacions.",
           history: [],
@@ -43,132 +52,135 @@ export default function InformesPage() {
 
   const actas = data?.actas_semana?.actas_semana ?? 0;
   const temas = data?.temas ?? [];
-  const alertas = data?.alertas ?? [];
   const coherencia = data?.coherencia ?? [];
-  const totalAlertas = alertas.reduce((s: number, a: any) => s + (a.n || 0), 0);
+  const maxTema = temas.length > 0 ? Math.max(...temas.map((t: any) => t.n || t.count || 1)) : 1;
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--ink)' }}>
-      <div style={{ padding: '22px 26px 18px', borderBottom: '1px solid var(--line)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div>
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--fog)', letterSpacing: '.16em', textTransform: 'uppercase', marginBottom: 8 }}>Operacions / Informes</div>
-          <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: 44, lineHeight: 1, margin: 0, letterSpacing: '-.02em', fontWeight: 400, color: 'var(--paper)' }}>
-            Informes <em style={{ color: 'var(--bone)' }}>setmanals.</em>
-          </h1>
-        </div>
-        <button
-          onClick={generateReport}
-          disabled={generating}
-          className="flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-[#2563eb] text-white hover:bg-[#1d4ed8] disabled:opacity-50 transition-colors"
-        >
-          {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-          {generating ? "Generant..." : "Generar informe amb IA"}
-        </button>
-      </div>
+      <PageHeader
+        crumb="Operacions / Informes"
+        title={<>Informes i <em style={{ color: 'var(--bone)', fontWeight: 400 }}>subscripcions.</em></>}
+        info="Biblioteca d'informes generats, subscripcions automàtiques i generació d'informes sota demanda amb IA."
+        actions={<StatusLine color="var(--wr-phosphor)">Informe setmanal · {actas} actes</StatusLine>}
+      />
 
-      {/* Stats cards */}
-      <div className="grid grid-cols-4 gap-4">
-        {[
-          { icon: FileText, label: "Actes processades (setmana)", value: actas, color: "text-[#2563eb]" },
-          { icon: Bell, label: "Alertes", value: totalAlertas, color: "text-[#fbbf24]" },
-          { icon: Users, label: "Concejals AC monitorats", value: coherencia.length || 7, color: "text-[#4ade80]" },
-          { icon: BarChart2, label: "Temes detectats", value: temas.length, color: "text-[#8b5cf6]" },
-        ].map((s, i) => (
-          <div key={i} className="bg-[#161b22] border border-[#30363d] rounded-lg p-4">
-            <s.icon className={`w-5 h-5 ${s.color} mb-2`} />
-            <p className="text-2xl font-bold text-[#e6edf3]">{s.value}</p>
-            <p className="text-xs text-[#8b949e]">{s.label}</p>
-          </div>
+      {/* Tabs */}
+      <div style={{ display: 'flex', borderBottom: '1px solid var(--line)' }}>
+        {TABS.map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)} style={{
+            flex: 1, padding: '10px 16px', background: tab === t.id ? '#0e0e0e' : 'transparent',
+            border: 'none', borderBottom: tab === t.id ? `2px solid ${t.color}` : '2px solid transparent',
+            borderRight: '1px solid var(--line)',
+            color: tab === t.id ? 'var(--paper)' : 'var(--fog)',
+            fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '.1em',
+            textTransform: 'uppercase', cursor: 'pointer',
+          }}>
+            {t.label}
+          </button>
         ))}
       </div>
 
-      {/* Generated report */}
-      {report && (
-        <div className="bg-[#161b22] border border-[#30363d] rounded-lg p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <FileText className="w-5 h-5 text-[#2563eb]" />
-            <h2 className="text-sm font-semibold text-[#e6edf3]">Informe generat per IA</h2>
-          </div>
-          <div className="prose prose-invert prose-sm max-w-none text-[#8b949e]">
-            {report.split("\n").map((line, i) => {
-              if (line.startsWith("###")) return <h3 key={i} className="text-[#e6edf3] text-sm font-bold mt-4 mb-1">{line.replace(/^#+\s*/, "")}</h3>;
-              if (line.startsWith("##")) return <h2 key={i} className="text-[#e6edf3] text-base font-bold mt-4 mb-1">{line.replace(/^#+\s*/, "")}</h2>;
-              if (line.startsWith("#")) return <h1 key={i} className="text-[#e6edf3] text-lg font-bold mt-4 mb-2">{line.replace(/^#+\s*/, "")}</h1>;
-              if (line.startsWith("- ") || line.startsWith("• ")) return <p key={i} className="ml-4 text-xs">• {line.replace(/^[-•]\s*/, "")}</p>;
-              if (line.startsWith("**")) return <p key={i} className="text-[#e6edf3] text-xs font-semibold mt-2">{line.replace(/\*\*/g, "")}</p>;
-              if (line.trim()) return <p key={i} className="text-xs leading-relaxed">{line}</p>;
-              return <br key={i} />;
-            })}
-          </div>
-        </div>
-      )}
+      <div style={{ padding: '20px 26px' }}>
+        {tab === 'biblioteca' && (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <PanelBox title="Temes més debatuts" subtitle="setmana" tone="amber">
+              {loading ? (
+                <div style={{ padding: '20px 0', textAlign: 'center' }}><Loader2 className="w-5 h-5 animate-spin mx-auto" style={{ color: 'var(--wr-amber)' }} /></div>
+              ) : temas.length === 0 ? (
+                <div style={{ padding: '30px 0', textAlign: 'center', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--fog)' }}>Sense dades encara</div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {temas.map((t: any, i: number) => (
+                    <TrendingBar key={i} label={traduirTema(t.tema || t.nombre)} value={t.n || t.count || 0} max={maxTema} tone={i < 2 ? 'red' : 'amber'} />
+                  ))}
+                </div>
+              )}
+            </PanelBox>
 
-      <div className="grid grid-cols-2 gap-4">
-        {/* Temas */}
-        <div className="bg-[#161b22] border border-[#30363d] rounded-lg">
-          <div className="flex items-center gap-2 px-5 py-4 border-b border-[#30363d]">
-            <TrendingUp className="w-4 h-4 text-[#8b949e]" />
-            <h2 className="text-sm font-semibold text-[#e6edf3]">Temes més debatuts</h2>
-          </div>
-          <div className="px-5 py-4 space-y-3">
-            {loading ? (
-              <Loader2 className="w-5 h-5 text-[#2563eb] animate-spin mx-auto" />
-            ) : temas.length === 0 ? (
-              <p className="text-xs text-[#8b949e] text-center py-4">Sense dades encara</p>
-            ) : (
-              temas.map((t: any, i: number) => {
-                const max = Math.max(...temas.map((x: any) => x.n || x.count || 1));
-                return (
-                  <div key={i} className="space-y-1">
-                    <div className="flex justify-between text-xs">
-                      <span className="text-[#e6edf3]">{t.tema || t.nombre}</span>
-                      <span className="text-[#6e7681]">{t.n || t.count}</span>
-                    </div>
-                    <div className="h-1.5 bg-[#1c2128] rounded-full">
-                      <div className="h-full bg-[#2563eb] rounded-full" style={{ width: `${((t.n || t.count) / max) * 100}%` }} />
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </div>
-
-        {/* Coherencia */}
-        <div className="bg-[#161b22] border border-[#30363d] rounded-lg">
-          <div className="flex items-center gap-2 px-5 py-4 border-b border-[#30363d]">
-            <Users className="w-4 h-4 text-[#8b949e]" />
-            <h2 className="text-sm font-semibold text-[#e6edf3]">Coherència concejals AC</h2>
-          </div>
-          <div className="px-5 py-4 space-y-3">
-            {loading ? (
-              <Loader2 className="w-5 h-5 text-[#2563eb] animate-spin mx-auto" />
-            ) : coherencia.length === 0 ? (
-              <p className="text-xs text-[#8b949e] text-center py-4">Sense dades encara</p>
-            ) : (
-              coherencia.map((c: any, i: number) => {
-                const score = c.indice_coherencia ?? 100;
-                return (
-                  <div key={i} className="space-y-1.5">
-                    <div className="flex justify-between">
-                      <div>
-                        <p className="text-xs text-[#e6edf3] font-medium">{c.nombre}</p>
-                        <p className="text-[10px] text-[#8b949e]">{c.municipio} · {c.total_votaciones} vots</p>
+            <PanelBox title="Coherència regidors AC" subtitle="alineació" tone="phos">
+              {loading ? (
+                <div style={{ padding: '20px 0', textAlign: 'center' }}><Loader2 className="w-5 h-5 animate-spin mx-auto" style={{ color: 'var(--wr-phosphor)' }} /></div>
+              ) : coherencia.length === 0 ? (
+                <div style={{ padding: '30px 0', textAlign: 'center', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--fog)' }}>Sense dades encara</div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {coherencia.map((c: any, i: number) => {
+                    const score = c.indice_coherencia ?? 100;
+                    return (
+                      <div key={i}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                          <span style={{ fontSize: 12, color: 'var(--paper)' }}>{c.nombre}</span>
+                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: score >= 80 ? 'var(--wr-phosphor)' : score >= 50 ? 'var(--wr-amber)' : 'var(--wr-red-2)', fontWeight: 700 }}>{score}%</span>
+                        </div>
+                        <div style={{ height: 3, background: 'var(--line)' }}>
+                          <div style={{ height: '100%', width: `${score}%`, background: score >= 80 ? 'var(--wr-phosphor)' : score >= 50 ? 'var(--wr-amber)' : 'var(--wr-red-2)' }} />
+                        </div>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--fog)', marginTop: 2 }}>{c.municipio} · {c.total_votaciones} vots</div>
                       </div>
-                      <span className="text-xs font-bold text-[#8b949e]">{score}%</span>
-                    </div>
-                    <div className="h-1 bg-[#1c2128] rounded-full">
-                      <div
-                        className={`h-full rounded-full ${score >= 80 ? "bg-[#4ade80]" : score >= 50 ? "bg-[#fbbf24]" : "bg-[#f87171]"}`}
-                        style={{ width: `${score}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })
+                    );
+                  })}
+                </div>
+              )}
+            </PanelBox>
+          </div>
+        )}
+
+        {tab === 'subscripcions' && (
+          <div style={{ textAlign: 'center', padding: '60px 0' }}>
+            <div style={{ fontFamily: 'var(--font-serif)', fontSize: 32, color: 'var(--paper)', marginBottom: 12 }}>
+              Subscripcions
+            </div>
+            <p style={{ fontSize: 14, color: 'var(--bone)', maxWidth: 480, margin: '0 auto 24px', lineHeight: 1.5 }}>
+              Rep briefs automàtics per email o Telegram amb els temes que t&apos;interessen. Configura la freqüència i els filtres.
+            </p>
+            <a href="/suscripciones" style={{
+              display: 'inline-flex', alignItems: 'center', gap: 8,
+              background: 'var(--wr-amber)', color: 'var(--ink)', border: 'none',
+              padding: '12px 18px', fontFamily: 'var(--font-mono)', fontSize: 12,
+              letterSpacing: '.1em', textTransform: 'uppercase', fontWeight: 700,
+              textDecoration: 'none',
+            }}>◼ GESTIONAR SUBSCRIPCIONS →</a>
+          </div>
+        )}
+
+        {tab === 'generar' && (
+          <div>
+            <div style={{ textAlign: 'center', padding: '40px 0 30px' }}>
+              <div style={{ fontFamily: 'var(--font-serif)', fontSize: 32, color: 'var(--paper)', marginBottom: 12 }}>
+                Generar informe <em style={{ color: 'var(--wr-red-2)' }}>sota demanda</em>
+              </div>
+              <p style={{ fontSize: 14, color: 'var(--bone)', maxWidth: 480, margin: '0 auto 24px', lineHeight: 1.5 }}>
+                La IA analitza totes les dades processades i genera un informe executiu complet.
+              </p>
+              <button onClick={generateReport} disabled={generating} style={{
+                display: 'inline-flex', alignItems: 'center', gap: 8,
+                background: 'var(--wr-red)', color: 'var(--paper)', border: '1px solid var(--wr-red)',
+                padding: '14px 20px', fontFamily: 'var(--font-mono)', fontSize: 12,
+                letterSpacing: '.1em', textTransform: 'uppercase', fontWeight: 700,
+                cursor: 'pointer', opacity: generating ? 0.5 : 1,
+                boxShadow: '0 0 24px -6px rgba(255,90,60,.4)',
+              }}>
+                {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                {generating ? 'Generant...' : '◼ GENERAR INFORME →'}
+              </button>
+            </div>
+
+            {report && (
+              <PanelBox title="Informe generat" subtitle="IA" tone="phos">
+                <div className="markdown-body" style={{ fontSize: 13 }}>
+                  {report.split('\n').map((line, i) => {
+                    if (line.startsWith('###')) return <h3 key={i} style={{ fontFamily: 'var(--font-serif)', fontSize: 18, color: 'var(--paper)', margin: '16px 0 6px', fontWeight: 400 }}>{line.replace(/^#+\s*/, '')}</h3>;
+                    if (line.startsWith('##')) return <h2 key={i} style={{ fontFamily: 'var(--font-serif)', fontSize: 22, color: 'var(--paper)', margin: '16px 0 6px', fontWeight: 400 }}>{line.replace(/^#+\s*/, '')}</h2>;
+                    if (line.startsWith('#')) return <h1 key={i} style={{ fontFamily: 'var(--font-serif)', fontSize: 28, color: 'var(--paper)', margin: '16px 0 8px', fontWeight: 400 }}>{line.replace(/^#+\s*/, '')}</h1>;
+                    if (line.startsWith('- ') || line.startsWith('• ')) return <p key={i} style={{ marginLeft: 16, fontSize: 12, color: 'var(--bone)' }}>• {line.replace(/^[-•]\s*/, '')}</p>;
+                    if (line.trim()) return <p key={i} style={{ fontSize: 12, color: 'var(--bone)', lineHeight: 1.5 }}>{line}</p>;
+                    return <br key={i} />;
+                  })}
+                </div>
+              </PanelBox>
             )}
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

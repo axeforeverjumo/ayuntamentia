@@ -7,6 +7,7 @@ import { PanelBox } from '@/components/warroom/PanelBox';
 import { StatusLine, StatusBadge } from '@/components/warroom/StatusBadge';
 import { TrendingBar } from '@/components/warroom/AlertFeed';
 import { Gauge } from '@/components/landing/primitives';
+import { traduirTema } from '@/lib/temesCatala';
 
 type Ranking = {
   nombre: string; cargo: string | null; partido: string; municipio: string; comarca: string | null;
@@ -148,7 +149,7 @@ export default function IntelPage() {
               {tend.filter(t => t.delta > 0).length > 0 ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                   {tend.filter(t => t.delta > 0).slice(0, 10).map((t, i) => (
-                    <TrendingBar key={i} label={t.tema} value={t.actual} max={maxTend} tone={i < 3 ? 'red' : 'amber'} />
+                    <TrendingBar key={i} label={traduirTema(t.tema)} value={t.actual} max={maxTend} tone={i < 3 ? 'red' : 'amber'} />
                   ))}
                 </div>
               ) : (
@@ -162,7 +163,7 @@ export default function IntelPage() {
               {tend.filter(t => t.delta < 0).length > 0 ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                   {tend.filter(t => t.delta < 0).slice(0, 10).map((t, i) => (
-                    <TrendingBar key={i} label={t.tema} value={t.actual} max={maxTend} tone="phos" />
+                    <TrendingBar key={i} label={traduirTema(t.tema)} value={t.actual} max={maxTend} tone="phos" />
                   ))}
                 </div>
               ) : (
@@ -191,7 +192,7 @@ export default function IntelPage() {
                       display: 'grid', gridTemplateColumns: '1fr 80px 80px 80px 100px',
                       padding: '8px 14px', borderBottom: '1px dashed var(--line-soft)', fontSize: 12,
                     }}>
-                      <span style={{ color: 'var(--paper)' }}>{t.tema}</span>
+                      <span style={{ color: 'var(--paper)' }}>{traduirTema(t.tema)}</span>
                       <span style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', color: 'var(--bone)' }}>{t.actual}</span>
                       <span style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', color: 'var(--fog)' }}>{t.previo}</span>
                       <span style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: 700, color: t.delta > 0 ? 'var(--wr-phosphor)' : 'var(--wr-red-2)' }}>

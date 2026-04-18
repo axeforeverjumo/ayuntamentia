@@ -55,33 +55,58 @@ export default function ParlamentPage() {
       </div>
       <div style={{ padding: '20px 26px', maxWidth: 1100 }}>
 
-      <div className="flex gap-4 border-b border-[#30363d] mb-6">
+      <div style={{ display: 'flex', borderBottom: '1px solid var(--line)', marginBottom: 20 }}>
         {TABS.map((t) => (
-          <button key={t} onClick={() => setTab(t)}
-                  className={'px-3 py-2 text-sm border-b-2 -mb-px ' +
-                    (tab === t ? 'border-[#2563eb] text-white' : 'border-transparent text-[#8b949e]')}>
+          <button key={t} onClick={() => setTab(t)} style={{
+            padding: '10px 16px', background: tab === t ? '#0e0e0e' : 'transparent',
+            border: 'none', borderBottom: tab === t ? '2px solid var(--wr-amber)' : '2px solid transparent',
+            borderRight: '1px solid var(--line)',
+            color: tab === t ? 'var(--paper)' : 'var(--fog)',
+            fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '.1em',
+            textTransform: 'uppercase', cursor: 'pointer',
+          }}>
             {t}
           </button>
         ))}
       </div>
 
       {tab === 'Sessions' && (
-        <table className="w-full text-sm">
-          <thead className="text-xs text-[#8b949e] uppercase">
-            <tr><th className="text-left py-2">Data</th><th className="text-left">Tipus</th><th className="text-left">Títol</th><th className="text-left">Estat</th></tr>
-          </thead>
-          <tbody>
+        sesiones.length > 0 ? (
+          <div style={{ border: '1px solid var(--line)', background: '#050505' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '120px 100px 1fr 100px', padding: '10px 14px', borderBottom: '1px solid var(--line)', fontFamily: 'var(--font-mono)', fontSize: 9.5, color: 'var(--fog)', letterSpacing: '.14em', textTransform: 'uppercase' }}>
+              <span>Data</span><span>Tipus</span><span>Títol</span><span>Estat</span>
+            </div>
             {sesiones.map((s) => (
-              <tr key={s.id} className="border-t border-[#21262d]">
-                <td className="py-2 whitespace-nowrap">{s.fecha}</td>
-                <td>{s.tipo}</td>
-                <td className="text-[#e6edf3]">{s.titulo}</td>
-                <td className="text-[#8b949e]">{s.status}</td>
-              </tr>
+              <div key={s.id} style={{ display: 'grid', gridTemplateColumns: '120px 100px 1fr 100px', padding: '10px 14px', borderBottom: '1px dashed var(--line-soft)', fontSize: 12 }}>
+                <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--fog)' }}>{s.fecha}</span>
+                <span style={{ color: 'var(--bone)' }}>{s.tipo}</span>
+                <span style={{ color: 'var(--paper)' }}>{s.titulo}</span>
+                <span style={{ color: 'var(--fog)' }}>{s.status}</span>
+              </div>
             ))}
-            {sesiones.length === 0 && <tr><td colSpan={4} className="py-6 text-center text-[#8b949e]">No hi ha sessions encara — el descobridor s&apos;executa cada nit.</td></tr>}
-          </tbody>
-        </table>
+          </div>
+        ) : (
+          <div style={{ textAlign: 'center', padding: '80px 0' }}>
+            <div style={{ width: 80, height: 80, margin: '0 auto 20px', border: '1px solid var(--line)', display: 'grid', placeItems: 'center', background: '#080808' }}>
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--wr-amber)" strokeWidth="1.2">
+                <path d="M3 21V5l9-3 9 3v16M3 21h18M8 9h2M14 9h2M8 13h2M14 13h2M8 17h2M14 17h2"/>
+              </svg>
+            </div>
+            <div style={{ fontFamily: 'var(--font-serif)', fontSize: 32, color: 'var(--paper)', marginBottom: 10 }}>
+              Properament
+            </div>
+            <p style={{ fontSize: 14, color: 'var(--bone)', maxWidth: 420, margin: '0 auto 24px', lineHeight: 1.5 }}>
+              Monitoratge del Parlament de Catalunya: sessions plenàries, comissions, DSPC. Comparativa entre discurs nacional i acció municipal.
+            </p>
+            <button style={{
+              display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 16px',
+              background: 'transparent', border: '1px solid var(--wr-amber)', color: 'var(--wr-amber)',
+              fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '.1em', textTransform: 'uppercase', cursor: 'pointer',
+            }}>
+              ◼ Notifica&apos;m quan estigui disponible
+            </button>
+          </div>
+        )
       )}
 
       {tab === 'Punts' && (
