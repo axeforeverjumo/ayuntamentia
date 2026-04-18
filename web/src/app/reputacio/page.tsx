@@ -13,17 +13,94 @@ const API = process.env.NEXT_PUBLIC_API_URL || '';
 
 const PARTITS = ['AC', 'JxCat', 'ERC', 'PSC', 'PP', 'CUP', 'VOX', 'Comuns'];
 
+const PARTIT_COLORS: Record<string, string> = {
+  AC: '#0a8f64', JxCat: '#00b2a9', ERC: '#f8b400', PSC: '#e30613',
+  PP: '#1d71b8', CUP: '#ffd700', VOX: '#63be21', Comuns: '#6a2c70', Cs: '#eb6109',
+};
+
+function SentimentDot({ sentiment }: { sentiment: string }) {
+  const color = sentiment === 'positiu' ? 'var(--wr-phosphor)' : sentiment === 'negatiu' ? 'var(--wr-red-2)' : 'var(--fog)';
+  return <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 8, background: color, boxShadow: sentiment !== 'neutre' ? `0 0 6px ${color}` : 'none' }} />;
+}
+
+function SentimentMeter({ positius, negatius, neutres }: { positius: number; negatius: number; neutres: number }) {
+  const total = positius + negatius + neutres || 1;
+  const pPos = (positius / total) * 100;
+  const pNeg = (negatius / total) * 100;
+  return (
+    <div>
+      <div style={{ display: 'flex', height: 10, border: '1px solid var(--line)', overflow: 'hidden', marginBottom: 6 }}>
+        <div style={{ width: `${pPos}%`, background: 'var(--wr-phosphor)', transition: 'width .8s' }} />
+        <div style={{ flex: 1, background: 'var(--ink-3)' }} />
+        <div style={{ width: `${pNeg}%`, background: 'var(--wr-red-2)', transition: 'width .8s' }} />
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '.08em', textTransform: 'uppercase' }}>
+        <span style={{ color: 'var(--wr-phosphor)' }}>+ {positius} positius</span>
+        <span style={{ color: 'var(--fog)' }}>{neutres} neutres</span>
+        <span style={{ color: 'var(--wr-red-2)' }}>− {negatius} negatius</span>
+      </div>
+    </div>
+  );
+}
+
+function ArticleCard({ article, partit, compact }: { article: any; partit?: string; compact?: boolean }) {
+  const sentColor = article.sentiment === 'positiu' ? 'var(--wr-phosphor)' : article.sentiment === 'negatiu' ? 'var(--wr-red-2)' : 'var(--fog)';
+  const sentBg = article.sentiment === 'positiu' ? 'rgba(161,255,90,.04)' : article.sentiment === 'negatiu' ? 'rgba(212,58,31,.04)' : 'transparent';
+  return (
+    <div style={{
+      background: sentBg, borderLeft: `3px solid ${sentColor}`,
+      padding: compact ? '10px 14px' : '14px 18px', marginBottom: 6,
+      border: `1px solid var(--line)`, borderLeftWidth: 3, borderLeftColor: sentColor,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: compact ? 12 : 14, color: 'var(--paper)', lineHeight: 1.3, marginBottom: 4 }}>
+            {article.titol}
+          </div>
+          {!compact && article.resum && (
+            <div style={{ fontSize: 11, color: 'var(--fog)', lineHeight: 1.4, marginBottom: 6, maxHeight: 40, overflow: 'hidden' }}>
+              {article.resum.replace(/<[^>]*>/g, '').slice(0, 160)}
+            </div>
+          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--fog)' }}>
+            <SentimentDot sentiment={article.sentiment} />
+            <span style={{ color: sentColor, fontWeight: 700 }}>{article.sentiment?.toUpperCase()}</span>
+            <span>·</span>
+            <span>{article.font}</span>
+            <span>·</span>
+            <span>{article.data}</span>
+          </div>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flexShrink: 0 }}>
+          {article.url && (
+            <a href={article.url} target="_blank" rel="noopener noreferrer" style={{
+              padding: '4px 8px', background: 'transparent', border: '1px solid var(--line)',
+              color: 'var(--bone)', fontFamily: 'var(--font-mono)', fontSize: 9,
+              textDecoration: 'none', textAlign: 'center',
+            }}>Llegir →</a>
+          )}
+          {partit && (
+            <Link href={`/chat?q=${encodeURIComponent(`Analitza aquesta notícia sobre ${partit}: "${article.titol}". Com ens afecta i quina resposta recomanaries?`)}`} style={{
+              padding: '4px 8px', background: 'rgba(212,58,31,.08)', border: '1px solid rgba(212,58,31,.3)',
+              color: 'var(--wr-red-2)', fontFamily: 'var(--font-mono)', fontSize: 9,
+              textDecoration: 'none', textAlign: 'center',
+            }}>Analitzar</Link>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ReputacioPage() {
   const [stats, setStats] = useState<any>(null);
   const [partit, setPartit] = useState('AC');
   const [detall, setDetall] = useState<any>(null);
   const [negatius, setNegatius] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'overview' | 'detall' | 'neteja'>('overview');
 
   useEffect(() => {
     fetch(`${API}/api/reputacio/stats?dies=30`).then(r => r.ok ? r.json() : null).then(setStats).catch(() => {});
-    setLoading(false);
   }, []);
 
   useEffect(() => {
@@ -32,17 +109,17 @@ export default function ReputacioPage() {
   }, [partit]);
 
   const TABS = [
-    { id: 'overview', label: 'Panorama general', color: 'var(--wr-phosphor)' },
-    { id: 'detall', label: `Detall ${partit}`, color: 'var(--wr-amber)' },
-    { id: 'neteja', label: 'Neteja reputació', color: 'var(--wr-red-2)' },
-  ] as const;
+    { id: 'overview' as const, label: 'Panorama general', color: 'var(--wr-phosphor)' },
+    { id: 'detall' as const, label: `Detall ${partit}`, color: 'var(--wr-amber)' },
+    { id: 'neteja' as const, label: 'Neteja reputació', color: 'var(--wr-red-2)' },
+  ];
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--ink)' }}>
       <PageHeader
         crumb="Operacions / Reputació"
         title={<>Reputació i <em style={{ color: 'var(--wr-red-2)', fontWeight: 400 }}>premsa.</em></>}
-        info="Monitoratge de premsa catalana en temps real. Sentiment per partit, evolució temporal i eines de neteja de reputació."
+        info="Monitoratge de premsa catalana en temps real. 9 diaris catalans, classificació automàtica per partit i sentiment. Actualització cada 30 minuts."
         actions={
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <StatusLine color="var(--wr-phosphor)">
@@ -72,12 +149,12 @@ export default function ReputacioPage() {
       </div>
 
       {/* Partit selector */}
-      <div style={{ padding: '14px 26px', borderBottom: '1px solid var(--line)', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+      <div style={{ padding: '14px 26px', borderBottom: '1px solid var(--line)', display: 'flex', gap: 4, flexWrap: 'wrap' }}>
         {PARTITS.map(p => (
           <button key={p} onClick={() => setPartit(p)} style={{
-            padding: '6px 12px', background: partit === p ? 'var(--paper)' : 'transparent',
-            color: partit === p ? 'var(--ink)' : 'var(--bone)',
-            border: '1px solid ' + (partit === p ? 'var(--paper)' : 'var(--line)'),
+            padding: '6px 14px', background: partit === p ? PARTIT_COLORS[p] || 'var(--paper)' : 'transparent',
+            color: partit === p ? '#fff' : 'var(--bone)',
+            border: `1px solid ${partit === p ? PARTIT_COLORS[p] || 'var(--paper)' : 'var(--line)'}`,
             fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '.08em',
             textTransform: 'uppercase', cursor: 'pointer', fontWeight: partit === p ? 700 : 400,
           }}>{p}</button>
@@ -86,171 +163,232 @@ export default function ReputacioPage() {
 
       <div style={{ padding: '20px 26px' }}>
 
-        {/* ── Overview ── */}
-        {tab === 'overview' && (
+        {/* ── OVERVIEW ── */}
+        {tab === 'overview' && stats && (
           <div>
-            {stats ? (
-              <>
-                <KPIGrid>
-                  <KPICard label="Total articles" value={stats.total_articles} tone="default" />
-                  <KPICard label="Positius" value={stats.positius} tone="phos" />
-                  <KPICard label="Negatius" value={stats.negatius} tone="red" />
-                  <KPICard label="Neutres" value={stats.neutres} tone="default" />
-                </KPIGrid>
+            <KPIGrid>
+              <KPICard label="Total articles" value={stats.total_articles} tone="default" sublabel="últims 30 dies" />
+              <KPICard label="Positius" value={stats.positius} tone="phos" sublabel={`${stats.total_articles > 0 ? Math.round(stats.positius / stats.total_articles * 100) : 0}% del total`} />
+              <KPICard label="Negatius" value={stats.negatius} tone="red" sublabel={`${stats.total_articles > 0 ? Math.round(stats.negatius / stats.total_articles * 100) : 0}% del total`} />
+              <KPICard label="Neutres" value={stats.neutres} tone="default" sublabel="sense càrrega política" />
+            </KPIGrid>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 16 }}>
-                  <PanelBox title="Mencions per partit" subtitle="30 dies" tone="amber">
-                    {stats.per_partit?.length > 0 ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        {stats.per_partit.map((p: any, i: number) => (
-                          <TrendingBar key={i} label={p.partit} value={p.mencions}
-                            max={stats.per_partit[0]?.mencions || 1}
-                            tone={p.partit === 'AC' ? 'phos' : i < 3 ? 'red' : 'amber'} />
-                        ))}
-                      </div>
-                    ) : (
-                      <EmptyState text="Esperant dades de premsa..." />
-                    )}
-                  </PanelBox>
+            {/* Sentiment meter global */}
+            <div style={{ marginTop: 16, padding: '18px 20px', background: '#080808', border: '1px solid var(--line)' }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--fog)', letterSpacing: '.14em', textTransform: 'uppercase', marginBottom: 10 }}>
+                Balanç de sentiment global · 30 dies
+              </div>
+              <SentimentMeter positius={stats.positius} negatius={stats.negatius} neutres={stats.neutres} />
+            </div>
 
-                  <PanelBox title="Fonts actives" subtitle={`${stats.per_font?.length || 0} diaris`} tone="phos">
-                    {stats.per_font?.length > 0 ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        {stats.per_font.map((f: any, i: number) => (
-                          <TrendingBar key={i} label={f.font} value={f.articles}
-                            max={stats.per_font[0]?.articles || 1} tone="phos" />
-                        ))}
+            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 16, marginTop: 16 }}>
+              {/* Mencions per partit */}
+              <PanelBox title="Mencions per partit" subtitle="30 dies" tone="amber">
+                {stats.per_partit?.length > 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {stats.per_partit.map((p: any, i: number) => {
+                      const color = PARTIT_COLORS[p.partit] || 'var(--bone)';
+                      return (
+                        <div key={i} style={{ cursor: 'pointer' }} onClick={() => { setPartit(p.partit); setTab('detall'); }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+                            <span style={{ fontSize: 12, color: 'var(--paper)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <span style={{ width: 10, height: 10, background: color, display: 'inline-block', flexShrink: 0 }} />
+                              {p.partit}
+                            </span>
+                            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color }}>{p.mencions}</span>
+                          </div>
+                          <div style={{ height: 4, background: 'var(--line)' }}>
+                            <div style={{ height: '100%', width: `${(p.mencions / (stats.per_partit[0]?.mencions || 1)) * 100}%`, background: color, transition: 'width .8s' }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <EmptyState text="Esperant dades de premsa..." />
+                )}
+              </PanelBox>
+
+              {/* Fonts */}
+              <PanelBox title="Fonts actives" subtitle={`${stats.per_font?.length || 0} diaris`} tone="phos">
+                {stats.per_font?.length > 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {stats.per_font.map((f: any, i: number) => (
+                      <div key={i} style={{
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                        padding: '6px 0', borderBottom: '1px dashed var(--line-soft)',
+                      }}>
+                        <span style={{ fontSize: 12, color: 'var(--paper)' }}>{f.font}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--wr-phosphor)' }}>{f.articles}</span>
+                          <span className="pulse-dot" style={{ width: 5, height: 5, borderRadius: 5, background: 'var(--wr-phosphor)' }} />
+                        </div>
                       </div>
-                    ) : (
-                      <EmptyState text="Cap font configurada" />
-                    )}
-                  </PanelBox>
-                </div>
-              </>
-            ) : (
-              <EmptyState text="Carregant estadístiques de premsa..." large />
-            )}
+                    ))}
+                  </div>
+                ) : (
+                  <EmptyState text="Cap font activa" />
+                )}
+              </PanelBox>
+            </div>
           </div>
         )}
 
-        {/* ── Detall per partit ── */}
+        {/* ── DETALL PER PARTIT ── */}
         {tab === 'detall' && (
           <div>
             {detall ? (
               <>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 16 }}>
-                  <PanelBox title="Sentiment" subtitle={partit} tone={detall.negatius > detall.positius ? 'red' : 'phos'}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                      <Gauge label="Positiu" value={detall.positius + detall.negatius > 0 ? Math.round(detall.positius / (detall.positius + detall.negatius + detall.neutres) * 100) : 0} tone="phos" />
-                      <Gauge label="Negatiu" value={detall.positius + detall.negatius > 0 ? Math.round(detall.negatius / (detall.positius + detall.negatius + detall.neutres) * 100) : 0} tone="red" />
-                      <Gauge label="Neutre" value={detall.positius + detall.negatius > 0 ? Math.round(detall.neutres / (detall.positius + detall.negatius + detall.neutres) * 100) : 0} tone="amber" />
+                {/* Sentiment summary */}
+                <div style={{ marginBottom: 16, padding: '20px', background: '#080808', border: '1px solid var(--line)', position: 'relative' }}>
+                  <CornerBrack />
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 24 }}>
+                    <div>
+                      <div style={{ fontFamily: 'var(--font-serif)', fontSize: 48, color: PARTIT_COLORS[partit] || 'var(--paper)', lineHeight: 1, marginBottom: 8 }}>
+                        {partit}
+                      </div>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--fog)', letterSpacing: '.1em', textTransform: 'uppercase', marginBottom: 12 }}>
+                        Anàlisi de sentiment · 30 dies
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        <Gauge label="Premsa positiva" value={detall.positius + detall.negatius > 0 ? Math.round(detall.positius / (detall.positius + detall.negatius + detall.neutres) * 100) : 0} tone="phos" />
+                        <Gauge label="Premsa negativa" value={detall.positius + detall.negatius > 0 ? Math.round(detall.negatius / (detall.positius + detall.negatius + detall.neutres) * 100) : 0} tone="red" />
+                      </div>
                     </div>
-                  </PanelBox>
-
-                  <div style={{ gridColumn: 'span 2' }}>
-                    <PanelBox title="Últims articles" subtitle={`${detall.articles?.length || 0} recents`} tone="amber">
-                      {detall.articles?.length > 0 ? (
-                        <div>
-                          {detall.articles.slice(0, 8).map((a: any, i: number) => (
-                            <div key={i} style={{
-                              display: 'grid', gridTemplateColumns: '70px 1fr auto',
-                              gap: 10, padding: '8px 0', borderBottom: '1px dashed var(--line-soft)',
-                            }}>
-                              <StatusBadge tone={a.sentiment === 'positiu' ? 'phos' : a.sentiment === 'negatiu' ? 'red' : 'bone'}>
-                                {a.sentiment === 'positiu' ? '+' : a.sentiment === 'negatiu' ? '−' : '·'}
-                              </StatusBadge>
-                              <div>
-                                <div style={{ fontSize: 12, color: 'var(--paper)', lineHeight: 1.3 }}>{a.titol}</div>
-                                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--fog)', marginTop: 2 }}>
-                                  {a.font} · {a.data}
-                                </div>
-                              </div>
-                              {a.url && (
-                                <a href={a.url} target="_blank" rel="noopener noreferrer" style={{
-                                  fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--bone)',
-                                  textDecoration: 'none', alignSelf: 'start',
-                                }}>→</a>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <EmptyState text={`Cap article trobat per ${partit}`} />
-                      )}
-                    </PanelBox>
+                    <div>
+                      <SentimentMeter positius={detall.positius} negatius={detall.negatius} neutres={detall.neutres} />
+                      <div style={{ marginTop: 16, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1, background: 'var(--line)', border: '1px solid var(--line)' }}>
+                        {[
+                          { label: 'Positius', value: detall.positius, color: 'var(--wr-phosphor)' },
+                          { label: 'Neutres', value: detall.neutres, color: 'var(--fog)' },
+                          { label: 'Negatius', value: detall.negatius, color: 'var(--wr-red-2)' },
+                        ].map((k, i) => (
+                          <div key={i} style={{ background: '#050505', padding: '12px 14px', textAlign: 'center' }}>
+                            <div style={{ fontFamily: 'var(--font-serif)', fontSize: 32, color: k.color, lineHeight: 1 }}>{k.value}</div>
+                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--fog)', letterSpacing: '.1em', textTransform: 'uppercase', marginTop: 4 }}>{k.label}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </div>
+
+                {/* Articles */}
+                <PanelBox title={`Últims articles · ${partit}`} subtitle={`${detall.articles?.length || 0} recents`} tone="amber">
+                  {detall.articles?.length > 0 ? (
+                    <div>
+                      {detall.articles.map((a: any, i: number) => (
+                        <ArticleCard key={i} article={a} partit={partit} />
+                      ))}
+                    </div>
+                  ) : (
+                    <EmptyState text={`Cap article trobat per ${partit} en 30 dies`} />
+                  )}
+                </PanelBox>
               </>
             ) : (
-              <EmptyState text="Carregant detall..." large />
+              <EmptyState text="Carregant..." large />
             )}
           </div>
         )}
 
-        {/* ── Neteja reputació ── */}
+        {/* ── NETEJA REPUTACIÓ ── */}
         {tab === 'neteja' && (
           <div>
+            {/* Hero */}
             <div style={{
-              background: '#050505', border: '1px solid var(--line)', padding: '28px 24px',
+              background: '#050505', border: '1px solid var(--line)', padding: '32px 28px',
               position: 'relative', overflow: 'hidden', marginBottom: 16,
             }}>
               <CornerBrack />
-              <DotGrid size={24} opacity={0.04} />
-              <div style={{ position: 'relative' }}>
-                <StatusBadge tone="red">◼ NETEJA DE REPUTACIÓ · {partit}</StatusBadge>
-                <h2 style={{
-                  fontFamily: 'var(--font-serif)', fontSize: 32, margin: '14px 0 10px',
-                  lineHeight: 1, color: 'var(--paper)', fontWeight: 400,
+              <DotGrid size={28} opacity={0.04} />
+              <div style={{ position: 'relative', display: 'grid', gridTemplateColumns: '1fr auto', gap: 24, alignItems: 'center' }}>
+                <div>
+                  <StatusBadge tone="red">◼ NETEJA DE REPUTACIÓ · INTEL·LIGÈNCIA ACTIVA</StatusBadge>
+                  <h2 style={{
+                    fontFamily: 'var(--font-serif)', fontSize: 36, margin: '16px 0 10px',
+                    lineHeight: 1, color: 'var(--paper)', fontWeight: 400,
+                  }}>
+                    On tenen <em style={{ color: 'var(--wr-red-2)' }}>mala premsa?</em>
+                  </h2>
+                  <p style={{ fontSize: 13, color: 'var(--bone)', lineHeight: 1.5, maxWidth: 500, margin: 0 }}>
+                    Articles amb sentiment negatiu sobre <strong style={{ color: 'var(--paper)' }}>{partit}</strong>. Clica &quot;Netejar&quot; per obrir el War Room amb una estratègia de millora automàtica — accions concretes, narratives alternatives i seguiment.
+                  </p>
+                </div>
+                <div style={{
+                  width: 120, height: 120, border: '2px solid var(--wr-red-2)',
+                  display: 'grid', placeItems: 'center', background: 'rgba(212,58,31,.04)',
                 }}>
-                  Temes on <em style={{ color: 'var(--wr-red-2)' }}>{partit}</em> té mala premsa.
-                </h2>
-                <p style={{ fontSize: 13, color: 'var(--bone)', lineHeight: 1.5, maxWidth: 500 }}>
-                  Selecciona un tema negatiu i el War Room et proposarà una estratègia de millora amb accions concretes.
-                </p>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontFamily: 'var(--font-serif)', fontSize: 42, color: 'var(--wr-red-2)', lineHeight: 1, fontStyle: 'italic' }}>
+                      {negatius.length}
+                    </div>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--fog)', letterSpacing: '.1em', textTransform: 'uppercase', marginTop: 4 }}>negatius</div>
+                  </div>
+                </div>
               </div>
             </div>
 
+            {/* Articles negatius */}
             {negatius.length > 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {negatius.map((a, i) => (
                   <div key={i} style={{
-                    background: '#080808', border: '1px solid var(--line)', padding: '16px 18px',
-                    display: 'grid', gridTemplateColumns: '1fr auto', gap: 14, alignItems: 'start',
+                    background: 'rgba(212,58,31,.03)', border: '1px solid rgba(212,58,31,.2)',
+                    borderLeft: '3px solid var(--wr-red-2)', padding: '16px 20px',
+                    display: 'grid', gridTemplateColumns: '1fr auto', gap: 16, alignItems: 'start',
                   }}>
                     <div>
-                      <div style={{ fontSize: 14, color: 'var(--paper)', lineHeight: 1.3, marginBottom: 6 }}>{a.titol}</div>
-                      {a.resum && <div style={{ fontSize: 12, color: 'var(--fog)', lineHeight: 1.4, marginBottom: 6 }}>{a.resum.slice(0, 200)}</div>}
-                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--fog)' }}>
-                        {a.font} · {a.data} · score: {a.score?.toFixed(2)}
+                      <div style={{ fontSize: 15, color: 'var(--paper)', lineHeight: 1.3, marginBottom: 6, fontWeight: 500 }}>{a.titol}</div>
+                      {a.resum && <div style={{ fontSize: 12, color: 'var(--fog)', lineHeight: 1.4, marginBottom: 8 }}>{a.resum.replace(/<[^>]*>/g, '').slice(0, 200)}</div>}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--fog)' }}>
+                        <SentimentDot sentiment="negatiu" />
+                        <span style={{ color: 'var(--wr-red-2)' }}>NEGATIU</span>
+                        <span>·</span>
+                        <span>{a.font}</span>
+                        <span>·</span>
+                        <span>{a.data}</span>
+                        <span>·</span>
+                        <span>score: {a.score?.toFixed(2)}</span>
                       </div>
                     </div>
-                    <Link href={`/chat?q=${encodeURIComponent(`Com millorar la reputació d'${partit} sobre: ${a.titol}? Proposa una estratègia concreta amb 3 accions.`)}`} style={{
-                      padding: '8px 14px', background: 'var(--wr-red)', color: 'var(--paper)',
-                      border: '1px solid var(--wr-red)', fontFamily: 'var(--font-mono)', fontSize: 10,
-                      letterSpacing: '.1em', textTransform: 'uppercase', fontWeight: 700,
-                      textDecoration: 'none', whiteSpace: 'nowrap',
-                      boxShadow: '0 0 16px -4px rgba(255,90,60,.3)',
-                    }}>
-                      ◼ NETEJAR →
-                    </Link>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {a.url && (
+                        <a href={a.url} target="_blank" rel="noopener noreferrer" style={{
+                          padding: '6px 12px', background: 'transparent', border: '1px solid var(--line)',
+                          color: 'var(--bone)', fontFamily: 'var(--font-mono)', fontSize: 10,
+                          textDecoration: 'none', textAlign: 'center',
+                        }}>Llegir →</a>
+                      )}
+                      <Link href={`/chat?q=${encodeURIComponent(`La premsa parla negativament d'${partit} sobre: "${a.titol}". Proposa 3 accions concretes per millorar la percepció pública sobre aquest tema, amb narratives alternatives i missatges clau per xarxes socials.`)}`} style={{
+                        padding: '6px 12px', background: 'var(--wr-red)', color: 'var(--paper)',
+                        border: '1px solid var(--wr-red)', fontFamily: 'var(--font-mono)', fontSize: 10,
+                        letterSpacing: '.08em', textTransform: 'uppercase', fontWeight: 700,
+                        textDecoration: 'none', textAlign: 'center',
+                        boxShadow: '0 0 12px -3px rgba(255,90,60,.3)',
+                      }}>◼ Netejar</Link>
+                    </div>
                   </div>
                 ))}
               </div>
             ) : (
               <div style={{
-                textAlign: 'center', padding: '60px 0', background: '#050505',
-                border: '1px solid var(--line)',
+                textAlign: 'center', padding: '60px 0', background: '#050505', border: '1px solid var(--line)',
               }}>
-                <div style={{ fontFamily: 'var(--font-serif)', fontSize: 28, color: 'var(--paper)', marginBottom: 10 }}>
-                  {negatius.length === 0 && detall ? 'Cap notícia negativa' : 'Carregant...'}
+                <div className="pulse-dot" style={{ width: 10, height: 10, borderRadius: 10, background: 'var(--wr-phosphor)', margin: '0 auto 14px' }} />
+                <div style={{ fontFamily: 'var(--font-serif)', fontSize: 28, color: 'var(--paper)', marginBottom: 8 }}>
+                  Cap notícia negativa
                 </div>
-                <p style={{ fontSize: 13, color: 'var(--wr-phosphor)', fontFamily: 'var(--font-mono)' }}>
-                  ✓ La premsa no parla negativament d&apos;{partit} en els últims 30 dies
+                <p style={{ fontSize: 13, color: 'var(--wr-phosphor)', fontFamily: 'var(--font-mono)', letterSpacing: '.06em' }}>
+                  ✓ {partit} no té premsa negativa detectada en els últims 30 dies
                 </p>
               </div>
             )}
           </div>
         )}
+
+        {/* Empty overview */}
+        {tab === 'overview' && !stats && <EmptyState text="Carregant estadístiques..." large />}
       </div>
     </div>
   );
@@ -263,6 +401,7 @@ function EmptyState({ text, large }: { text: string; large?: boolean }) {
       fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--fog)',
       letterSpacing: '.1em', textTransform: 'uppercase',
     }}>
+      <div className="pulse-dot" style={{ width: 8, height: 8, borderRadius: 8, background: 'var(--wr-phosphor)', margin: '0 auto 10px' }} />
       {text}
     </div>
   );
