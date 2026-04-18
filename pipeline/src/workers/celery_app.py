@@ -63,5 +63,9 @@ app.conf.update(
             "task": "src.workers.tasks.evaluate_alert_rules",
             "schedule": crontab(minute="*/30"),  # cada 30 minutos
         },
+        "ingest-premsa": {
+            "task": "src.workers.tasks.ingest_premsa",
+            "schedule": crontab(minute="*/30"),  # cada 30 minutos
+        },
     },
 )

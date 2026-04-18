@@ -40,7 +40,8 @@ const navItems: NavItem[] = [
   { href: '/alertas', label: 'Alertes', icon: Bell, hint: 'Regles actives' },
   { href: '/municipios', label: 'Municipis', icon: MapPin, hint: '947 municipis' },
   { href: '/regidors', label: 'Regidors', icon: Users, hint: 'Alineació i perfils' },
-  { href: '/intel', label: 'Intel·ligència', icon: Radar, hint: 'Estratègia' },
+  { href: '/reputacio', label: 'Reputació', icon: Radar, hint: 'Premsa · sentiment' },
+  { href: '/intel', label: 'Intel·ligència', icon: ShieldCheck, hint: 'Estratègia' },
   { href: '/parlament', label: 'Parlament', icon: Building2, hint: 'DSPC · sessions' },
   { href: '/informes', label: 'Informes', icon: FileText, hint: 'Biblioteca + briefs' },
 ];

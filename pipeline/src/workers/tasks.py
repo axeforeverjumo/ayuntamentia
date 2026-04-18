@@ -224,3 +224,19 @@ def evaluate_alert_rules():
     result = run_all_active_rules()
     logger.info(f"Reglas evaluadas: {result}")
     return result
+
+
+@app.task(name="src.workers.tasks.ingest_premsa")
+def ingest_premsa():
+    """Ingesta RSS de premsa catalana — cada 30 min."""
+    import httpx
+    api_url = os.getenv("API_INTERNAL_URL", "http://localhost:8050")
+    try:
+        r = httpx.post(f"{api_url}/api/reputacio/ingest", timeout=120)
+        r.raise_for_status()
+        result = r.json()
+        logger.info(f"Premsa ingestada: {result}")
+        return result
+    except Exception as e:
+        logger.warning(f"Error ingesting premsa: {e}")
+        return {"error": str(e)}
