@@ -1,17 +1,31 @@
-"use client";
+'use client';
 
-import { useState, useRef, useEffect, useCallback } from "react";
-import {
-  Send, Loader2, Sparkles, MessageSquare,
-  Plus, Trash2,
-} from "lucide-react";
-import { ChatMessage } from "@/components/ui/ChatMessage";
-import { ProgressiveLoader } from "@/components/ui/ProgressiveLoader";
-import { PoliticalModes } from "@/components/ui/PoliticalModes";
-import { apiClient } from "@/lib/ApiClient";
-import { CLIENT_CONFIG } from "@/lib/clientConfig";
-import type { ChatMessage as ChatMessageType, ChatResponse } from "@/lib/types";
-import { cn } from "@/lib/utils";
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { Loader2, Trash2, Plus } from 'lucide-react';
+import { ChatMessage } from '@/components/ui/ChatMessage';
+import { ProgressiveLoader } from '@/components/ui/ProgressiveLoader';
+import { apiClient } from '@/lib/ApiClient';
+import { CLIENT_CONFIG } from '@/lib/clientConfig';
+import type { ChatMessage as ChatMessageType, ChatResponse } from '@/lib/types';
+import { PageHeader } from '@/components/warroom/PageHeader';
+import { StatusBadge, LiveDot, StatusLine } from '@/components/warroom/StatusBadge';
+import { Gauge, DotGrid, CornerBrack } from '@/components/landing/primitives';
+
+const MODES = [
+  { id: 'monitor', label: 'Monitor', color: 'var(--wr-phosphor)', hint: 'Què es diu de...', icon: '◉' },
+  { id: 'atacar', label: 'Atacar', color: 'var(--wr-red-2)', hint: 'Munició contra rivals', icon: '◎' },
+  { id: 'defensar', label: 'Defensar', color: '#93c5fd', hint: 'Argumentari pel partit', icon: '◇' },
+  { id: 'comparar', label: 'Comparar', color: '#c4b5fd', hint: 'Posició vs rivals', icon: '⬡' },
+  { id: 'oportunitat', label: 'Oportunitat', color: 'var(--wr-amber)', hint: "Forats d'agenda", icon: '◆' },
+] as const;
+
+const SEEDS: Record<string, string[]> = {
+  monitor: ['Què ha dit el PP sobre habitatge el darrer mes?', 'Posicionament JxCat en seguretat', 'Evolució tema soroll nocturn 60 dies'],
+  atacar: ['Dossier contradiccions PP · civisme', 'Promeses trencades PSC a Terrassa', 'Contradiccions ERC BES parlament vs municipal'],
+  defensar: ['Com defensar el nostre vot sobre ordenança civisme?', 'Argumentari fiscalitat comercial', 'Resposta a acusació de transfuguisme'],
+  comparar: ['PP vs JxCat en urbanisme 2026', 'Dades votació habitatge · tots els partits', 'Qui ha proposat més sobre seguretat?'],
+  oportunitat: ['On pot créixer el partit ara?', "Forats d'agenda sense cobrir · comarques altes", 'Temes amb menció ciutadana alta i 0 debats'],
+};
 
 interface Conversation {
   id: string;
@@ -21,59 +35,43 @@ interface Conversation {
   updatedAt: string;
 }
 
-function generateId(): string {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-}
-
+function generateId() { return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`; }
 function loadConversations(): Conversation[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = localStorage.getItem("ayuntamentia_chats");
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
+  if (typeof window === 'undefined') return [];
+  try { return JSON.parse(localStorage.getItem('ayuntamentia_chats') || '[]'); } catch { return []; }
 }
-
-function saveConversations(convs: Conversation[]) {
-  localStorage.setItem("ayuntamentia_chats", JSON.stringify(convs));
-}
-
-function titleFromMessage(msg: string): string {
-  return msg.length > 40 ? msg.slice(0, 40) + "..." : msg;
-}
+function saveConversations(convs: Conversation[]) { localStorage.setItem('ayuntamentia_chats', JSON.stringify(convs)); }
 
 export default function ChatPage() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [input, setInput] = useState("");
+  const [input, setInput] = useState('');
+  const [mode, setMode] = useState('monitor');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  // Load from localStorage on mount
   useEffect(() => {
     const loaded = loadConversations();
     setConversations(loaded);
     if (loaded.length > 0) setActiveId(loaded[0].id);
   }, []);
 
-  const activeConv = conversations.find((c) => c.id === activeId);
+  const activeConv = conversations.find(c => c.id === activeId);
   const messages = activeConv?.messages || [];
+  const modeDef = MODES.find(m => m.id === mode)!;
+  const seeds = SEEDS[mode] || [];
 
   const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, []);
-
   useEffect(() => { scrollToBottom(); }, [messages.length, scrollToBottom]);
 
   const updateConversation = (id: string, msgs: ChatMessageType[], title?: string) => {
-    setConversations((prev) => {
-      const updated = prev.map((c) =>
-        c.id === id
-          ? { ...c, messages: msgs, updatedAt: new Date().toISOString(), ...(title ? { title } : {}) }
-          : c
+    setConversations(prev => {
+      const updated = prev.map(c =>
+        c.id === id ? { ...c, messages: msgs, updatedAt: new Date().toISOString(), ...(title ? { title } : {}) } : c
       );
       saveConversations(updated);
       return updated;
@@ -81,228 +79,171 @@ export default function ChatPage() {
   };
 
   const newConversation = () => {
-    const conv: Conversation = {
-      id: generateId(),
-      title: "Nova conversa",
-      messages: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    setConversations((prev) => {
-      const updated = [conv, ...prev];
-      saveConversations(updated);
-      return updated;
-    });
+    const conv: Conversation = { id: generateId(), title: 'Nova conversa', messages: [], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+    setConversations(prev => { const u = [conv, ...prev]; saveConversations(u); return u; });
     setActiveId(conv.id);
     setError(null);
   };
 
   const deleteConversation = (id: string) => {
-    setConversations((prev) => {
-      const updated = prev.filter((c) => c.id !== id);
-      saveConversations(updated);
-      return updated;
-    });
-    if (activeId === id) {
-      setActiveId(conversations.length > 1 ? conversations.find((c) => c.id !== id)?.id || null : null);
-    }
+    setConversations(prev => { const u = prev.filter(c => c.id !== id); saveConversations(u); return u; });
+    if (activeId === id) setActiveId(conversations.find(c => c.id !== id)?.id || null);
   };
 
   const sendMessage = async (content: string) => {
     if (!content.trim() || isLoading) return;
-
     let convId = activeId;
-    // Create conversation if none active
     if (!convId) {
-      const conv: Conversation = {
-        id: generateId(),
-        title: titleFromMessage(content),
-        messages: [],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      setConversations((prev) => {
-        const updated = [conv, ...prev];
-        saveConversations(updated);
-        return updated;
-      });
+      const conv: Conversation = { id: generateId(), title: content.slice(0, 40), messages: [], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+      setConversations(prev => { const u = [conv, ...prev]; saveConversations(u); return u; });
       convId = conv.id;
       setActiveId(convId);
     }
-
-    const userMsg: ChatMessageType = {
-      id: generateId(),
-      role: "user",
-      content: content.trim(),
-      timestamp: new Date().toISOString(),
-    };
-
-    const currentMsgs = conversations.find((c) => c.id === convId)?.messages || [];
+    const userMsg: ChatMessageType = { id: generateId(), role: 'user', content: content.trim(), timestamp: new Date().toISOString() };
+    const currentMsgs = conversations.find(c => c.id === convId)?.messages || [];
     const newMsgs = [...currentMsgs, userMsg];
-    const isFirst = currentMsgs.length === 0;
-    updateConversation(convId, newMsgs, isFirst ? titleFromMessage(content) : undefined);
-
-    setInput("");
+    updateConversation(convId, newMsgs, currentMsgs.length === 0 ? content.slice(0, 40) : undefined);
+    setInput('');
     setIsLoading(true);
     setError(null);
-    if (textareaRef.current) textareaRef.current.style.height = "auto";
-
     try {
-      const history = currentMsgs.map((m) => ({ role: m.role, content: m.content }));
-      const response = await apiClient.post<ChatResponse>("/api/chat/", {
-        message: content.trim(),
-        history,
-      });
-
+      const history = currentMsgs.map(m => ({ role: m.role, content: m.content }));
+      const response = await apiClient.post<ChatResponse>('/api/chat/', { message: content.trim(), history });
       const assistantMsg: ChatMessageType = {
-        id: generateId(),
-        role: "assistant",
-        content: response.answer,
-        sources: response.sources,
-        followUps: response.follow_ups,
-        intent: response.intent,
+        id: generateId(), role: 'assistant', content: response.answer,
+        sources: response.sources, followUps: response.follow_ups, intent: response.intent,
         timestamp: new Date().toISOString(),
       };
-
       updateConversation(convId, [...newMsgs, assistantMsg]);
     } catch {
       setError("No s'ha pogut connectar amb el servidor.");
-      updateConversation(convId, currentMsgs); // rollback
+      updateConversation(convId, currentMsgs);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage(input);
-    }
-  };
-
   return (
-    <div className="flex h-screen relative">
-      {/* Ambient background glow */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -left-40 w-[500px] h-[500px] rounded-full bg-[#7c3aed] opacity-[0.06] blur-[120px]" />
-        <div className="absolute -bottom-40 -right-40 w-[500px] h-[500px] rounded-full bg-[#06b6d4] opacity-[0.05] blur-[120px]" />
-      </div>
-
-      {/* Sidebar - conversation history */}
-      <div className="w-64 border-r border-[#21262d] bg-[#0a0d12]/80 backdrop-blur-sm flex flex-col relative z-10">
-        <div className="p-3">
-          <button
-            onClick={newConversation}
-            className={cn(
-              "w-full flex items-center gap-2 px-3 py-2 text-xs rounded-xl",
-              "bg-gradient-to-r from-[#1a0b2e]/50 to-[#0a1e26]/50",
-              "border border-[#7c3aed]/30 text-[#c4b5fd]",
-              "hover:border-[#7c3aed]/60 hover:from-[#1a0b2e] hover:to-[#0a1e26] hover:text-[#e6edf3]",
-              "transition-all duration-200",
-            )}
-          >
-            <Plus className="w-3.5 h-3.5" />
-            Nova conversa
+    <div style={{ display: 'flex', height: '100vh', background: 'var(--ink)' }}>
+      {/* Conversation sidebar */}
+      <div style={{
+        width: 220, borderRight: '1px solid var(--line)', background: '#050505',
+        display: 'flex', flexDirection: 'column',
+      }}>
+        <div style={{ padding: '10px' }}>
+          <button onClick={newConversation} style={{
+            width: '100%', display: 'flex', alignItems: 'center', gap: 8,
+            padding: '8px 12px', background: 'transparent',
+            border: '1px dashed var(--line)', color: 'var(--bone)',
+            fontFamily: 'var(--font-mono)', fontSize: 11, cursor: 'pointer',
+            letterSpacing: '.06em', textTransform: 'uppercase',
+          }}>
+            <Plus size={12} /> Nova conversa
           </button>
         </div>
-
-        <div className="flex-1 overflow-y-auto px-2 space-y-0.5">
-          {conversations.length === 0 ? (
-            <p className="text-xs text-[#6e7681] text-center py-8 px-3">
-              Encara no hi ha converses
-            </p>
-          ) : (
-            conversations.map((conv) => (
-              <div
-                key={conv.id}
-                className={cn(
-                  "group flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-all",
-                  activeId === conv.id
-                    ? "bg-gradient-to-r from-[#1a0b2e]/60 to-[#0a1e26]/60 text-[#e6edf3] border-l-2 border-[#7c3aed]"
-                    : "text-[#8b949e] hover:bg-[#161b22] hover:text-[#e6edf3]"
-                )}
-                onClick={() => { setActiveId(conv.id); setError(null); }}
-              >
-                <MessageSquare className="w-3.5 h-3.5 flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs truncate">{conv.title}</p>
-                  <p className="text-[10px] text-[#6e7681]">
-                    {conv.messages.length} missatges
-                  </p>
-                </div>
-                <button
-                  onClick={(e) => { e.stopPropagation(); deleteConversation(conv.id); }}
-                  className="opacity-0 group-hover:opacity-100 p-1 hover:text-[#f87171] transition-all"
-                >
-                  <Trash2 className="w-3 h-3" />
-                </button>
+        <div className="thin-scroll" style={{ flex: 1, overflow: 'auto', padding: '0 6px' }}>
+          {conversations.map(conv => (
+            <div
+              key={conv.id}
+              onClick={() => { setActiveId(conv.id); setError(null); }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: '8px 10px', marginBottom: 2, cursor: 'pointer',
+                background: activeId === conv.id ? 'var(--paper)' : 'transparent',
+                color: activeId === conv.id ? 'var(--ink)' : 'var(--bone)',
+                borderLeft: activeId === conv.id ? '3px solid var(--wr-red)' : '3px solid transparent',
+                fontSize: 12,
+              }}
+            >
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: activeId === conv.id ? 700 : 400 }}>{conv.title}</div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, opacity: .5 }}>{conv.messages.length} msg</div>
               </div>
-            ))
-          )}
+              <button onClick={e => { e.stopPropagation(); deleteConversation(conv.id); }}
+                style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', padding: 2, opacity: .4 }}>
+                <Trash2 size={11} />
+              </button>
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* Main chat area */}
-      <div className="flex-1 flex flex-col relative z-10">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#21262d] bg-[#0a0d12]/80 backdrop-blur-sm">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#7c3aed]/20 to-[#06b6d4]/20 border border-[#7c3aed]/30 flex items-center justify-center relative">
-              <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-[#7c3aed]/10 to-[#06b6d4]/10 blur-md" />
-              <Sparkles className="w-4 h-4 text-[#c4b5fd] relative" />
-            </div>
-            <div>
-              <h1 className="text-sm font-bold text-[#e6edf3] flex items-center gap-2">
-                {activeConv?.title || "AyuntamentIA"}
-                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[#052e16] border border-[#16a34a]/30 text-[9px] font-semibold uppercase tracking-wider text-[#4ade80]">
-                  <span className="w-1 h-1 rounded-full bg-[#4ade80] animate-pulse" />
-                  Live
-                </span>
-              </h1>
-              <p className="text-[11px] text-[#8b949e]">
-                Intel·ligència política · 947 municipis de Catalunya
-              </p>
-            </div>
-          </div>
+      {/* Main war room area */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        <PageHeader
+          crumb="Operacions / War Room"
+          title={<>Sala de guerra. <em style={{ color: 'var(--fog)', fontWeight: 400 }}>{modeDef.label.toLowerCase()}</em></>}
+          actions={<StatusLine color="var(--wr-phosphor)">Índex al dia · últim batch 03:47</StatusLine>}
+        />
+
+        {/* Mode selector */}
+        <div style={{ padding: '14px 26px', borderBottom: '1px solid var(--line)', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {MODES.map(m => {
+            const active = mode === m.id;
+            return (
+              <button key={m.id} onClick={() => setMode(m.id)} style={{
+                display: 'flex', alignItems: 'center', gap: 7, padding: '7px 11px',
+                background: active ? 'var(--ink-4)' : 'transparent',
+                border: '1px solid ' + (active ? m.color : 'var(--line)'),
+                color: active ? m.color : 'var(--bone)',
+                cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: 11,
+                letterSpacing: '.06em', textTransform: 'uppercase',
+              }}>
+                <span style={{ fontSize: 14 }}>{m.icon}</span> {m.label}
+              </button>
+            );
+          })}
         </div>
 
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto px-6 py-6">
+        {/* Messages or empty state */}
+        <div className="thin-scroll" style={{ flex: 1, overflow: 'auto', padding: '22px 26px 0' }}>
           {messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-center max-w-xl mx-auto">
-              <div className="relative mb-6">
-                <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-[#7c3aed] to-[#06b6d4] blur-2xl opacity-40" />
-                <div className="relative w-20 h-20 rounded-3xl bg-gradient-to-br from-[#1a0b2e] to-[#0a1e26] border border-[#7c3aed]/40 flex items-center justify-center">
-                  <Sparkles className="w-9 h-9 text-[#c4b5fd]" />
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', textAlign: 'center' }}>
+              <DotGrid size={28} opacity={0.04} />
+              <div style={{ position: 'relative', maxWidth: 580 }}>
+                <StatusBadge tone="red">◼ {modeDef.label.toUpperCase()} MODE · ACTIU</StatusBadge>
+                <h2 style={{
+                  fontFamily: 'var(--font-serif)', fontSize: 'clamp(36px, 5vw, 64px)',
+                  margin: '18px 0 14px', lineHeight: .95, letterSpacing: '-.02em',
+                  color: 'var(--paper)', fontWeight: 400,
+                }}>
+                  {modeDef.id === 'atacar' ? <>Tria el <em style={{ color: modeDef.color }}>rival.</em></> :
+                   modeDef.id === 'defensar' ? <>Prepara l&apos;<em style={{ color: modeDef.color }}>argumentari.</em></> :
+                   modeDef.id === 'comparar' ? <>Qui és <em style={{ color: modeDef.color }}>millor?</em></> :
+                   modeDef.id === 'oportunitat' ? <>On <em style={{ color: modeDef.color }}>ataquem?</em></> :
+                   <>Què es <em style={{ color: modeDef.color }}>diu?</em></>}
+                </h2>
+                <p style={{ fontSize: 14, color: 'var(--bone)', lineHeight: 1.5, margin: '0 0 28px' }}>
+                  {modeDef.hint}. Sobre dades reals de 947 municipis, el Parlament i les xarxes.
+                </p>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, textAlign: 'left' }}>
+                  {seeds.map((s, i) => (
+                    <button key={i} onClick={() => sendMessage(s)} disabled={isLoading} style={{
+                      display: 'block', width: '100%', padding: '10px 14px',
+                      background: 'transparent', border: '1px dashed var(--line)',
+                      color: 'var(--bone)', fontFamily: 'var(--font-sans)', fontSize: 13,
+                      cursor: 'pointer', textAlign: 'left',
+                    }}>
+                      → {s}
+                    </button>
+                  ))}
                 </div>
               </div>
-              <h2 className="text-2xl font-bold bg-gradient-to-r from-[#c4b5fd] via-[#f3f6fa] to-[#67e8f9] bg-clip-text text-transparent mb-2">
-                L'arma política de {CLIENT_CONFIG.nombre}
-              </h2>
-              <p className="text-sm text-[#8b949e] leading-relaxed mb-6 max-w-md">
-                Tria el mode. Pregunta com un polític: ataca rivals, defensa posicions,
-                compara partits o detecta oportunitats — sobre dades reals de 947 municipis.
-              </p>
-              <PoliticalModes onAsk={sendMessage} disabled={isLoading} />
-              <p className="text-[10px] text-[#6e7681] mt-5">
-                O escriu la teva pregunta sota 👇
-              </p>
             </div>
           ) : (
-            <div className="max-w-3xl mx-auto space-y-6">
-              {messages.map((message) => (
-                <ChatMessage
-                  key={message.id}
-                  message={message}
-                  onFollowUp={sendMessage}
-                  followUpDisabled={isLoading}
-                />
+            <div style={{ maxWidth: 800, margin: '0 auto' }}>
+              {messages.map(message => (
+                <ChatMessage key={message.id} message={message} onFollowUp={sendMessage} followUpDisabled={isLoading} />
               ))}
               {isLoading && <ProgressiveLoader />}
               {error && (
-                <div className="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-[#450a0a] to-[#2a0a0a] border border-[#dc2626]/40">
-                  <MessageSquare className="w-4 h-4 text-[#f87171] flex-shrink-0" />
-                  <p className="text-sm text-[#fca5a5]">{error}</p>
+                <div style={{
+                  padding: '10px 14px', fontFamily: 'var(--font-mono)', fontSize: 11,
+                  background: 'rgba(212,58,31,.08)', border: '1px solid rgba(212,58,31,.3)',
+                  color: 'var(--wr-red-2)', marginBottom: 16,
+                }}>
+                  ⚠ {error}
                 </div>
               )}
               <div ref={messagesEndRef} />
@@ -310,48 +251,105 @@ export default function ChatPage() {
           )}
         </div>
 
-        {/* Input */}
-        <div className="px-6 py-4 border-t border-[#21262d] bg-[#0a0d12]/80 backdrop-blur-sm">
-          <div className="max-w-3xl mx-auto">
-            <div className={cn(
-              "flex items-end gap-3 p-3 rounded-2xl border transition-all relative",
-              "bg-gradient-to-br from-[#0f141b] to-[#161b22]",
-              "border-[#21262d] focus-within:border-[#7c3aed]/50",
-              "focus-within:shadow-[0_0_32px_-8px_rgba(124,58,237,0.35)]",
-            )}>
-              <textarea
-                ref={textareaRef}
+        {/* Composer */}
+        <div style={{
+          borderTop: '1px solid var(--line)', padding: '14px 26px 18px',
+          background: 'var(--ink-2)',
+        }}>
+          <div style={{ maxWidth: 800, margin: '0 auto' }}>
+            {/* Quick seeds when chatting */}
+            {messages.length > 0 && (
+              <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap' }}>
+                {seeds.slice(0, 2).map((s, i) => (
+                  <button key={i} onClick={() => sendMessage(s)} disabled={isLoading} style={{
+                    background: 'transparent', border: '1px dashed var(--line)', color: 'var(--bone)',
+                    padding: '5px 9px', fontFamily: 'var(--font-sans)', fontSize: 11, cursor: 'pointer',
+                  }}>{s}</button>
+                ))}
+              </div>
+            )}
+
+            <form onSubmit={e => { e.preventDefault(); sendMessage(input); }} style={{
+              display: 'grid', gridTemplateColumns: '1fr auto',
+              background: 'var(--ink)', border: '1px solid var(--line)',
+              borderTop: `3px solid ${modeDef.color}`,
+            }}>
+              <input
+                ref={inputRef}
                 value={input}
-                onChange={(e) => {
-                  setInput(e.target.value);
-                  const el = textareaRef.current;
-                  if (el) { el.style.height = "auto"; el.style.height = `${Math.min(el.scrollHeight, 160)}px`; }
+                onChange={e => setInput(e.target.value)}
+                placeholder={`Mode ${modeDef.label.toLowerCase()} · ${modeDef.hint}`}
+                disabled={isLoading}
+                style={{
+                  background: 'transparent', border: 'none', color: 'var(--paper)',
+                  padding: '14px 16px', fontSize: 14, fontFamily: 'var(--font-sans)', outline: 'none',
                 }}
-                onKeyDown={handleKeyDown}
-                placeholder="Pregunta sobre política municipal…"
-                rows={1}
-                className="flex-1 bg-transparent text-[13px] text-[#f3f6fa] placeholder:text-[#6e7681] resize-none focus:outline-none leading-relaxed"
               />
-              <button
-                onClick={() => sendMessage(input)}
-                disabled={!input.trim() || isLoading}
-                className={cn(
-                  "flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-all",
-                  input.trim() && !isLoading
-                    ? "bg-gradient-to-br from-[#7c3aed] to-[#06b6d4] text-white hover:from-[#8b5cf6] hover:to-[#22d3ee] shadow-lg shadow-[#7c3aed]/30"
-                    : "bg-[#1c2128] text-[#6e7681] cursor-not-allowed",
-                )}
-              >
-                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+              <button type="submit" disabled={!input.trim() || isLoading} style={{
+                background: isLoading ? 'var(--ink-4)' : modeDef.color,
+                color: 'var(--ink)', border: 'none', padding: '0 20px', cursor: 'pointer',
+                fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '.1em',
+                textTransform: 'uppercase', fontWeight: 700,
+                opacity: !input.trim() || isLoading ? 0.4 : 1,
+              }}>
+                {isLoading ? <Loader2 size={14} className="animate-spin" /> : 'Disparar →'}
               </button>
-            </div>
-            <p className="text-[10px] text-[#6e7681] mt-2 text-center">
-              <kbd className="px-1 py-0.5 rounded bg-[#1c2128] border border-[#30363d] text-[9px]">Enter</kbd> enviar ·{" "}
-              <kbd className="px-1 py-0.5 rounded bg-[#1c2128] border border-[#30363d] text-[9px]">Shift+Enter</kbd> nova línia
-            </p>
+            </form>
           </div>
         </div>
       </div>
+
+      {/* Right panel: sources + confidence */}
+      <aside className="thin-scroll" style={{
+        width: 300, borderLeft: '1px solid var(--line)', background: 'var(--ink-2)',
+        padding: '18px 16px', overflow: 'auto',
+      }}>
+        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--fog)', letterSpacing: '.12em', textTransform: 'uppercase', marginBottom: 10 }}>
+          Fonts actives
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 22 }}>
+          {[
+            { kind: 'ACTA', label: 'Plens municipals', sub: '51.192 processades' },
+            { kind: 'DSPC', label: 'Diari Sessions Parlament', sub: 'Sessions 2024-2026' },
+            { kind: 'SOCIAL', label: 'Bluesky + premsa', sub: 'Cluster mencions' },
+          ].map((s, i) => (
+            <div key={i} style={{
+              background: 'var(--ink)', border: '1px solid var(--line)', padding: '8px 10px',
+              display: 'grid', gridTemplateColumns: '52px 1fr', gap: 8,
+            }}>
+              <StatusBadge tone={s.kind === 'ACTA' ? 'bone' : s.kind === 'DSPC' ? 'phos' : 'amber'}>{s.kind}</StatusBadge>
+              <div>
+                <div style={{ fontSize: 11, color: 'var(--paper)' }}>{s.label}</div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--fog)', marginTop: 2 }}>{s.sub}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--fog)', letterSpacing: '.12em', textTransform: 'uppercase', marginBottom: 10 }}>
+          Confiança
+        </div>
+        <div style={{ background: 'var(--ink)', border: '1px solid var(--line)', padding: 14, marginBottom: 22 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <Gauge label="Evidència documental" value={92} tone="phos" />
+            <Gauge label="Risc legal" value={20} tone="amber" />
+            <Gauge label="Frescor dades" value={85} tone="phos" />
+          </div>
+        </div>
+
+        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--fog)', letterSpacing: '.12em', textTransform: 'uppercase', marginBottom: 10 }}>
+          Accions ràpides
+        </div>
+        <div style={{ display: 'grid', gap: 6 }}>
+          {['Desar al dossier rival', 'Exportar PDF · 4 pàg', 'Enviar a Telegram', 'Generar tweet (≤260c)', 'Afegir a brief setmanal'].map((a, i) => (
+            <button key={i} style={{
+              background: 'var(--ink)', border: '1px solid var(--line)', color: 'var(--paper)',
+              padding: '8px 11px', textAlign: 'left', cursor: 'pointer',
+              fontFamily: 'var(--font-mono)', fontSize: 10.5,
+            }}>▸ {a}</button>
+          ))}
+        </div>
+      </aside>
     </div>
   );
 }
