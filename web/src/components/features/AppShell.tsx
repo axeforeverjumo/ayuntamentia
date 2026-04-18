@@ -5,15 +5,15 @@ import { usePathname } from 'next/navigation';
 import { Menu, X } from 'lucide-react';
 import { Sidebar } from './Sidebar';
 
-const AUTH_ROUTES = ['/login', '/legal'];
+const SHELL_EXCLUDED = ['/login', '/legal', '/landing'];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const isAuth = AUTH_ROUTES.some((p) => pathname.startsWith(p));
+  const excluded = SHELL_EXCLUDED.some((p) => pathname.startsWith(p));
 
-  if (isAuth) {
-    return <div className="min-h-screen">{children}</div>;
+  if (excluded) {
+    return <>{children}</>;
   }
 
   return (
