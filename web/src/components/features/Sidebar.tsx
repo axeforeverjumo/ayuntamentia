@@ -118,7 +118,9 @@ export function Sidebar() {
           <span className="pulse-dot" style={{ width: 7, height: 7, borderRadius: 7, background: 'var(--wr-phosphor)', boxShadow: '0 0 6px var(--wr-phosphor)' }} />
           <div style={{ lineHeight: 1.1 }}>
             <div style={{ fontSize: 11, color: 'var(--paper)' }}>Aliança Catalana</div>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--fog)' }}>tenant actiu · operatiu</div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--fog)' }}>
+              {user?.rol === 'super_admin' || user?.rol === 'admin' ? 'direcció · accés complet' : 'delegat · àmbit assignat'}
+            </div>
           </div>
         </div>
       </div>
