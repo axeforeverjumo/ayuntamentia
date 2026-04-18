@@ -30,23 +30,27 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, hint: 'Visió general' },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, hint: 'Visió executiva' },
   { href: '/chat', label: 'War Room', icon: Crosshair, hint: 'Chat multi-mode' },
-  { href: '/buscar', label: 'Buscar', icon: Search, hint: 'Actes i punts' },
+  { href: '/buscar', label: 'Cercar', icon: Search, hint: 'Cerca universal' },
   { href: '/alertas', label: 'Alertes', icon: Bell, hint: 'Regles actives' },
   { href: '/municipios', label: 'Municipis', icon: MapPin, hint: '947 municipis' },
-  { href: '/informes', label: 'Informes', icon: FileText, hint: 'Setmanals' },
-  { href: '/intel', label: 'Intel·ligència', icon: Radar, hint: 'Tendències' },
+  { href: '/regidors', label: 'Regidors', icon: Users, hint: 'Alineació i perfils' },
+  { href: '/intel', label: 'Intel·ligència', icon: Radar, hint: 'Estratègia' },
   { href: '/parlament', label: 'Parlament', icon: Building2, hint: 'DSPC · sessions' },
-  { href: '/recepcion', label: 'Recepció social', icon: Bell, hint: 'Eco social' },
-  { href: '/suscripciones', label: 'Subscripcions', icon: Mail, hint: 'Briefs' },
+  { href: '/informes', label: 'Informes', icon: FileText, hint: 'Biblioteca + briefs' },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
   const [user, setUser] = useState<{ email: string; rol?: string } | null>(null);
+  const [alertCount, setAlertCount] = useState<number>(0);
 
   useEffect(() => {
+    fetch((process.env.NEXT_PUBLIC_API_URL || '') + '/api/alertas/stats/resumen')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setAlertCount(d.nuevas || 0); })
+      .catch(() => {});
     const supabase = getSupabaseBrowser();
     supabase.auth.getUser().then(({ data }) => {
       if (data.user) setUser({ email: data.user.email ?? '' });
@@ -150,11 +154,16 @@ export function Sidebar() {
                   </div>
                 )}
               </div>
-              {item.badge && (
+              {item.href === '/alertas' && alertCount > 0 && (
                 <span style={{
                   background: 'var(--wr-red)', color: 'var(--paper)', fontFamily: 'var(--font-mono)',
                   fontSize: 10, padding: '2px 6px', minWidth: 18, textAlign: 'center',
-                }}>{item.badge}</span>
+                }}>{alertCount}</span>
+              )}
+              {item.href === '/alertas' && alertCount === 0 && (
+                <span style={{
+                  color: 'var(--wr-phosphor)', fontFamily: 'var(--font-mono)', fontSize: 10,
+                }}>✓</span>
               )}
             </Link>
           );

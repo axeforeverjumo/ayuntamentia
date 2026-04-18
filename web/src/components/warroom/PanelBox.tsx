@@ -1,6 +1,6 @@
 'use client';
 
-import { type ReactNode, type CSSProperties } from 'react';
+import { useState, type ReactNode, type CSSProperties } from 'react';
 import { CornerBrack } from '@/components/landing/primitives';
 
 type PanelTone = 'default' | 'red' | 'amber' | 'phos';
@@ -48,10 +48,15 @@ export function PanelBox({ title, subtitle, tone = 'default', children, style, i
 }
 
 export function InfoTooltip({ text }: { text: string }) {
+  const [show, setShow] = useState(false);
   return (
     <span
-      title={text}
-      style={{
+      style={{ position: 'relative', display: 'inline-flex' }}
+      onMouseEnter={() => setShow(true)}
+      onMouseLeave={() => setShow(false)}
+      onClick={() => setShow(!show)}
+    >
+      <span style={{
         display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
         width: 16, height: 16, borderRadius: 16,
         border: '1px solid var(--line)', color: 'var(--fog)',
@@ -59,7 +64,18 @@ export function InfoTooltip({ text }: { text: string }) {
         marginLeft: 8, flexShrink: 0,
       }}
     >
-      i
+        i
+      </span>
+      {show && (
+        <span style={{
+          position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)',
+          marginTop: 6, padding: '8px 12px', background: '#111', border: '1px solid var(--line)',
+          color: 'var(--bone)', fontFamily: 'var(--font-sans)', fontSize: 12, lineHeight: 1.4,
+          whiteSpace: 'normal', width: 280, zIndex: 100, boxShadow: '0 8px 24px rgba(0,0,0,.5)',
+        }}>
+          {text}
+        </span>
+      )}
     </span>
   );
 }

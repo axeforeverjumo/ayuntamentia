@@ -61,6 +61,7 @@ export default function DashboardPage() {
       <PageHeader
         crumb="Operacions / Dashboard"
         title={<>Visió <em style={{ color: 'var(--fog)', fontWeight: 400 }}>executiva.</em></>}
+        info="Visió global del sistema: KPIs principals, alertes crítiques, activitat recent i temes en tendència. Dades actualitzades cada 15 minuts."
         actions={
           <StatusLine color="var(--wr-phosphor)">
             Pipeline actiu · {(stats.actas_procesadas || 0).toLocaleString('es-ES')} actes

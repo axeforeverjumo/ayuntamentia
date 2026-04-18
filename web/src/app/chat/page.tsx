@@ -173,6 +173,7 @@ export default function ChatPage() {
         <PageHeader
           crumb="Operacions / War Room"
           title={<>Sala de guerra. <em style={{ color: 'var(--fog)', fontWeight: 400 }}>{modeDef.label.toLowerCase()}</em></>}
+          info="Chat d'intel·ligència amb 5 modes polítics. Genera dossiers, contradiccions, speeches i anàlisis sobre dades reals de 947 municipis."
           actions={<StatusLine color="var(--wr-phosphor)">Índex al dia · últim batch 03:47</StatusLine>}
         />
 
