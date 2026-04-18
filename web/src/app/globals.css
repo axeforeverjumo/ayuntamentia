@@ -36,7 +36,7 @@
   --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
 }
 
-:root {
+:root, [data-theme="dark"] {
   color-scheme: dark;
 
   --ink: #060606;
@@ -58,6 +58,39 @@
   --wr-phosphor-dim: #4f7d35;
   --wr-ultramarine: #3b5cff;
   --wr-danger: #ff2d2d;
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+
+  --ink: #f2ece0;
+  --ink-2: #e8e1d1;
+  --ink-3: #dcd3bf;
+  --ink-4: #c9bfa8;
+  --line: #b8ad93;
+  --line-soft: #d3c9b2;
+  --paper: #14110d;
+  --paper-2: #262017;
+  --bone: #3b3428;
+  --fog: #6d6452;
+  --mute: #8a7f68;
+  --wr-red: #a63521;
+  --wr-red-2: #c2412a;
+  --wr-red-ink: #fce8e4;
+  --wr-amber: #b8860b;
+  --wr-phosphor: #2d6a1e;
+  --wr-phosphor-dim: #4f7d35;
+  --wr-ultramarine: #2b4bcc;
+  --wr-danger: #cc2222;
+
+  --color-background: #f2ece0;
+  --color-surface: #e8e1d1;
+  --color-surface-elevated: #dcd3bf;
+  --color-border: #b8ad93;
+  --color-border-muted: #c9bfa8;
+  --color-foreground: #14110d;
+  --color-foreground-muted: #6d6452;
+  --color-foreground-subtle: #8a7f68;
 }
 
 html, body { margin: 0; padding: 0; }

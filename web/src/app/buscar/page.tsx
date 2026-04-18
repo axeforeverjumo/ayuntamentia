@@ -356,19 +356,32 @@ function BuscarPageInner() {
         </div>
       )}
 
-      {/* Initial empty state */}
+      {/* Initial empty state with suggestions */}
       {!isPending && !hasSearched && (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-[#1c2128] border border-[#30363d] flex items-center justify-center mb-4">
-            <Search className="w-7 h-7 text-[#8b949e]" />
+        <div style={{ padding: '40px 0', textAlign: 'center' }}>
+          <div style={{ width: 64, height: 64, margin: '0 auto 16px', border: '1px solid var(--line)', display: 'grid', placeItems: 'center', background: '#080808' }}>
+            <Search className="w-7 h-7" style={{ color: 'var(--bone)' }} />
           </div>
-          <p className="text-base font-medium text-[#8b949e]">
-            Cerca en tots els plens municipals
+          <div style={{ fontFamily: 'var(--font-serif)', fontSize: 28, color: 'var(--paper)', marginBottom: 8 }}>
+            Cerca <em style={{ color: 'var(--bone)' }}>universal</em>
+          </div>
+          <p style={{ fontSize: 14, color: 'var(--fog)', maxWidth: 420, margin: '0 auto 28px', lineHeight: 1.5 }}>
+            Cerca en actes, votacions i declaracions de tots els 947 municipis de Catalunya.
           </p>
-          <p className="text-sm text-[#6e7681] mt-1 max-w-sm">
-            Introdueix paraules clau per trobar actes, votacions i
-            declaracions de tots els municipis de Catalunya
-          </p>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--fog)', letterSpacing: '.14em', textTransform: 'uppercase', marginBottom: 12 }}>
+            Cerques suggerides
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxWidth: 400, margin: '0 auto' }}>
+            {['habitatge social', 'civisme terrasses', 'seguretat ciutadana', 'pressupost 2026', 'immigració'].map(q => (
+              <button key={q} onClick={() => { setQuery(q); performSearch(q, filters, 1); }} style={{
+                padding: '10px 14px', background: 'transparent', border: '1px dashed var(--line)',
+                color: 'var(--bone)', fontFamily: 'var(--font-sans)', fontSize: 13,
+                cursor: 'pointer', textAlign: 'left',
+              }}>
+                → {q}
+              </button>
+            ))}
+          </div>
         </div>
       )}
     </div>

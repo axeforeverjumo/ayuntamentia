@@ -71,6 +71,30 @@ export default function MunicipiosPage() {
           {municipios.length > 0 ? `${municipios.length} municipis · Catalunya` : 'Catalunya'}
         </p>
       </div>
+      {/* Sub-nav */}
+      <div style={{ display: 'flex', borderBottom: '1px solid var(--line)' }}>
+        {[
+          { id: 'tots', label: 'Tots els municipis' },
+          { id: 'ac', label: 'Amb presència AC' },
+          { id: 'recent', label: 'Per activitat recent' },
+        ].map(t => (
+          <button key={t.id} onClick={() => {
+            if (t.id === 'ac') setSearch('AC');
+            else if (t.id === 'recent') { setSearch(''); setSort('recent'); }
+            else { setSearch(''); }
+          }} style={{
+            padding: '10px 16px', background: 'transparent',
+            border: 'none', borderBottom: '2px solid transparent',
+            borderRight: '1px solid var(--line)',
+            color: 'var(--fog)',
+            fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '.1em',
+            textTransform: 'uppercase', cursor: 'pointer',
+          }}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
       <div style={{ padding: '20px 26px' }} className="space-y-6">
 
       {/* Filters */}

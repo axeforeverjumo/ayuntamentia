@@ -18,7 +18,10 @@ import {
   Crosshair,
   Radar,
   Users,
+  Sun,
+  Moon,
 } from 'lucide-react';
+import { useTheme } from '@/lib/useTheme';
 import { cn } from '@/lib/utils';
 import { getSupabaseBrowser } from '@/lib/supabaseBrowser';
 
@@ -44,6 +47,7 @@ const navItems: NavItem[] = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { theme, toggle: toggleTheme } = useTheme();
   const [user, setUser] = useState<{ email: string; rol?: string } | null>(null);
   const [alertCount, setAlertCount] = useState<number>(0);
 
@@ -187,6 +191,17 @@ export function Sidebar() {
             <span>Admin</span>
           </Link>
         )}
+        <button
+          onClick={toggleTheme}
+          style={{
+            width: '100%', display: 'flex', alignItems: 'center', gap: 8,
+            padding: '8px 10px', marginBottom: 4, background: 'transparent', border: 'none',
+            color: 'var(--bone)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit',
+          }}
+        >
+          {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          <span>{theme === 'dark' ? 'Mode clar' : 'Mode fosc'}</span>
+        </button>
         <Link
           href="/settings"
           className="no-underline"
