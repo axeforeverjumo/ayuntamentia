@@ -223,3 +223,14 @@ body {
 }
 .markdown-body th { background: var(--color-surface-elevated); font-weight: 600; }
 .markdown-body hr { border: 0; border-top: 1px solid var(--color-border-muted); margin: 1rem 0; }
+
+/* Print styles for PDF export */
+@media print {
+  body { background: white !important; color: black !important; }
+  aside, nav, .grain::before, .pulse-dot, .scanline::after, .blink { display: none !important; }
+  * { animation: none !important; box-shadow: none !important; }
+  [style*="background: var(--ink)"], [style*="background: #0"] { background: white !important; }
+  [style*="color: var(--paper)"] { color: black !important; }
+  [style*="color: var(--bone)"], [style*="color: var(--fog)"] { color: #555 !important; }
+  [style*="border"] { border-color: #ddd !important; }
+}

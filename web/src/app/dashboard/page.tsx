@@ -10,6 +10,7 @@ import { AlertFeed, TrendingBar } from '@/components/warroom/AlertFeed';
 import { TacticalRadar } from '@/components/landing/TacticalRadar';
 import { traduirTema } from '@/lib/temesCatala';
 import { Gauge, DotGrid, CornerBrack } from '@/components/landing/primitives';
+import { MapaCatalunyaInteractiu } from '@/components/warroom/MapaCatalunya';
 
 const API = process.env.NEXT_PUBLIC_API_URL || '';
 
@@ -17,6 +18,7 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<any>({});
   const [temas, setTemas] = useState<any[]>([]);
   const [actividad, setActividad] = useState<any[]>([]);
+  const [municipios, setMunicipios] = useState<any[]>([]);
   const [alertas, setAlertas] = useState<any>({ total: 0, nuevas: 0, altas_nuevas: 0 });
   const [loading, setLoading] = useState(true);
 
@@ -26,11 +28,13 @@ export default function DashboardPage() {
       fetch(`${API}/api/dashboard/temas`).then(r => r.json()),
       fetch(`${API}/api/dashboard/actividad-reciente`).then(r => r.json()),
       fetch(`${API}/api/alertas/stats`).then(r => r.json()),
-    ]).then(([s, t, a, al]) => {
+      fetch(`${API}/api/municipios/`).then(r => r.json()),
+    ]).then(([s, t, a, al, m]) => {
       if (s.status === 'fulfilled') setStats(s.value);
       if (t.status === 'fulfilled') setTemas(Array.isArray(t.value) ? t.value : []);
       if (a.status === 'fulfilled') setActividad(Array.isArray(a.value) ? a.value : []);
       if (al.status === 'fulfilled') setAlertas(al.value);
+      if (m.status === 'fulfilled') setMunicipios(Array.isArray(m.value) ? m.value : []);
       setLoading(false);
     });
   }, []);
@@ -64,9 +68,18 @@ export default function DashboardPage() {
         title={<>Visió <em style={{ color: 'var(--fog)', fontWeight: 400 }}>executiva.</em></>}
         info="Visió global del sistema: KPIs principals, alertes crítiques, activitat recent i temes en tendència. Dades actualitzades cada 15 minuts."
         actions={
-          <StatusLine color="var(--wr-phosphor)">
-            Pipeline actiu · {(stats.actas_procesadas || 0).toLocaleString('es-ES')} actes
-          </StatusLine>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <StatusLine color="var(--wr-phosphor)">
+              Pipeline actiu · {(stats.actas_procesadas || 0).toLocaleString('es-ES')} actes
+            </StatusLine>
+            <button onClick={() => window.print()} style={{
+              padding: '6px 12px', background: 'transparent', border: '1px solid var(--line)',
+              color: 'var(--bone)', fontFamily: 'var(--font-mono)', fontSize: 10,
+              letterSpacing: '.08em', textTransform: 'uppercase', cursor: 'pointer',
+            }}>
+              ▸ PDF
+            </button>
+          </div>
         }
       />
 
@@ -88,25 +101,16 @@ export default function DashboardPage() {
         {/* Main grid: Radar + Alertes + Temes */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr 1fr', gap: 12 }}>
 
-          {/* Radar tàctic */}
-          <PanelBox title="Radar territorial" subtitle="947 municipis" tone="phos">
-            <div style={{
-              background: 'radial-gradient(circle at center, #0b1409 0%, #050505 70%)',
-              padding: 12, border: '1px solid var(--line-soft)', position: 'relative',
-            }}>
-              <TacticalRadar />
-              <div style={{
-                fontFamily: 'var(--font-mono)', fontSize: 8, color: 'var(--wr-phosphor-dim)',
-                letterSpacing: '.18em', marginTop: 6, textAlign: 'center', textTransform: 'uppercase',
-              }}>
-                SWEEP · LIVE · 947 TARGETS
-              </div>
-            </div>
-            <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <Gauge label="Cobertura territorial" value={100} tone="phos" />
-              <Gauge label="Actes últims 30d" value={stats.actas_procesadas > 0 ? 78 : 0} tone="amber" />
-            </div>
-          </PanelBox>
+          {/* Mapa Catalunya interactiu */}
+          <MapaCatalunyaInteractiu
+            municipios={municipios.map((m: any) => ({
+              nombre: m.nombre,
+              lat: 0, lng: 0,
+              actas: m.actas_procesadas || 0,
+              alertas: 0,
+              tiene_ac: m.tiene_ac || false,
+            }))}
+          />
 
           {/* Feed alertes / activitat */}
           <PanelBox title="Intel stream" subtitle="últimes 24h" tone="red">

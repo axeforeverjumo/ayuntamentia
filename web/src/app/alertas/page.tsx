@@ -624,8 +624,12 @@ function AlertaCard({
               <span className={cn('w-1 h-1 rounded-full', meta.text.replace('text-', 'bg-'))} />
               {meta.label}
             </span>
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#1c2128] border border-[#30363d] text-[#8b949e]">
-              <Tag className="w-2.5 h-2.5" />
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium"
+              style={alerta.tipo === 'incoherencia_interna'
+                ? { background: 'rgba(161,255,90,.08)', border: '1px solid rgba(161,255,90,.3)', color: 'var(--wr-phosphor)', fontWeight: 700 }
+                : { background: '#1c2128', border: '1px solid #30363d', color: '#8b949e' }
+              }>
+              {alerta.tipo === 'incoherencia_interna' ? '◆ ' : ''}<Tag className="w-2.5 h-2.5" />
               {tipoLabel}
             </span>
             {partido && <PartidoChip partido={partido} size="xs" />}
