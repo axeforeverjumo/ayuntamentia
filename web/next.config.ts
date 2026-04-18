@@ -6,7 +6,7 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   turbopack: {
-    root: process.cwd(),
+    root: __dirname,
   },
 };
 
