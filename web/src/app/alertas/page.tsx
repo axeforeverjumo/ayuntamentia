@@ -166,45 +166,39 @@ export default function AlertasPage() {
   }, [alertas]);
 
   return (
-    <div className="min-h-screen p-6 relative">
-      {/* Ambient glow */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -left-40 w-[400px] h-[400px] rounded-full bg-[#d97706] opacity-[0.04] blur-[120px]" />
-        <div className="absolute -bottom-40 -right-40 w-[400px] h-[400px] rounded-full bg-[#dc2626] opacity-[0.04] blur-[120px]" />
-      </div>
-
-      <div className="relative z-10 space-y-6 max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#d97706]/20 to-[#dc2626]/20 border border-[#d97706]/30 flex items-center justify-center relative">
-              <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-[#d97706]/10 to-[#dc2626]/10 blur-md" />
-              <Bell className="w-4 h-4 text-[#fbbf24] relative" />
+    <div style={{ minHeight: '100vh', background: 'var(--ink)' }}>
+      {/* War Room Header */}
+      <div style={{ padding: '22px 26px 18px', borderBottom: '1px solid var(--line)' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+          <div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--fog)', letterSpacing: '.16em', textTransform: 'uppercase', marginBottom: 8 }}>
+              Operacions / Alertes
             </div>
-            <div>
-              <h1 className="text-lg font-bold text-[#e6edf3] flex items-center gap-2">
-                Alertes polítiques
-                {stats && stats.nuevas > 0 && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#2a1f08] border border-[#d97706]/40 text-[10px] font-semibold uppercase tracking-wider text-[#fbbf24]">
-                    <span className="w-1 h-1 rounded-full bg-[#fbbf24] animate-pulse" />
-                    {stats.nuevas} noves
-                  </span>
-                )}
-              </h1>
-              <p className="text-xs text-[#8b949e] mt-0.5">
-                Incoherències, contradiccions i tendències detectades automàticament
-              </p>
-            </div>
+            <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: 44, lineHeight: 1, margin: 0, letterSpacing: '-.02em', fontWeight: 400, color: 'var(--paper)', display: 'flex', alignItems: 'center', gap: 14 }}>
+              Alertes <em style={{ color: 'var(--wr-red-2)' }}>actives.</em>
+              {stats && stats.nuevas > 0 && (
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '.14em', textTransform: 'uppercase', padding: '4px 10px', background: 'rgba(212,58,31,.08)', border: '1px solid rgba(212,58,31,.3)', color: 'var(--wr-red-2)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <span className="pulse-dot" style={{ width: 6, height: 6, background: 'var(--wr-red-2)', borderRadius: 6 }} />
+                  {stats.nuevas} noves
+                </span>
+              )}
+              {stats && stats.nuevas === 0 && (
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '.14em', textTransform: 'uppercase', padding: '4px 10px', background: 'rgba(139,211,91,.06)', border: '1px solid rgba(139,211,91,.3)', color: 'var(--wr-phosphor)' }}>
+                  ✓ Cap alerta crítica
+                </span>
+              )}
+            </h1>
           </div>
-          <div className="flex items-center gap-2">
+          <div style={{ display: 'flex', gap: 8 }}>
             <button
               onClick={openNewRegla}
-              className={cn(
-                'flex items-center gap-2 px-3 py-2 text-xs rounded-xl',
-                'bg-gradient-to-r from-[#7c3aed] to-[#06b6d4] text-white',
-                'hover:from-[#8b5cf6] hover:to-[#22d3ee]',
-                'shadow-lg shadow-[#7c3aed]/20 transition-all',
-              )}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px',
+                background: 'var(--wr-red)', color: 'var(--paper)', border: '1px solid var(--wr-red)',
+                fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '.1em',
+                textTransform: 'uppercase', fontWeight: 700, cursor: 'pointer',
+                boxShadow: '0 0 20px -6px rgba(255,90,60,.4)',
+              }}
             >
               <Plus className="w-3.5 h-3.5" />
               Nova regla
@@ -212,14 +206,12 @@ export default function AlertasPage() {
             <button
               onClick={loadData}
               disabled={loading}
-              className={cn(
-                'flex items-center gap-2 px-3 py-2 text-xs rounded-xl',
-                'bg-gradient-to-r from-[#1a0b2e]/50 to-[#0a1e26]/50',
-                'border border-[#7c3aed]/30 text-[#c4b5fd]',
-                'hover:border-[#7c3aed]/60 hover:text-[#e6edf3]',
-                'transition-all duration-200',
-                'disabled:opacity-50',
-              )}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px',
+                background: 'transparent', border: '1px solid var(--line)', color: 'var(--bone)',
+                fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '.08em',
+                textTransform: 'uppercase', cursor: 'pointer', opacity: loading ? 0.5 : 1,
+              }}
             >
               <RefreshCw className={cn('w-3.5 h-3.5', loading && 'animate-spin')} />
               Actualitzar

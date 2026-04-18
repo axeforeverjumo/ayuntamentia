@@ -48,11 +48,13 @@ export default function InformesPage() {
   const totalAlertas = alertas.reduce((s: number, a: any) => s + (a.n || 0), 0);
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
+    <div style={{ minHeight: '100vh', background: 'var(--ink)' }}>
+      <div style={{ padding: '22px 26px 18px', borderBottom: '1px solid var(--line)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
-          <h1 className="text-xl font-bold text-[#e6edf3]">Informes</h1>
-          <p className="text-sm text-[#8b949e] mt-0.5">Resums i anàlisis de l&apos;activitat municipal</p>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--fog)', letterSpacing: '.16em', textTransform: 'uppercase', marginBottom: 8 }}>Operacions / Informes</div>
+          <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: 44, lineHeight: 1, margin: 0, letterSpacing: '-.02em', fontWeight: 400, color: 'var(--paper)' }}>
+            Informes <em style={{ color: 'var(--bone)' }}>setmanals.</em>
+          </h1>
         </div>
         <button
           onClick={generateReport}

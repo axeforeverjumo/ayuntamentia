@@ -45,9 +45,15 @@ export default function ParlamentPage() {
   }, []);
 
   return (
-    <div className="p-8 max-w-7xl">
-      <h1 className="text-2xl font-semibold mb-2">Parlament de Catalunya</h1>
-      <p className="text-sm text-[#8b949e] mb-6">Sessions plenàries, comissions i Diari de Sessions (DSPC).</p>
+    <div style={{ minHeight: '100vh', background: 'var(--ink)' }}>
+      <div style={{ padding: '22px 26px 18px', borderBottom: '1px solid var(--line)' }}>
+        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--fog)', letterSpacing: '.16em', textTransform: 'uppercase', marginBottom: 8 }}>Operacions / Parlament</div>
+        <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: 44, lineHeight: 1, margin: 0, letterSpacing: '-.02em', fontWeight: 400, color: 'var(--paper)' }}>
+          Parlament de <em style={{ color: 'var(--wr-amber)' }}>Catalunya.</em>
+        </h1>
+        <p style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--fog)', marginTop: 8 }}>Sessions plenàries, comissions i DSPC</p>
+      </div>
+      <div style={{ padding: '20px 26px', maxWidth: 1100 }}>
 
       <div className="flex gap-4 border-b border-[#30363d] mb-6">
         {TABS.map((t) => (

@@ -103,11 +103,15 @@ export default function SuscripcionesPage() {
   }
 
   return (
-    <div className="p-8 max-w-5xl">
-      <h1 className="text-2xl font-semibold mb-2">Subscripcions a informes temàtics</h1>
-      <p className="text-sm text-[#8b949e] mb-6">
-        Rep un brief automàtic per email o Telegram amb els temes que t&apos;interessen.
-      </p>
+    <div style={{ minHeight: '100vh', background: 'var(--ink)' }}>
+      <div style={{ padding: '22px 26px 18px', borderBottom: '1px solid var(--line)' }}>
+        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--fog)', letterSpacing: '.16em', textTransform: 'uppercase', marginBottom: 8 }}>Operacions / Subscripcions</div>
+        <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: 44, lineHeight: 1, margin: 0, letterSpacing: '-.02em', fontWeight: 400, color: 'var(--paper)' }}>
+          Subscripcions <em style={{ color: 'var(--bone)' }}>actives.</em>
+        </h1>
+        <p style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--fog)', marginTop: 8 }}>Briefs automàtics per email o Telegram</p>
+      </div>
+      <div style={{ padding: '20px 26px', maxWidth: 900 }}>
 
       <div className="bg-[#161b22] border border-[#30363d] rounded-lg p-4 mb-6 flex items-center justify-between">
         <div>

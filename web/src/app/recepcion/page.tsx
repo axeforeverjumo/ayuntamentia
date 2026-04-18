@@ -76,13 +76,15 @@ export default function RecepcionPage() {
   }, [agg]);
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold mb-1">Recepció social</h1>
-        <p className="text-sm text-[#8b949e]">
-          Eco a premsa catalana i xarxes socials dels temes de l&apos;agenda municipal.
-        </p>
+    <div style={{ minHeight: '100vh', background: 'var(--ink)' }}>
+      <div style={{ padding: '22px 26px 18px', borderBottom: '1px solid var(--line)' }}>
+        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--fog)', letterSpacing: '.16em', textTransform: 'uppercase', marginBottom: 8 }}>Operacions / Recepció social</div>
+        <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: 44, lineHeight: 1, margin: 0, letterSpacing: '-.02em', fontWeight: 400, color: 'var(--paper)' }}>
+          Eco <em style={{ color: 'var(--wr-amber)' }}>social.</em>
+        </h1>
+        <p style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--fog)', marginTop: 8 }}>Premsa catalana i xarxes socials · agenda municipal</p>
       </div>
+      <div style={{ padding: '20px 26px', maxWidth: 1100 }}>
 
       {/* KPIs globales */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">

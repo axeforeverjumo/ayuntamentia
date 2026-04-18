@@ -61,16 +61,17 @@ export default function MunicipiosPage() {
   }, [municipios, search]);
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-xl font-bold text-[#e6edf3]">Municipis</h1>
-        <p className="text-sm text-[#8b949e] mt-0.5">
-          {municipios.length > 0
-            ? `${municipios.length} municipis monitorats a Catalunya`
-            : 'Municipis monitorats a Catalunya'}
+    <div style={{ minHeight: '100vh', background: 'var(--ink)' }}>
+      <div style={{ padding: '22px 26px 18px', borderBottom: '1px solid var(--line)' }}>
+        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--fog)', letterSpacing: '.16em', textTransform: 'uppercase', marginBottom: 8 }}>Operacions / Municipis</div>
+        <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: 44, lineHeight: 1, margin: 0, letterSpacing: '-.02em', fontWeight: 400, color: 'var(--paper)' }}>
+          Municipis <em style={{ color: 'var(--wr-phosphor)' }}>monitorats.</em>
+        </h1>
+        <p style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--fog)', marginTop: 8, letterSpacing: '.06em' }}>
+          {municipios.length > 0 ? `${municipios.length} municipis · Catalunya` : 'Catalunya'}
         </p>
       </div>
+      <div style={{ padding: '20px 26px' }} className="space-y-6">
 
       {/* Filters */}
       <div className="flex items-center gap-3 flex-wrap">
