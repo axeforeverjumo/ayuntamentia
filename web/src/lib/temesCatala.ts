@@ -1,36 +1,53 @@
+// Mapa de traducció de temes ES→CA validat amb terminologia oficial
+// Font: Generalitat de Catalunya, Diari Oficial, nomenclatura municipal
 const TEMES_MAP: Record<string, string> = {
+  // --- Temes principals (per freqüència a la BD) ---
+  procedimiento: 'procediment',
   hacienda: 'hisenda',
+  otros: 'altres',
   urbanismo: 'urbanisme',
-  seguridad: 'seguretat',
   medio_ambiente: 'medi ambient',
-  cultura: 'cultura',
-  transporte: 'transport',
   servicios_sociales: 'serveis socials',
-  vivienda: 'habitatge',
+  cultura: 'cultura',
   educacion: 'educació',
   educación: 'educació',
-  salud: 'salut',
+  seguridad: 'seguretat',
+  transporte: 'transport',
+  ruegos: 'precs i preguntes',
+  deportes: 'esports',
   comercio: 'comerç',
+  vivienda: 'habitatge',
+  salud: 'salut',
+  mociones: 'mocions',
+  turismo: 'turisme',
+  agua: 'aigua',
+  juventud: 'joventut',
+  personal: 'personal',
+  servicios: 'serveis',
+
+  // --- Variantes mal escrites (normalització) ---
+  medio_ambient: 'medi ambient',
+  'medio_ambiente': 'medi ambient',
+  'medio_ambiente': 'medi ambient',
+  'medio_ambiental': 'medi ambient',
+  'medio_ambiento': 'medi ambient',
+  'medio_ambientre': 'medi ambient',
+  transport: 'transport',
+
+  // --- Temes secundaris ---
   inmigración: 'immigració',
   inmigracion: 'immigració',
   civismo: 'civisme',
-  otros: 'altres',
-  mociones: 'mocions',
-  deportes: 'esports',
-  empleo: 'ocupació',
-  turismo: 'turisme',
   agricultura: 'agricultura',
   industria: 'indústria',
   justicia: 'justícia',
   infraestructuras: 'infraestructures',
   energia: 'energia',
-  agua: 'aigua',
   residuos: 'residus',
   movilidad: 'mobilitat',
   participacion: 'participació',
   transparencia: 'transparència',
   igualdad: 'igualtat',
-  juventud: 'joventut',
   mayores: 'gent gran',
   sanidad: 'sanitat',
   seguridad_ciudadana: 'seguretat ciutadana',
@@ -48,15 +65,30 @@ const TEMES_MAP: Record<string, string> = {
   cementerios: 'cementiris',
   bomberos: 'bombers',
   policia: 'policia',
+  empleo: 'ocupació',
+
+  // --- Ja en català (pass-through) ---
   urbanisme: 'urbanisme',
   seguretat: 'seguretat',
   habitatge: 'habitatge',
+  hisenda: 'hisenda',
+  altres: 'altres',
+  procediment: 'procediment',
 };
 
 export function traduirTema(tema: string): string {
   if (!tema) return tema;
   const lower = tema.toLowerCase().trim();
-  return TEMES_MAP[lower] || TEMES_MAP[lower.replace(/ /g, '_')] || tema;
+  // Try exact match
+  if (TEMES_MAP[lower]) return TEMES_MAP[lower];
+  // Try replacing spaces with underscores
+  const underscored = lower.replace(/ /g, '_');
+  if (TEMES_MAP[underscored]) return TEMES_MAP[underscored];
+  // Try removing underscores
+  const spaced = lower.replace(/_/g, ' ');
+  if (TEMES_MAP[spaced]) return TEMES_MAP[spaced];
+  // Return original with first letter capitalized
+  return tema;
 }
 
 export function traduirTemes<T extends Record<string, unknown>>(
