@@ -1,7 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
 import { Loader2, RefreshCw, FileText, Users } from 'lucide-react';
 import { PageHeader } from '@/components/warroom/PageHeader';
 import { PanelBox } from '@/components/warroom/PanelBox';
@@ -18,8 +17,7 @@ const TABS = [
 ] as const;
 
 export default function InformesPage() {
-  const params = useSearchParams();
-  const [tab, setTab] = useState(params.get('tab') || 'biblioteca');
+  const [tab, setTab] = useState('biblioteca');
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
