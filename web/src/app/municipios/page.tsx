@@ -182,6 +182,7 @@ export default function MunicipiosPage() {
         </div>
       )}
     </div>
+    </div>
   );
 }
 

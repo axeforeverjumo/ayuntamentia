@@ -250,5 +250,6 @@ export default function RecepcionPage() {
         )}
       </div>
     </div>
+    </div>
   );
 }

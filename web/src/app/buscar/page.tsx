@@ -372,6 +372,7 @@ function BuscarPageInner() {
         </div>
       )}
     </div>
+    </div>
   );
 }
 

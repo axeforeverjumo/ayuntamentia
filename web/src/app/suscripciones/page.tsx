@@ -297,5 +297,6 @@ export default function SuscripcionesPage() {
         </div>
       )}
     </div>
+    </div>
   );
 }

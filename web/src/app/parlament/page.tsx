@@ -118,5 +118,6 @@ export default function ParlamentPage() {
         </table>
       )}
     </div>
+    </div>
   );
 }
