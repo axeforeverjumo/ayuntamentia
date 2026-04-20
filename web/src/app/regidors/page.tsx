@@ -50,7 +50,7 @@ export default function RegidorsPage() {
         <div style={{ display: 'flex', gap: 1, background: 'var(--line)', border: '1px solid var(--line)' }}>
           {(['propis', 'rivals'] as const).map(v => (
             <button key={v} onClick={() => setView(v)} style={{
-              padding: '8px 16px', background: view === v ? 'var(--paper)' : '#050505',
+              padding: '8px 16px', background: view === v ? 'var(--paper)' : 'var(--ink-2)',
               color: view === v ? 'var(--ink)' : 'var(--bone)', border: 'none',
               fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '.1em',
               textTransform: 'uppercase', cursor: 'pointer', fontWeight: view === v ? 700 : 400,
@@ -62,7 +62,7 @@ export default function RegidorsPage() {
 
         <select value={order} onChange={e => setOrder(e.target.value as 'divergencia' | 'alineacion')}
           style={{
-            padding: '8px 14px', background: '#050505', border: '1px solid var(--line)',
+            padding: '8px 14px', background: 'var(--ink-2)', border: '1px solid var(--line)',
             color: 'var(--paper)', fontFamily: 'var(--font-mono)', fontSize: 12,
           }}>
           <option value="divergencia">Més divergents primer</option>
@@ -75,7 +75,7 @@ export default function RegidorsPage() {
             value={partido === 'AC' ? '' : partido}
             onChange={e => setPartido(e.target.value || '')}
             style={{
-              padding: '8px 14px', background: '#050505', border: '1px solid var(--line)',
+              padding: '8px 14px', background: 'var(--ink-2)', border: '1px solid var(--line)',
               color: 'var(--paper)', fontFamily: 'var(--font-mono)', fontSize: 12, width: 240, outline: 'none',
             }}
           />
@@ -112,7 +112,7 @@ export default function RegidorsPage() {
             )}
 
             {/* Table */}
-            <div style={{ border: '1px solid var(--line)', background: '#050505' }}>
+            <div style={{ border: '1px solid var(--line)', background: 'var(--ink-2)' }}>
               <div style={{
                 display: 'grid', gridTemplateColumns: '1.2fr 80px 140px 70px 80px 120px',
                 padding: '10px 14px', borderBottom: '1px solid var(--line)',

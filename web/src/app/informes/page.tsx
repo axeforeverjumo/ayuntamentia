@@ -66,7 +66,7 @@ export default function InformesPage() {
       <div style={{ display: 'flex', borderBottom: '1px solid var(--line)' }}>
         {TABS.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)} style={{
-            flex: 1, padding: '10px 16px', background: tab === t.id ? '#0e0e0e' : 'transparent',
+            flex: 1, padding: '10px 16px', background: tab === t.id ? 'var(--ink-3)' : 'transparent',
             border: 'none', borderBottom: tab === t.id ? `2px solid ${t.color}` : '2px solid transparent',
             borderRight: '1px solid var(--line)',
             color: tab === t.id ? 'var(--paper)' : 'var(--fog)',

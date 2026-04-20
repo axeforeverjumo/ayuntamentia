@@ -359,7 +359,7 @@ function BuscarPageInner() {
       {/* Initial empty state with suggestions */}
       {!isPending && !hasSearched && (
         <div style={{ padding: '40px 0', textAlign: 'center' }}>
-          <div style={{ width: 64, height: 64, margin: '0 auto 16px', border: '1px solid var(--line)', display: 'grid', placeItems: 'center', background: '#080808' }}>
+          <div style={{ width: 64, height: 64, margin: '0 auto 16px', border: '1px solid var(--line)', display: 'grid', placeItems: 'center', background: 'var(--ink-2)' }}>
             <Search className="w-7 h-7" style={{ color: 'var(--bone)' }} />
           </div>
           <div style={{ fontFamily: 'var(--font-serif)', fontSize: 28, color: 'var(--paper)', marginBottom: 8 }}>

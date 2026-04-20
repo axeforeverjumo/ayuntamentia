@@ -185,7 +185,7 @@ export default function ReputacioPage() {
       <div style={{ display: 'flex', borderBottom: '1px solid var(--line)' }}>
         {TABS.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)} style={{
-            flex: 1, padding: '10px 16px', background: tab === t.id ? '#0e0e0e' : 'transparent',
+            flex: 1, padding: '10px 16px', background: tab === t.id ? 'var(--ink-3)' : 'transparent',
             border: 'none', borderBottom: tab === t.id ? `2px solid ${t.color}` : '2px solid transparent',
             borderRight: '1px solid var(--line)',
             color: tab === t.id ? 'var(--paper)' : 'var(--fog)',
@@ -221,7 +221,7 @@ export default function ReputacioPage() {
             </KPIGrid>
 
             {/* Sentiment meter global */}
-            <div style={{ marginTop: 16, padding: '18px 20px', background: '#080808', border: '1px solid var(--line)' }}>
+            <div style={{ marginTop: 16, padding: '18px 20px', background: 'var(--ink-2)', border: '1px solid var(--line)' }}>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--fog)', letterSpacing: '.14em', textTransform: 'uppercase', marginBottom: 10 }}>
                 Balanç de sentiment global · 30 dies
               </div>
@@ -287,7 +287,7 @@ export default function ReputacioPage() {
             {detall ? (
               <>
                 {/* Sentiment summary */}
-                <div style={{ marginBottom: 16, padding: '20px', background: '#080808', border: '1px solid var(--line)', position: 'relative' }}>
+                <div style={{ marginBottom: 16, padding: '20px', background: 'var(--ink-2)', border: '1px solid var(--line)', position: 'relative' }}>
                   <CornerBrack />
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 24 }}>
                     <div>
@@ -310,7 +310,7 @@ export default function ReputacioPage() {
                           { label: 'Neutres', value: detall.neutres, color: 'var(--fog)' },
                           { label: 'Negatius', value: detall.negatius, color: 'var(--wr-red-2)' },
                         ].map((k, i) => (
-                          <div key={i} style={{ background: '#050505', padding: '12px 14px', textAlign: 'center' }}>
+                          <div key={i} style={{ background: 'var(--ink-2)', padding: '12px 14px', textAlign: 'center' }}>
                             <div style={{ fontFamily: 'var(--font-serif)', fontSize: 32, color: k.color, lineHeight: 1 }}>{k.value}</div>
                             <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--fog)', letterSpacing: '.1em', textTransform: 'uppercase', marginTop: 4 }}>{k.label}</div>
                           </div>
@@ -344,7 +344,7 @@ export default function ReputacioPage() {
           <div>
             {/* Hero */}
             <div style={{
-              background: '#050505', border: '1px solid var(--line)', padding: '32px 28px',
+              background: 'var(--ink-2)', border: '1px solid var(--line)', padding: '32px 28px',
               position: 'relative', overflow: 'hidden', marginBottom: 16,
             }}>
               <CornerBrack />
@@ -420,7 +420,7 @@ export default function ReputacioPage() {
               </div>
             ) : (
               <div style={{
-                textAlign: 'center', padding: '60px 0', background: '#050505', border: '1px solid var(--line)',
+                textAlign: 'center', padding: '60px 0', background: 'var(--ink-2)', border: '1px solid var(--line)',
               }}>
                 <div className="pulse-dot" style={{ width: 10, height: 10, borderRadius: 10, background: 'var(--wr-phosphor)', margin: '0 auto 14px' }} />
                 <div style={{ fontFamily: 'var(--font-serif)', fontSize: 28, color: 'var(--paper)', marginBottom: 8 }}>

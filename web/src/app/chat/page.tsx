@@ -160,7 +160,7 @@ function ChatPageInner() {
     <div style={{ display: 'flex', height: '100vh', background: 'var(--ink)' }}>
       {/* Conversation sidebar */}
       <div style={{
-        width: 220, borderRight: '1px solid var(--line)', background: '#050505',
+        width: 220, borderRight: '1px solid var(--line)', background: 'var(--ink-2)',
         display: 'flex', flexDirection: 'column',
       }}>
         <div style={{ padding: '10px' }}>

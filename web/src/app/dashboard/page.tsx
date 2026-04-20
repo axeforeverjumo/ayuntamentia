@@ -161,7 +161,7 @@ export default function DashboardPage() {
 
           {/* War Room quick access */}
           <div style={{
-            background: '#050505', border: '1px solid var(--line)',
+            background: 'var(--ink-2)', border: '1px solid var(--line)',
             padding: '28px 24px', position: 'relative', overflow: 'hidden',
           }}>
             <CornerBrack />

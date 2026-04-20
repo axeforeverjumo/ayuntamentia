@@ -59,7 +59,7 @@ export default function IntelPage() {
       <div style={{ display: 'flex', borderBottom: '1px solid var(--line)' }}>
         {TABS.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)} style={{
-            flex: 1, padding: '10px 16px', background: tab === t.id ? '#0e0e0e' : 'transparent',
+            flex: 1, padding: '10px 16px', background: tab === t.id ? 'var(--ink-3)' : 'transparent',
             border: 'none', borderBottom: tab === t.id ? `2px solid ${t.color}` : '2px solid transparent',
             borderRight: '1px solid var(--line)',
             color: tab === t.id ? 'var(--paper)' : 'var(--fog)',
@@ -79,14 +79,14 @@ export default function IntelPage() {
               <input placeholder="Filtra per partit (ex: AC, PSC)"
                 value={partido} onChange={(e) => setPartido(e.target.value)}
                 style={{
-                  padding: '8px 14px', background: '#050505', border: '1px solid var(--line)',
+                  padding: '8px 14px', background: 'var(--ink-2)', border: '1px solid var(--line)',
                   color: 'var(--paper)', fontFamily: 'var(--font-mono)', fontSize: 12, outline: 'none',
                   width: 260,
                 }}
               />
               <select value={order} onChange={(e) => setOrder(e.target.value as 'divergencia' | 'alineacion')}
                 style={{
-                  padding: '8px 14px', background: '#050505', border: '1px solid var(--line)',
+                  padding: '8px 14px', background: 'var(--ink-2)', border: '1px solid var(--line)',
                   color: 'var(--paper)', fontFamily: 'var(--font-mono)', fontSize: 12,
                 }}>
                 <option value="divergencia">Més divergents primer</option>
@@ -94,7 +94,7 @@ export default function IntelPage() {
               </select>
             </div>
 
-            <div style={{ border: '1px solid var(--line)', background: '#050505' }}>
+            <div style={{ border: '1px solid var(--line)', background: 'var(--ink-2)' }}>
               <div style={{
                 display: 'grid', gridTemplateColumns: '1fr 80px 120px 70px 80px 100px',
                 padding: '10px 14px', borderBottom: '1px solid var(--line)',
@@ -177,7 +177,7 @@ export default function IntelPage() {
 
             <div style={{ gridColumn: '1 / -1' }}>
               <PanelBox title="Evolució completa" subtitle={`${tend.length} temes`} tone="amber">
-                <div style={{ border: '1px solid var(--line)', background: '#050505' }}>
+                <div style={{ border: '1px solid var(--line)', background: 'var(--ink-2)' }}>
                   <div style={{
                     display: 'grid', gridTemplateColumns: '1fr 80px 80px 80px 100px',
                     padding: '10px 14px', borderBottom: '1px solid var(--line)',
@@ -233,7 +233,7 @@ export default function IntelPage() {
             {prom.length > 0 ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {prom.map((p, i) => (
-                  <div key={i} style={{ background: '#080808', border: '1px solid var(--line)', padding: '18px 20px' }}>
+                  <div key={i} style={{ background: 'var(--ink-2)', border: '1px solid var(--line)', padding: '18px 20px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
                       <span style={{ fontFamily: 'var(--font-serif)', fontSize: 22, color: 'var(--paper)' }}>{p.tema}</span>
                       <StatusBadge tone="red">{p.rechazadas} rebutjades</StatusBadge>

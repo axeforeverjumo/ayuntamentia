@@ -64,7 +64,7 @@ function LoginInner() {
 
         {/* Command strip */}
         <div style={{
-          padding: '8px 24px', borderBottom: '1px solid var(--line)', background: '#050505',
+          padding: '8px 24px', borderBottom: '1px solid var(--line)', background: 'var(--ink-2)',
           fontFamily: 'var(--font-mono)', fontSize: 9.5, letterSpacing: '.14em',
           textTransform: 'uppercase', color: 'var(--fog)', display: 'flex', gap: 20,
         }}>
@@ -100,7 +100,7 @@ function LoginInner() {
               { label: 'Actes processades', v: '82.352', tone: 'var(--wr-phosphor)' },
               { label: 'Threat level', v: 'DEFCON 2', tone: 'var(--wr-red-2)' },
             ].map((k, i) => (
-              <div key={i} style={{ background: '#050505', padding: '12px 14px' }}>
+              <div key={i} style={{ background: 'var(--ink-2)', padding: '12px 14px' }}>
                 <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--fog)', letterSpacing: '.14em', textTransform: 'uppercase' }}>{k.label}</div>
                 <div style={{ fontFamily: 'var(--font-serif)', fontSize: 24, color: k.tone, lineHeight: 1.1, marginTop: 4 }}>{k.v}</div>
               </div>
@@ -110,12 +110,12 @@ function LoginInner() {
 
         {/* Bottom radar strip */}
         <div style={{
-          borderTop: '1px solid var(--line)', background: '#050505',
+          borderTop: '1px solid var(--line)', background: 'var(--ink-2)',
           display: 'grid', gridTemplateColumns: '180px 1fr', height: 220,
         }}>
           <div style={{
             borderRight: '1px solid var(--line)', padding: 12,
-            background: 'radial-gradient(circle at center, #0b1409 0%, #050505 70%)',
+            background: 'radial-gradient(circle at center, #0b1409 0%, var(--ink-2) 70%)',
           }}>
             <TacticalRadar />
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: 8, color: 'var(--wr-phosphor-dim)', letterSpacing: '.18em', marginTop: 4, textAlign: 'center', textTransform: 'uppercase' }}>
@@ -134,7 +134,7 @@ function LoginInner() {
       {/* Right: login form */}
       <div style={{
         width: 480, display: 'flex', flexDirection: 'column',
-        background: '#0a0a0a', position: 'relative',
+        background: 'var(--ink-2)', position: 'relative',
       }}>
         {/* Top classification */}
         <div style={{
@@ -180,7 +180,7 @@ function LoginInner() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 style={{
-                  width: '100%', padding: '14px 16px', background: '#050505',
+                  width: '100%', padding: '14px 16px', background: 'var(--ink-2)',
                   border: '1px solid var(--line)', color: 'var(--paper)',
                   fontFamily: 'var(--font-mono)', fontSize: 13, outline: 'none',
                 }}
@@ -199,7 +199,7 @@ function LoginInner() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   style={{
-                    width: '100%', padding: '14px 16px', background: '#050505',
+                    width: '100%', padding: '14px 16px', background: 'var(--ink-2)',
                     border: '1px solid var(--line)', color: 'var(--paper)',
                     fontFamily: 'var(--font-mono)', fontSize: 13, outline: 'none',
                   }}
@@ -252,7 +252,7 @@ function LoginInner() {
 
         {/* Bottom security badges */}
         <div style={{
-          padding: '14px 24px', borderTop: '1px solid var(--line)', background: '#050505',
+          padding: '14px 24px', borderTop: '1px solid var(--line)', background: 'var(--ink-2)',
           fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--fog)',
           letterSpacing: '.14em', textTransform: 'uppercase',
           display: 'flex', justifyContent: 'space-between',

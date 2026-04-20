@@ -58,7 +58,7 @@ export default function ParlamentPage() {
       <div style={{ display: 'flex', borderBottom: '1px solid var(--line)', marginBottom: 20 }}>
         {TABS.map((t) => (
           <button key={t} onClick={() => setTab(t)} style={{
-            padding: '10px 16px', background: tab === t ? '#0e0e0e' : 'transparent',
+            padding: '10px 16px', background: tab === t ? 'var(--ink-3)' : 'transparent',
             border: 'none', borderBottom: tab === t ? '2px solid var(--wr-amber)' : '2px solid transparent',
             borderRight: '1px solid var(--line)',
             color: tab === t ? 'var(--paper)' : 'var(--fog)',
@@ -72,7 +72,7 @@ export default function ParlamentPage() {
 
       {tab === 'Sessions' && (
         sesiones.length > 0 ? (
-          <div style={{ border: '1px solid var(--line)', background: '#050505' }}>
+          <div style={{ border: '1px solid var(--line)', background: 'var(--ink-2)' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '120px 100px 1fr 100px', padding: '10px 14px', borderBottom: '1px solid var(--line)', fontFamily: 'var(--font-mono)', fontSize: 9.5, color: 'var(--fog)', letterSpacing: '.14em', textTransform: 'uppercase' }}>
               <span>Data</span><span>Tipus</span><span>Títol</span><span>Estat</span>
             </div>
@@ -87,7 +87,7 @@ export default function ParlamentPage() {
           </div>
         ) : (
           <div style={{ textAlign: 'center', padding: '80px 0' }}>
-            <div style={{ width: 80, height: 80, margin: '0 auto 20px', border: '1px solid var(--line)', display: 'grid', placeItems: 'center', background: '#080808' }}>
+            <div style={{ width: 80, height: 80, margin: '0 auto 20px', border: '1px solid var(--line)', display: 'grid', placeItems: 'center', background: 'var(--ink-2)' }}>
               <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--wr-amber)" strokeWidth="1.2">
                 <path d="M3 21V5l9-3 9 3v16M3 21h18M8 9h2M14 9h2M8 13h2M14 13h2M8 17h2M14 17h2"/>
               </svg>

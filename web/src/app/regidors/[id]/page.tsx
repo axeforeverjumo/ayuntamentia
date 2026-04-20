@@ -130,7 +130,7 @@ export default function RegidorPerfilPage() {
         {/* Historial votacions */}
         <PanelBox title="Historial de votacions" subtitle={`${votacions.length} registrades`} tone="default">
           {votacions.length > 0 ? (
-            <div style={{ border: '1px solid var(--line)', background: '#050505' }}>
+            <div style={{ border: '1px solid var(--line)', background: 'var(--ink-2)' }}>
               <div style={{
                 display: 'grid', gridTemplateColumns: '100px 1fr 100px 80px',
                 padding: '10px 14px', borderBottom: '1px solid var(--line)',
