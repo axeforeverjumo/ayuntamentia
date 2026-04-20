@@ -21,8 +21,13 @@ export default function RegidorsPage() {
   const [order, setOrder] = useState<'divergencia' | 'alineacion'>('divergencia');
 
   useEffect(() => {
-    const q = new URLSearchParams({ order, limit: '100' });
-    if (view === 'propis') q.set('partido', partido);
+    setLoading(true);
+    const q = new URLSearchParams({ order, limit: '200' });
+    if (view === 'propis') {
+      q.set('partido', 'AC');
+    } else if (partido && partido !== 'AC') {
+      q.set('partido', partido);
+    }
     fetch(`${API}/api/intel/ranking-concejales?${q}`)
       .then(r => r.ok ? r.json() : [])
       .then(d => { setRegidors(Array.isArray(d) ? d : []); setLoading(false); })
@@ -68,7 +73,7 @@ export default function RegidorsPage() {
           <input
             placeholder="Filtrar per partit (PP, PSC, ERC...)"
             value={partido === 'AC' ? '' : partido}
-            onChange={e => setPartido(e.target.value || 'AC')}
+            onChange={e => setPartido(e.target.value || '')}
             style={{
               padding: '8px 14px', background: '#050505', border: '1px solid var(--line)',
               color: 'var(--paper)', fontFamily: 'var(--font-mono)', fontSize: 12, width: 240, outline: 'none',

@@ -16,10 +16,10 @@ def ranking(
     order: str = Query("divergencia", regex="^(divergencia|alineacion)$"),
     limit: int = Query(50, le=200),
 ):
-    where, params = ["votos_total >= 5"], []
+    where, params = ["votos_total >= 1"], []
     if partido:
-        where.append("partido = %s")
-        params.append(partido)
+        where.append("(partido ILIKE %s OR partido ILIKE %s)")
+        params.extend([f"%{partido}%", f"{partido}-%"])
     if municipio:
         where.append("LOWER(municipio) ILIKE LOWER(%s)")
         params.append(f"%{municipio}%")
