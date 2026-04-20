@@ -75,6 +75,7 @@ export default function AlertasPage() {
   const [reglas, setReglas] = useState<AlertaRegla[]>([]);
   const [tab, setTab] = useState<'alertas' | 'reglas'>('alertas');
   const [filter, setFilter] = useState<AlertSeverity | 'totes'>('totes');
+  const [tipoFilter, setTipoFilter] = useState<string>('tots');
   const [estadoFilter, setEstadoFilter] = useState<'nueva' | 'todas'>('nueva');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -155,8 +156,11 @@ export default function AlertasPage() {
   };
 
   const filteredAlertas = useMemo(
-    () => alertas.filter((a) => filter === 'totes' || a.severidad === filter),
-    [alertas, filter],
+    () => alertas.filter((a) =>
+      (filter === 'totes' || a.severidad === filter) &&
+      (tipoFilter === 'tots' || a.tipo === tipoFilter)
+    ),
+    [alertas, filter, tipoFilter],
   );
 
   const counts = useMemo(() => {
@@ -278,7 +282,7 @@ export default function AlertasPage() {
         )}
 
         {tab === 'alertas' && (<>
-        {/* Filters */}
+        {/* Filters row 1: severity + estado */}
         <div className="flex items-center gap-3 flex-wrap">
           <Filter className="w-4 h-4 text-[#8b949e]" />
           <div className="flex bg-gradient-to-r from-[#0f141b] to-[#161b22] border border-[#21262d] rounded-xl p-1 gap-1">
@@ -326,6 +330,36 @@ export default function AlertasPage() {
               Totes
             </button>
           </div>
+        </div>
+
+        {/* Filters row 2: tipus */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--fog)', letterSpacing: '.14em', textTransform: 'uppercase' }}>Tipus</span>
+          {([
+            { value: 'tots', label: 'Tots', color: 'var(--bone)' },
+            { value: 'incoherencia_interna', label: 'Incoherència interna', color: 'var(--wr-phosphor)' },
+            { value: 'contradiccion_rival', label: 'Contradicció rival', color: 'var(--wr-red-2)' },
+            { value: 'tendencia_emergente', label: 'Tendència emergent', color: 'var(--wr-amber)' },
+            { value: 'voto_polemic', label: 'Vot polèmic', color: 'var(--bone)' },
+          ] as const).map(opt => (
+            <button
+              key={opt.value}
+              onClick={() => setTipoFilter(opt.value)}
+              style={{
+                padding: '4px 10px',
+                background: tipoFilter === opt.value
+                  ? `color-mix(in srgb, ${opt.color} 14%, transparent)`
+                  : 'transparent',
+                border: `1px solid ${tipoFilter === opt.value ? opt.color : 'var(--line)'}`,
+                color: tipoFilter === opt.value ? opt.color : 'var(--fog)',
+                fontFamily: 'var(--font-mono)', fontSize: 9.5,
+                letterSpacing: '.1em', textTransform: 'uppercase',
+                cursor: 'pointer', transition: 'all .15s',
+              }}
+            >
+              {opt.label}
+            </button>
+          ))}
         </div>
 
         {/* Error state */}

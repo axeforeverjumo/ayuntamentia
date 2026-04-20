@@ -8,6 +8,7 @@ import {
   XCircle, MinusCircle, Calendar, MapPin, AlertCircle, Loader2,
 } from "lucide-react";
 import { formatDate, cn } from "@/lib/utils";
+import { ContextualChat } from "@/components/ui/ContextualChat";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "";
 
@@ -233,6 +234,13 @@ export default function ActaDetailPage() {
           </div>
         </div>
       </div>
+
+      <ContextualChat
+        contextType="acta"
+        contextId={String(id)}
+        contextLabel={`${acta.municipio || acta.nom_ens} · ${acta.fecha}`}
+        contextPrompt={`CONTEXTO: Respon NOMÉS sobre l'acta del ple de ${acta.municipio || acta.nom_ens} del ${acta.fecha}, amb ${puntos.length} punts. ID acta: ${id}. `}
+      />
     </div>
   );
 }
