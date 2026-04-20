@@ -32,7 +32,26 @@ def ranking(
     with get_db() as conn:
         cur = conn.cursor(cursor_factory=RealDictCursor)
         cur.execute(sql, params)
-        return cur.fetchall()
+        rows = cur.fetchall()
+
+        # Fallback: if partido filter returned 0 from ranking view,
+        # return cargos_electos directly (for parties without individual vote tracking)
+        if not rows and partido:
+            cur.execute("""
+                SELECT DISTINCT ON (c.nombre) c.nombre, c.cargo,
+                       c.partido, m.nombre AS municipio, m.comarca,
+                       0 AS votos_total, 0 AS coincidentes, 0 AS divergencias,
+                       NULL::numeric AS pct_alineacion
+                FROM cargos_electos c
+                JOIN municipios m ON m.id = c.municipio_id
+                WHERE c.activo = true
+                  AND (c.partido ILIKE %s OR c.partido ILIKE %s)
+                ORDER BY c.nombre, c.id DESC
+                LIMIT %s
+            """, (f"%{partido}%", f"{partido}-%", limit))
+            rows = cur.fetchall()
+
+        return rows
 
 
 @router.get("/tendencias")
