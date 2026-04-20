@@ -158,7 +158,7 @@ export default function ReputacioPage() {
 
   const TABS = [
     { id: 'overview' as const, label: 'Panorama general', color: 'var(--wr-phosphor)' },
-    { id: 'detall' as const, label: `Detall ${partit}`, color: 'var(--wr-amber)' },
+    { id: 'detall' as const, label: 'Detall partits', color: 'var(--wr-amber)' },
     { id: 'neteja' as const, label: 'Neteja reputació', color: 'var(--wr-red-2)' },
   ];
 
@@ -207,18 +207,20 @@ export default function ReputacioPage() {
         ))}
       </div>
 
-      {/* Partit selector */}
-      <div style={{ padding: '14px 26px', borderBottom: '1px solid var(--line)', display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-        {PARTITS.map(p => (
-          <button key={p} onClick={() => setPartit(p)} style={{
-            padding: '6px 14px', background: partit === p ? PARTIT_COLORS[p] || 'var(--paper)' : 'transparent',
-            color: partit === p ? '#fff' : 'var(--bone)',
-            border: `1px solid ${partit === p ? PARTIT_COLORS[p] || 'var(--paper)' : 'var(--line)'}`,
-            fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '.08em',
-            textTransform: 'uppercase', cursor: 'pointer', fontWeight: partit === p ? 700 : 400,
-          }}>{p}</button>
-        ))}
-      </div>
+      {/* Partit selector — only in detall/neteja tabs */}
+      {tab !== 'overview' && (
+        <div style={{ padding: '14px 26px', borderBottom: '1px solid var(--line)', display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+          {PARTITS.map(p => (
+            <button key={p} onClick={() => setPartit(p)} style={{
+              padding: '6px 14px', background: partit === p ? PARTIT_COLORS[p] || 'var(--paper)' : 'transparent',
+              color: partit === p ? '#fff' : 'var(--bone)',
+              border: `1px solid ${partit === p ? PARTIT_COLORS[p] || 'var(--paper)' : 'var(--line)'}`,
+              fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '.08em',
+              textTransform: 'uppercase', cursor: 'pointer', fontWeight: partit === p ? 700 : 400,
+            }}>{p}</button>
+          ))}
+        </div>
+      )}
 
       <div style={{ padding: '20px 26px' }}>
 
