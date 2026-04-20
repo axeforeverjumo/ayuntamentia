@@ -71,6 +71,6 @@ def get_actividad_reciente():
             LEFT JOIN alertas al ON al.punto_id = p.id AND al.estado = 'nueva'
             WHERE a.status = 'structured'
             GROUP BY a.id, a.fecha, a.tipo, m.nombre, a.quality_score
-            ORDER BY a.structured_at DESC LIMIT 20
+            ORDER BY a.fecha DESC LIMIT 20
         """)
         return cur.fetchall()

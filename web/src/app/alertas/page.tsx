@@ -4,7 +4,7 @@ import { useState, useEffect, useTransition, useMemo } from 'react';
 import {
   Bell, AlertTriangle, AlertCircle, Info, CheckCircle2,
   Filter, Loader2, RefreshCw, Clock, X, Eye, Sparkles,
-  TrendingUp, Building2, Tag, Plus, Zap, Edit2, Trash2,
+  TrendingUp, Building2, Tag, Plus, Zap, Edit2, Trash2, Share2,
 } from 'lucide-react';
 import { apiClient } from '@/lib/ApiClient';
 import { PartidoChip } from '@/components/ui/PartidoChip';
@@ -633,6 +633,7 @@ function AlertaCard({
   onResolve: (id: number) => void;
   isPending: boolean;
 }) {
+  const [copied, setCopied] = useState(false);
   const meta = SEVERITY_META[alerta.severidad];
   const SeverityIcon = meta.icon;
   const partido = extractPartido(alerta.titulo);
@@ -722,6 +723,19 @@ function AlertaCard({
 
         {!isResolved && (
           <div className="flex-shrink-0 flex flex-col gap-1.5">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                const url = `${window.location.origin}/alertas?id=${alerta.id}`;
+                navigator.clipboard.writeText(url);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+              }}
+              title="Compartir alerta"
+              className="w-8 h-8 rounded-lg flex items-center justify-center bg-[#0f141b] border border-[#21262d] text-[#8b949e] hover:border-[#7c3aed]/50 hover:text-[#c4b5fd] transition-colors"
+            >
+              {copied ? <span style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--wr-phosphor)' }}>✓</span> : <Share2 className="w-3.5 h-3.5" />}
+            </button>
             {alerta.estado === 'nueva' && (
               <button
                 onClick={(e) => { e.stopPropagation(); onMarkViewed(alerta.id); }}
