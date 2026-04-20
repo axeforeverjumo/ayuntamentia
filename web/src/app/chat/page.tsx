@@ -2,12 +2,15 @@
 
 import { useState, useRef, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Loader2, Trash2, Plus } from 'lucide-react';
+import Link from 'next/link';
+import { Loader2, Trash2, Plus, BookmarkPlus } from 'lucide-react';
 import { ChatMessage } from '@/components/ui/ChatMessage';
 import { ProgressiveLoader } from '@/components/ui/ProgressiveLoader';
+import { SaveToWorkspaceModal } from '@/components/ui/SaveToWorkspaceModal';
 import { apiClient } from '@/lib/ApiClient';
 import { CLIENT_CONFIG } from '@/lib/clientConfig';
 import type { ChatMessage as ChatMessageType, ChatResponse } from '@/lib/types';
+import type { WorkspaceMode } from '@/lib/workspaceStorage';
 import { PageHeader } from '@/components/warroom/PageHeader';
 import { StatusBadge, LiveDot, StatusLine } from '@/components/warroom/StatusBadge';
 import { Gauge, DotGrid, CornerBrack } from '@/components/landing/primitives';
@@ -61,6 +64,8 @@ function ChatPageInner() {
   const [mode, setMode] = useState('monitor');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [saveTarget, setSaveTarget] = useState<{ message: ChatMessageType; query: string } | null>(null);
+  const [savedToast, setSavedToast] = useState<string | null>(null);
   const autoFiredRef = useRef(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -211,7 +216,7 @@ function ChatPageInner() {
         />
 
         {/* Mode selector */}
-        <div style={{ padding: '14px 26px', borderBottom: '1px solid var(--line)', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        <div style={{ padding: '14px 26px', borderBottom: '1px solid var(--line)', display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
           {MODES.map(m => {
             const active = mode === m.id;
             return (
@@ -227,6 +232,14 @@ function ChatPageInner() {
               </button>
             );
           })}
+          <Link href="/chat/workspace" style={{
+            marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6,
+            padding: '7px 11px', border: '1px solid var(--line)', color: 'var(--bone)',
+            fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '.06em',
+            textTransform: 'uppercase', textDecoration: 'none',
+          }}>
+            📋 Workspace
+          </Link>
         </div>
 
         {/* Messages or empty state */}
@@ -267,8 +280,25 @@ function ChatPageInner() {
             </div>
           ) : (
             <div style={{ maxWidth: 800, margin: '0 auto' }}>
-              {messages.map(message => (
-                <ChatMessage key={message.id} message={message} onFollowUp={sendMessage} followUpDisabled={isLoading} />
+              {messages.map((message, idx) => (
+                <div key={message.id}>
+                  <ChatMessage message={message} onFollowUp={sendMessage} followUpDisabled={isLoading} />
+                  {message.role === 'assistant' && (
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8, marginTop: -8 }}>
+                      <button
+                        onClick={() => setSaveTarget({ message, query: messages[idx - 1]?.content || '' })}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px',
+                          background: 'transparent', border: '1px solid var(--line)', color: 'var(--fog)',
+                          fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '.1em',
+                          textTransform: 'uppercase', cursor: 'pointer',
+                        }}
+                      >
+                        <BookmarkPlus style={{ width: 11, height: 11 }} /> Guardar al workspace
+                      </button>
+                    </div>
+                  )}
+                </div>
               ))}
               {isLoading && <ProgressiveLoader />}
               {error && (
@@ -332,6 +362,38 @@ function ChatPageInner() {
           </div>
         </div>
       </div>
+
+      {/* Save to workspace modal */}
+      {saveTarget && (
+        <SaveToWorkspaceModal
+          open
+          defaultMode={mode}
+          content={saveTarget.message.content}
+          query={saveTarget.query}
+          sources={(saveTarget.message.sources || []).map((s: any) => s.url || s.titulo || String(s))}
+          onClose={() => setSaveTarget(null)}
+          onSaved={(savedMode: WorkspaceMode) => {
+            setSaveTarget(null);
+            const label = MODES.find(m => m.id === savedMode)?.label || savedMode;
+            setSavedToast(`Guardat al workspace de ${label}`);
+            setTimeout(() => setSavedToast(null), 3000);
+          }}
+        />
+      )}
+
+      {/* Toast */}
+      {savedToast && (
+        <div style={{
+          position: 'fixed', bottom: 24, left: 280, zIndex: 100,
+          padding: '10px 16px', background: 'var(--ink-2)', border: '1px solid var(--line)',
+          borderLeft: '3px solid var(--wr-phosphor)',
+          fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--wr-phosphor)',
+          letterSpacing: '.1em', textTransform: 'uppercase',
+          boxShadow: '0 8px 24px rgba(0,0,0,.4)',
+        }}>
+          ✓ {savedToast}
+        </div>
+      )}
 
       {/* Right panel: sources + confidence */}
       <aside className="thin-scroll" style={{
