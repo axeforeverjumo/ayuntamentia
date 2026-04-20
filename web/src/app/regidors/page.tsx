@@ -1,8 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { PageHeader } from '@/components/warroom/PageHeader';
-import { HelpBanner } from '@/components/warroom/HelpBanner';
 import { PanelBox } from '@/components/warroom/PanelBox';
 import { StatusLine, StatusBadge } from '@/components/warroom/StatusBadge';
 import { Gauge } from '@/components/landing/primitives';
@@ -18,15 +17,17 @@ export default function RegidorsPage() {
   const [regidors, setRegidors] = useState<Regidor[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<'propis' | 'rivals'>('propis');
-  const [partido, setPartido] = useState('AC');
+  const [partido, setPartido] = useState('');
   const [order, setOrder] = useState<'divergencia' | 'alineacion'>('divergencia');
+  const [filterMuni, setFilterMuni] = useState('');
+  const [rangoAlin, setRangoAlin] = useState('tots');
 
   useEffect(() => {
     setLoading(true);
     const q = new URLSearchParams({ order, limit: '200' });
     if (view === 'propis') {
       q.set('partido', 'AC');
-    } else if (partido && partido !== 'AC') {
+    } else if (partido) {
       q.set('partido', partido);
     }
     fetch(`${API}/api/intel/ranking-concejales?${q}`)
@@ -35,8 +36,18 @@ export default function RegidorsPage() {
       .catch(() => setLoading(false));
   }, [view, partido, order]);
 
-  const danger = regidors.filter(r => r.pct_alineacion < 70);
-  const aligned = regidors.filter(r => r.pct_alineacion >= 70);
+  const filtered = useMemo(() => {
+    return regidors.filter(r => {
+      if (filterMuni && !r.municipio.toLowerCase().includes(filterMuni.toLowerCase())) return false;
+      if (rangoAlin === 'critic' && r.pct_alineacion >= 50) return false;
+      if (rangoAlin === 'preocupant' && (r.pct_alineacion < 50 || r.pct_alineacion >= 70)) return false;
+      if (rangoAlin === 'acceptable' && (r.pct_alineacion < 70 || r.pct_alineacion >= 90)) return false;
+      if (rangoAlin === 'excel' && r.pct_alineacion < 90) return false;
+      return true;
+    });
+  }, [regidors, filterMuni, rangoAlin]);
+
+  const danger = filtered.filter(r => r.pct_alineacion < 60);
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--ink)' }}>
@@ -44,24 +55,23 @@ export default function RegidorsPage() {
         crumb="Operacions / Regidors"
         title={<>Regidors <em style={{ color: view === 'propis' ? 'var(--wr-phosphor)' : 'var(--wr-red-2)', fontWeight: 400 }}>{view === 'propis' ? 'propis.' : 'rivals.'}</em></>}
         actions={<StatusLine color="var(--wr-phosphor)">{regidors.length} regidors carregats</StatusLine>}
-      />
-      <HelpBanner
-        pageKey="regidors"
-        title="Regidors i càrrecs electes"
-        description="Perfils de tots els regidors detectats a les actes. Per defecte mostra els d'Aliança Catalana (Propis). Canvia a Rivals per analitzar l'alineació dels regidors d'altres partits — els més divergents són els més vulnerables."
-        dataSource="Extret automàticament de les actes de plens processades per IA"
-        tips={[
-          "Regidors amb alineació < 70% apareixen en vermell — són els que voten diferent al seu grup",
-          "Clica un regidor per veure el seu perfil complet amb historial de votacions",
-          "Un rival amb alta divergència pot ser un aliat potencial en votacions futures",
-        ]}
+        info={{
+          title: 'Regidors i càrrecs electes',
+          description: "Perfils de tots els regidors detectats a les actes. Per defecte mostra els d'Aliança Catalana (Propis). Canvia a Rivals per analitzar l'alineació dels regidors d'altres partits — els més divergents són els més vulnerables.",
+          dataSource: 'Extret automàticament de les actes de plens processades per IA',
+          tips: [
+            "Regidors amb alineació < 70% apareixen en vermell — són els que voten diferent al seu grup",
+            "Clica un regidor per veure el seu perfil complet amb historial de votacions",
+            "Un rival amb alta divergència pot ser un aliat potencial en votacions futures",
+          ],
+        }}
       />
 
       {/* Toggle + filters */}
       <div style={{ padding: '14px 26px', borderBottom: '1px solid var(--line)', display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', gap: 1, background: 'var(--line)', border: '1px solid var(--line)' }}>
           {(['propis', 'rivals'] as const).map(v => (
-            <button key={v} onClick={() => setView(v)} style={{
+            <button key={v} onClick={() => { setView(v); if (v === 'rivals') setPartido(''); }} style={{
               padding: '8px 16px', background: view === v ? 'var(--paper)' : 'var(--ink-2)',
               color: view === v ? 'var(--ink)' : 'var(--bone)', border: 'none',
               fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '.1em',
@@ -84,14 +94,36 @@ export default function RegidorsPage() {
         {view === 'rivals' && (
           <input
             placeholder="Filtrar per partit (PP, PSC, ERC...)"
-            value={partido === 'AC' ? '' : partido}
-            onChange={e => setPartido(e.target.value || '')}
+            value={partido}
+            onChange={e => setPartido(e.target.value)}
             style={{
               padding: '8px 14px', background: 'var(--ink-2)', border: '1px solid var(--line)',
-              color: 'var(--paper)', fontFamily: 'var(--font-mono)', fontSize: 12, width: 240, outline: 'none',
+              color: 'var(--paper)', fontFamily: 'var(--font-mono)', fontSize: 12, width: 220, outline: 'none',
             }}
           />
         )}
+
+        <input
+          placeholder="Filtrar per municipi..."
+          value={filterMuni}
+          onChange={e => setFilterMuni(e.target.value)}
+          style={{
+            padding: '8px 14px', background: 'var(--ink-2)', border: '1px solid var(--line)',
+            color: 'var(--paper)', fontFamily: 'var(--font-mono)', fontSize: 12, width: 200, outline: 'none',
+          }}
+        />
+
+        <select value={rangoAlin} onChange={e => setRangoAlin(e.target.value)}
+          style={{
+            padding: '8px 14px', background: 'var(--ink-2)', border: '1px solid var(--line)',
+            color: 'var(--paper)', fontFamily: 'var(--font-mono)', fontSize: 12,
+          }}>
+          <option value="tots">Tots (alineació)</option>
+          <option value="critic">&lt; 50% (Crític)</option>
+          <option value="preocupant">50–70% (Preocupant)</option>
+          <option value="acceptable">70–90% (Acceptable)</option>
+          <option value="excel">≥ 90% (Excel·lent)</option>
+        </select>
       </div>
 
       <div style={{ padding: '20px 26px' }}>
@@ -118,7 +150,7 @@ export default function RegidorsPage() {
               }}>
                 <span className="pulse-dot" style={{ width: 8, height: 8, borderRadius: 8, background: 'var(--wr-red-2)' }} />
                 <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--wr-red-2)', letterSpacing: '.08em', textTransform: 'uppercase' }}>
-                  ⚠ {danger.length} regidors amb alineació &lt; 70% — revisar
+                  ⚠ {danger.length} regidors amb alineació &lt; 60% — revisar
                 </span>
               </div>
             )}
@@ -136,36 +168,34 @@ export default function RegidorsPage() {
                 <span style={{ textAlign: 'right' }}>Diverg.</span>
                 <span style={{ textAlign: 'right' }}>% Alineació</span>
               </div>
-              {regidors.map((r, i) => {
-                const isDanger = r.pct_alineacion < 70;
+              {filtered.map((r, i) => {
+                const isDanger = r.pct_alineacion < 60;
+                const isWarn = r.pct_alineacion >= 60 && r.pct_alineacion < 70;
+                const rowBg = isDanger ? 'rgba(212,58,31,.04)' : isWarn ? 'rgba(212,148,31,.04)' : 'transparent';
+                const pctColor = isDanger ? 'var(--wr-red-2)' : isWarn ? 'var(--wr-amber)' : 'var(--wr-phosphor)';
                 return (
                   <div key={i} style={{
                     display: 'grid', gridTemplateColumns: '1.2fr 80px 140px 70px 80px 120px',
                     padding: '10px 14px',
                     borderBottom: '1px dashed var(--line-soft)',
-                    background: isDanger && view === 'propis' ? 'rgba(212,58,31,.03)' : 'transparent',
+                    background: rowBg,
                     fontSize: 13,
                   }}>
-                    <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <span style={{ color: 'var(--paper)', fontWeight: 500 }}>{r.nombre}</span>
-                      {r.cargo && <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--fog)', marginLeft: 6 }}>{r.cargo}</span>}
+                      {r.cargo && <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--fog)' }}>{r.cargo}</span>}
+                      {isDanger && <StatusBadge tone="red">⚠ Preocupació</StatusBadge>}
                     </div>
                     <StatusBadge tone={r.partido === 'AC' ? 'phos' : 'bone'}>{r.partido}</StatusBadge>
                     <span style={{ color: 'var(--fog)', fontSize: 12 }}>{r.municipio}</span>
                     <span style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--bone)' }}>{r.votos_total}</span>
                     <span style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--wr-amber)', fontWeight: 700 }}>{r.divergencias}</span>
                     <div style={{ textAlign: 'right' }}>
-                      <span style={{
-                        fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 700,
-                        color: isDanger ? 'var(--wr-red-2)' : 'var(--wr-phosphor)',
-                      }}>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 700, color: pctColor }}>
                         {r.pct_alineacion}%
                       </span>
                       <div style={{ height: 3, background: 'var(--line)', marginTop: 4, marginLeft: 'auto', width: 70 }}>
-                        <div style={{
-                          height: '100%', width: `${r.pct_alineacion}%`,
-                          background: isDanger ? 'var(--wr-red-2)' : 'var(--wr-phosphor)',
-                        }} />
+                        <div style={{ height: '100%', width: `${r.pct_alineacion}%`, background: pctColor }} />
                       </div>
                     </div>
                   </div>

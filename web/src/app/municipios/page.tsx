@@ -269,14 +269,17 @@ function MunicipioCard({ municipio }: { municipio: Municipio }) {
         </div>
       </div>
 
-      {municipio.ultima_acta && (
-        <div className="mt-3 pt-3 border-t border-[#21262d]">
-          <p className="text-[10px] text-[#6e7681]">
-            Última acta:{' '}
-            <span className="text-[#8b949e]">{municipio.ultima_acta}</span>
+      <div className="mt-3 pt-3 border-t border-[#21262d]">
+        {municipio.ultima_acta ? (
+          <p style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--fog)' }}>
+            Últim ple: fa {Math.floor((Date.now() - new Date(municipio.ultima_acta).getTime()) / 86400000)} dies
           </p>
-        </div>
-      )}
+        ) : (
+          <p style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--fog)' }}>
+            Sense plens processats
+          </p>
+        )}
+      </div>
     </Link>
   );
 }
