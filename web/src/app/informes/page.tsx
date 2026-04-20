@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import { Loader2, RefreshCw, FileText, Users } from 'lucide-react';
 import { PageHeader } from '@/components/warroom/PageHeader';
+import { HelpBanner } from '@/components/warroom/HelpBanner';
 import { PanelBox } from '@/components/warroom/PanelBox';
 import { StatusLine, StatusBadge } from '@/components/warroom/StatusBadge';
 import { TrendingBar } from '@/components/warroom/AlertFeed';
@@ -60,6 +61,17 @@ export default function InformesPage() {
         title={<>Informes i <em style={{ color: 'var(--bone)', fontWeight: 400 }}>subscripcions.</em></>}
         info="Biblioteca d'informes generats, subscripcions automàtiques i generació d'informes sota demanda amb IA."
         actions={<StatusLine color="var(--wr-phosphor)">Informe setmanal · {actas} actes</StatusLine>}
+      />
+      <HelpBanner
+        pageKey="informes"
+        title="Informes i subscripcions"
+        description="Biblioteca d'informes generats i sistema de briefs automàtics. Pots generar un informe executiu sota demanda amb la IA, o configurar subscripcions per rebre resums periòdics per email o Telegram."
+        dataSource="Generació automàtica basada en les actes processades de la setmana"
+        tips={[
+          "L'informe generat amb IA és perfecte per reunions de direcció",
+          "Configura subscripcions per rebre un brief cada dilluns amb el resum setmanal",
+          "Pots personalitzar els temes i municipis de cada subscripció",
+        ]}
       />
 
       {/* Tabs */}

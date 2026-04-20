@@ -12,6 +12,7 @@ import { AlertaDetailModal } from '@/components/ui/AlertaDetailModal';
 import { ReglaFormModal } from '@/components/ui/ReglaFormModal';
 import type { Alerta, AlertasStats, AlertSeverity, AlertEstado, AlertaRegla } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { HelpBanner } from '@/components/warroom/HelpBanner';
 
 type ListResponse = { total: number; page: number; results: Alerta[] } | Alerta[];
 
@@ -222,6 +223,17 @@ export default function AlertasPage() {
             </button>
           </div>
         </div>
+      <HelpBanner
+        pageKey="alertas"
+        title="Alertes polítiques"
+        description="El sistema detecta automàticament incoherències, contradiccions, tendències emergents i vots polèmics. No has de buscar — el sistema et diu quan passa alguna cosa important. Pots crear regles personalitzades per vigilar temes, partits o regidors concrets."
+        dataSource="Avaluació automàtica cada 30 minuts sobre les últimes actes processades"
+        tips={[
+          "Filtra per tipus: Incoherència interna (verd) és la més potent per demos",
+          "Crea regles personalitzades amb el botó 'Nova regla' — combina partits + temes + municipis",
+          "Clica una alerta per veure el context complet amb votacions i arguments",
+        ]}
+      />
 
         {/* Tabs */}
         <div className="flex bg-gradient-to-r from-[#0f141b] to-[#161b22] border border-[#21262d] rounded-xl p-1 gap-1 w-fit">

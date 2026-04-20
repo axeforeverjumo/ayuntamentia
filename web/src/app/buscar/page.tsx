@@ -17,6 +17,7 @@ import { SearchInput } from '@/components/ui/SearchInput';
 import { apiClient } from '@/lib/ApiClient';
 import type { SearchResponse, SearchResult } from '@/lib/types';
 import { formatDate, cn } from '@/lib/utils';
+import { HelpBanner } from '@/components/warroom/HelpBanner';
 
 const RESULTS_PER_PAGE = 10;
 
@@ -132,6 +133,17 @@ function BuscarPageInner() {
           Cerca <em style={{ color: 'var(--bone)' }}>universal.</em>
         </h1>
       </div>
+      <HelpBanner
+        pageKey="buscar"
+        title="Cerca universal"
+        description="Cerca en totes les actes, votacions i declaracions de tots els municipis de Catalunya. Usa filtres per municipi, partit, tema o dates per trobar exactament el que busques. Els resultats mostren snippets amb les paraules clau destacades."
+        dataSource="Cerca full-text sobre 54.410 actes i 333.995 punts de l'ordre del dia"
+        tips={[
+          "Prova cerques com 'habitatge social' o 'civisme terrasses'",
+          "Clica un resultat per veure l'acta completa amb chat contextual",
+          "Usa filtres avançats per acotar per municipi, partit o dates",
+        ]}
+      />
       <div style={{ padding: '20px 26px', maxWidth: 900 }} className="space-y-6">
 
       {/* Search bar */}

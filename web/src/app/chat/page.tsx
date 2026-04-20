@@ -12,6 +12,7 @@ import { CLIENT_CONFIG } from '@/lib/clientConfig';
 import type { ChatMessage as ChatMessageType, ChatResponse } from '@/lib/types';
 import type { WorkspaceMode } from '@/lib/workspaceStorage';
 import { PageHeader } from '@/components/warroom/PageHeader';
+import { HelpBanner } from '@/components/warroom/HelpBanner';
 import { StatusBadge, LiveDot, StatusLine } from '@/components/warroom/StatusBadge';
 import { Gauge, DotGrid, CornerBrack } from '@/components/landing/primitives';
 
@@ -213,6 +214,17 @@ function ChatPageInner() {
           title={<>Sala de guerra. <em style={{ color: 'var(--fog)', fontWeight: 400 }}>{modeDef.label.toLowerCase()}</em></>}
           info="Chat d'intel·ligència amb 5 modes polítics. Genera dossiers, contradiccions, speeches i anàlisis sobre dades reals de 947 municipis."
           actions={<StatusLine color="var(--wr-phosphor)">Índex al dia · últim batch 03:47</StatusLine>}
+        />
+        <HelpBanner
+          pageKey="chat"
+          title="War Room — Sala de guerra"
+          description="El cor de la plataforma. Pregunta com un polític i rep respostes amb cites literals, fonts verificables i accions concretes. Tria un dels 5 modes segons el que necessitis: vigilar, atacar, defensar, comparar o detectar oportunitats."
+          dataSource="Cerca en 54.410 actes, 228.124 votacions, DSPC del Parlament i premsa catalana"
+          tips={[
+            "Mode Monitor per seguiment diari, Mode Atacar per preparar un ple",
+            "Cada resposta mostra les fonts — clica-les per verificar",
+            "Guarda les respostes útils al Workspace per construir speeches i dossiers",
+          ]}
         />
 
         {/* Mode selector */}

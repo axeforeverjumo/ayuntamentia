@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { PageHeader } from '@/components/warroom/PageHeader';
+import { HelpBanner } from '@/components/warroom/HelpBanner';
 import { PanelBox } from '@/components/warroom/PanelBox';
 import { StatusLine, StatusBadge } from '@/components/warroom/StatusBadge';
 import { Gauge } from '@/components/landing/primitives';
@@ -43,6 +44,17 @@ export default function RegidorsPage() {
         crumb="Operacions / Regidors"
         title={<>Regidors <em style={{ color: view === 'propis' ? 'var(--wr-phosphor)' : 'var(--wr-red-2)', fontWeight: 400 }}>{view === 'propis' ? 'propis.' : 'rivals.'}</em></>}
         actions={<StatusLine color="var(--wr-phosphor)">{regidors.length} regidors carregats</StatusLine>}
+      />
+      <HelpBanner
+        pageKey="regidors"
+        title="Regidors i càrrecs electes"
+        description="Perfils de tots els regidors detectats a les actes. Per defecte mostra els d'Aliança Catalana (Propis). Canvia a Rivals per analitzar l'alineació dels regidors d'altres partits — els més divergents són els més vulnerables."
+        dataSource="Extret automàticament de les actes de plens processades per IA"
+        tips={[
+          "Regidors amb alineació < 70% apareixen en vermell — són els que voten diferent al seu grup",
+          "Clica un regidor per veure el seu perfil complet amb historial de votacions",
+          "Un rival amb alta divergència pot ser un aliat potencial en votacions futures",
+        ]}
       />
 
       {/* Toggle + filters */}

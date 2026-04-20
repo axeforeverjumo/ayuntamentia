@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import apiClient from '@/lib/ApiClient';
+import { HelpBanner } from '@/components/warroom/HelpBanner';
 
 type Sesion = {
   id: number;
@@ -53,6 +54,16 @@ export default function ParlamentPage() {
         </h1>
         <p style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--fog)', marginTop: 8 }}>Sessions plenàries, comissions i DSPC</p>
       </div>
+      <HelpBanner
+        pageKey="parlament"
+        title="Parlament de Catalunya"
+        description="Monitoratge de sessions plenàries, comissions i el Diari de Sessions del Parlament. Quan estigui actiu, permetrà creuar el que es diu al Parlament amb el que es vota als municipis — la font més potent de contradiccions."
+        dataSource="Diari de Sessions del Parlament de Catalunya (DSPC) · descobriment diari"
+        tips={[
+          "Properament: comparativa automàtica Parlament vs Municipis",
+          "Les contradiccions entre discurs nacional i acció local són les més potents per a un ple",
+        ]}
+      />
       <div style={{ padding: '20px 26px', maxWidth: 1100 }}>
 
       <div style={{ display: 'flex', borderBottom: '1px solid var(--line)', marginBottom: 20 }}>

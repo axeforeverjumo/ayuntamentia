@@ -18,6 +18,7 @@ import { SearchInput } from '@/components/ui/SearchInput';
 import { apiClient } from '@/lib/ApiClient';
 import type { Municipio } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { HelpBanner } from '@/components/warroom/HelpBanner';
 
 const PROVINCIAS = ['Totes', 'Barcelona', 'Girona', 'Lleida', 'Tarragona'];
 
@@ -71,6 +72,17 @@ export default function MunicipiosPage() {
           {municipios.length > 0 ? `${municipios.length} municipis · Catalunya` : 'Catalunya'}
         </p>
       </div>
+      <HelpBanner
+        pageKey="municipios"
+        title="Municipis de Catalunya"
+        description="Directori dels 947 municipis monitorats. Consulta l'activitat de qualsevol ajuntament: últims plens, composició del ple, temes debatuts i alertes actives. Filtra per presència d'AC o per activitat recent."
+        dataSource="947 municipis · dades de dadesobertes.gencat.cat"
+        tips={[
+          "Usa el filtre 'Amb presència AC' per veure on tenim regidors",
+          "Clica un municipi per veure'n el detall complet",
+          "Dins la fitxa del municipi pots obrir un chat contextual per preguntar sobre aquell municipi",
+        ]}
+      />
       {/* Sub-nav */}
       <div style={{ display: 'flex', borderBottom: '1px solid var(--line)' }}>
         {[

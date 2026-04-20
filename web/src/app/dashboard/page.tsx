@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { PageHeader } from '@/components/warroom/PageHeader';
+import { HelpBanner } from '@/components/warroom/HelpBanner';
 import { KPICard, KPIGrid } from '@/components/warroom/KPICard';
 import { PanelBox } from '@/components/warroom/PanelBox';
 import { StatusLine, StatusBadge } from '@/components/warroom/StatusBadge';
@@ -81,6 +82,17 @@ export default function DashboardPage() {
             </button>
           </div>
         }
+      />
+      <HelpBanner
+        pageKey="dashboard"
+        title="Dashboard executiu"
+        description="Visió global de tota l'activitat política a Catalunya. Aquí veus en 10 segons els KPIs principals, l'activitat recent, els temes que estan escalant i l'estat del sistema. És la primera pantalla que hauries de mirar cada matí."
+        dataSource="54.410 actes processades · 228.124 votacions · 947 municipis · actualització cada 15 min"
+        tips={[
+          "Els KPIs es comparen amb el període anterior — vermell = ha baixat, verd = ha pujat",
+          "Clica un municipi al mapa per veure'n el detall",
+          "Usa 'Obrir War Room' per fer preguntes directes sobre les dades",
+        ]}
       />
 
       <div style={{ padding: '20px 26px', display: 'flex', flexDirection: 'column', gap: 16 }}>

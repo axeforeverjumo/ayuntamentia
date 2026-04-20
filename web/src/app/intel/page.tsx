@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { PageHeader } from '@/components/warroom/PageHeader';
+import { HelpBanner } from '@/components/warroom/HelpBanner';
 import { KPICard, KPIGrid } from '@/components/warroom/KPICard';
 import { PanelBox } from '@/components/warroom/PanelBox';
 import { StatusLine, StatusBadge } from '@/components/warroom/StatusBadge';
@@ -82,6 +83,17 @@ export default function IntelPage() {
         title={<>Intel·ligència <em style={{ color: 'var(--wr-amber)', fontWeight: 400 }}>estratègica.</em></>}
         info="Anàlisi estratègica del posicionament polític. Rànquing d'alineació dels regidors, tendències emergents als plens, vigilància de rivals i detecció de promeses incomplertes."
         actions={<StatusLine color="var(--wr-phosphor)">947 municipis · anàlisi continu</StatusLine>}
+      />
+      <HelpBanner
+        pageKey="intel"
+        title="Intel·ligència estratègica"
+        description="Anàlisi profunda del posicionament polític. Detecta qui no va alineat dins de cada partit (Rànquing), quins temes estan escalant (Tendències), la vulnerabilitat dels rivals (Competitiva) i les promeses que no es compleixen (Promeses)."
+        dataSource="Anàlisi creuat de votacions, actes i sessions parlamentàries"
+        tips={[
+          "Al Rànquing, els regidors amb menys alineació són 'targets' — divergeixen del seu grup",
+          "Les Tendències et diuen on posar el focus aquesta setmana",
+          "Intel·ligència Competitiva agrupa rivals per vulnerabilitat — el més vulnerable és el més atacable",
+        ]}
       />
 
       {/* Tabs */}
