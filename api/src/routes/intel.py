@@ -1,10 +1,9 @@
 """Endpoints de inteligencia: ranking concejales, tendencias, promesas incumplidas."""
 
 from typing import Optional
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Query
 from psycopg2.extras import RealDictCursor
 
-from ..auth import CurrentUser, get_current_user
 from ..db import get_db
 
 router = APIRouter()
@@ -16,7 +15,6 @@ def ranking(
     municipio: Optional[str] = None,
     order: str = Query("divergencia", regex="^(divergencia|alineacion)$"),
     limit: int = Query(50, le=200),
-    _: CurrentUser = Depends(get_current_user),
 ):
     where, params = ["votos_total >= 5"], []
     if partido:
@@ -40,7 +38,6 @@ def ranking(
 @router.get("/tendencias")
 def tendencias(
     limit: int = Query(30, le=100),
-    _: CurrentUser = Depends(get_current_user),
 ):
     with get_db() as conn:
         cur = conn.cursor(cursor_factory=RealDictCursor)
@@ -52,7 +49,6 @@ def tendencias(
 def promesas_incumplidas(
     partido: Optional[str] = None,
     limit: int = Query(50, le=200),
-    _: CurrentUser = Depends(get_current_user),
 ):
     """Cruce: puntos propuestos por el partido X en el Parlament que luego fueron
     rechazados en los municipios donde ese partido gobierna."""
