@@ -5,6 +5,19 @@ import { MessageSquare, X, Loader2 } from 'lucide-react';
 
 const API = process.env.NEXT_PUBLIC_API_URL || '';
 
+function simpleMarkdown(text: string): string {
+  return text
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/^### (.*?)$/gm, '<h3>$1</h3>')
+    .replace(/^## (.*?)$/gm, '<h2>$1</h2>')
+    .replace(/^# (.*?)$/gm, '<h1>$1</h1>')
+    .replace(/^- (.*?)$/gm, '<li>$1</li>')
+    .replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>')
+    .replace(/\n\n/g, '<br/><br/>')
+    .replace(/\n/g, '<br/>');
+}
+
 interface Message {
   role: 'user' | 'assistant';
   content: string;
@@ -160,12 +173,16 @@ export function ContextualChat({ contextLabel, contextPrompt }: ContextualChatPr
                 </div>
               ) : (
                 <div style={{
-                  background: 'transparent', color: 'var(--paper)',
-                  padding: '10px 14px 10px 0', fontSize: 14, lineHeight: 1.6,
-                  fontFamily: 'var(--font-serif)', borderLeft: '2px solid var(--wr-red)',
+                  background: 'transparent',
+                  padding: '10px 14px 10px 0',
+                  borderLeft: '2px solid var(--wr-red)',
                   paddingLeft: 12,
                 }}>
-                  {msg.content}
+                  <div
+                    className="markdown-body"
+                    style={{ fontSize: 12 }}
+                    dangerouslySetInnerHTML={{ __html: simpleMarkdown(msg.content) }}
+                  />
                 </div>
               )}
             </div>

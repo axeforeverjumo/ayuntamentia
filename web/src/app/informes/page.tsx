@@ -1,197 +1,333 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
-import { Loader2, RefreshCw, FileText, Users } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Loader2 } from 'lucide-react';
 import { PageHeader } from '@/components/warroom/PageHeader';
-import { HelpBanner } from '@/components/warroom/HelpBanner';
-import { PanelBox } from '@/components/warroom/PanelBox';
-import { StatusLine, StatusBadge } from '@/components/warroom/StatusBadge';
-import { TrendingBar } from '@/components/warroom/AlertFeed';
+import { StatusLine } from '@/components/warroom/StatusBadge';
+import apiClient from '@/lib/ApiClient';
+import { CronPicker } from '@/components/ui/CronPicker';
 import { traduirTema } from '@/lib/temesCatala';
+import type { HelpInfo } from '@/components/warroom/PanelBox';
 
-const API = process.env.NEXT_PUBLIC_API_URL || '';
+const TEMAS = [
+  'medio_ambiente', 'comercio', 'pesca', 'agricultura', 'caza',
+  'urbanismo', 'seguridad', 'servicios_sociales', 'vivienda',
+  'educacion', 'salud', 'transporte', 'cultura', 'mociones',
+];
 
-const TABS = [
-  { id: 'biblioteca', label: 'Biblioteca', color: 'var(--bone)' },
-  { id: 'subscripcions', label: 'Subscripcions', color: 'var(--wr-amber)' },
-  { id: 'generar', label: 'Generar amb IA', color: 'var(--wr-red-2)' },
-] as const;
+type Sub = {
+  id: number;
+  nombre: string;
+  temas: string[];
+  prompt_libre: string | null;
+  canal: 'email' | 'telegram' | 'both';
+  cron_expr: string;
+  activo: boolean;
+  last_sent_at: string | null;
+};
+
+const INFO: HelpInfo = {
+  title: 'Informes i subscripcions',
+  description: "Gestió de briefs automàtics per email o Telegram. Cada subscripció vigila els temes que t'interessen i t'envia un resum periòdic generat per IA.",
+  dataSource: 'Generació automàtica basada en les actes processades',
+  tips: [
+    "Les subscripcions actives s'envien automàticament segons la freqüència configurada",
+    'Configura una subscripció per rebre un brief cada dilluns amb el resum setmanal',
+    'Pots personalitzar els temes i la consulta lliure de cada subscripció',
+  ],
+};
+
+const inputStyle: React.CSSProperties = {
+  width: '100%', background: 'var(--ink)', border: '1px solid var(--line)',
+  color: 'var(--paper)', fontFamily: 'var(--font-sans)', fontSize: 13,
+  padding: '10px 12px', outline: 'none', boxSizing: 'border-box',
+};
+
+const labelStyle: React.CSSProperties = {
+  display: 'block', fontFamily: 'var(--font-mono)', fontSize: 9,
+  color: 'var(--fog)', letterSpacing: '.12em', textTransform: 'uppercase', marginBottom: 6,
+};
 
 export default function InformesPage() {
-  const [tab, setTab] = useState('biblioteca');
-  const [data, setData] = useState<any>(null);
+  const [subs, setSubs] = useState<Sub[]>([]);
   const [loading, setLoading] = useState(true);
-  const [generating, setGenerating] = useState(false);
-  const [report, setReport] = useState<string | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+
+  const [nombre, setNombre] = useState('');
+  const [modo, setModo] = useState<'temas' | 'libre'>('temas');
+  const [temas, setTemas] = useState<string[]>([]);
+  const [promptLibre, setPromptLibre] = useState('');
+  const [canal, setCanal] = useState<'email' | 'telegram' | 'both'>('telegram');
+  const [cron, setCron] = useState('0 8 * * 5');
+  const [creating, setCreating] = useState(false);
+
+  async function load() {
+    setLoading(true);
+    try {
+      const data = await apiClient.get<Sub[]>('/api/subscripciones');
+      setSubs(data);
+    } catch {}
+    setLoading(false);
+  }
+
+  useEffect(() => { load(); }, []);
 
   useEffect(() => {
-    fetch(`${API}/api/informes/semanal`)
-      .then(r => r.json()).then(setData).catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
+    if (!modalOpen) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setModalOpen(false); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [modalOpen]);
 
-  const generateReport = async () => {
-    setGenerating(true);
+  const canCreate = !!nombre && (
+    (modo === 'temas' && temas.length > 0) ||
+    (modo === 'libre' && promptLibre.trim().length >= 10)
+  );
+
+  async function create() {
+    if (!canCreate || creating) return;
+    setCreating(true);
     try {
-      const res = await fetch(`${API}/api/chat/`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: "Genera un informe semanal executiu sobre l'activitat als plens municipals. Inclou: resum, temes principals, votacions destacades d'AC, i recomanacions.",
-          history: [],
-        }),
+      await apiClient.post('/api/subscripciones', {
+        nombre,
+        temas: modo === 'temas' ? temas : [],
+        municipios: [],
+        prompt_libre: modo === 'libre' ? promptLibre.trim() : null,
+        ventana_dias: 7,
+        canal,
+        cron_expr: cron,
+        activo: true,
       });
-      const d = await res.json();
-      setReport(d.answer || "No s'ha pogut generar l'informe.");
-    } catch {
-      setReport("Error al generar l'informe.");
-    } finally {
-      setGenerating(false);
-    }
-  };
-
-  const actas = data?.actas_semana?.actas_semana ?? 0;
-  const temas = data?.temas ?? [];
-  const coherencia = data?.coherencia ?? [];
-  const maxTema = temas.length > 0 ? Math.max(...temas.map((t: any) => t.n || t.count || 1)) : 1;
+      setNombre(''); setTemas([]); setPromptLibre('');
+      setModalOpen(false);
+      load();
+    } catch {}
+    setCreating(false);
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--ink)' }}>
       <PageHeader
         crumb="Operacions / Informes"
-        title={<>Informes i <em style={{ color: 'var(--bone)', fontWeight: 400 }}>subscripcions.</em></>}
-        info="Biblioteca d'informes generats, subscripcions automàtiques i generació d'informes sota demanda amb IA."
-        actions={<StatusLine color="var(--wr-phosphor)">Informe setmanal · {actas} actes</StatusLine>}
-      />
-      <HelpBanner
-        pageKey="informes"
-        title="Informes i subscripcions"
-        description="Biblioteca d'informes generats i sistema de briefs automàtics. Pots generar un informe executiu sota demanda amb la IA, o configurar subscripcions per rebre resums periòdics per email o Telegram."
-        dataSource="Generació automàtica basada en les actes processades de la setmana"
-        tips={[
-          "L'informe generat amb IA és perfecte per reunions de direcció",
-          "Configura subscripcions per rebre un brief cada dilluns amb el resum setmanal",
-          "Pots personalitzar els temes i municipis de cada subscripció",
-        ]}
-      />
-
-      {/* Tabs */}
-      <div style={{ display: 'flex', borderBottom: '1px solid var(--line)' }}>
-        {TABS.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)} style={{
-            flex: 1, padding: '10px 16px', background: tab === t.id ? 'var(--ink-3)' : 'transparent',
-            border: 'none', borderBottom: tab === t.id ? `2px solid ${t.color}` : '2px solid transparent',
-            borderRight: '1px solid var(--line)',
-            color: tab === t.id ? 'var(--paper)' : 'var(--fog)',
-            fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '.1em',
-            textTransform: 'uppercase', cursor: 'pointer',
+        title={<>Informes.</>}
+        info={INFO}
+        actions={
+          <button onClick={() => setModalOpen(true)} style={{
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+            background: 'var(--wr-red)', color: 'var(--paper)',
+            border: '1px solid var(--wr-red)', padding: '10px 16px',
+            fontFamily: 'var(--font-mono)', fontSize: 11,
+            letterSpacing: '.1em', textTransform: 'uppercase', fontWeight: 700,
+            cursor: 'pointer',
           }}>
-            {t.label}
+            ◼ GENERAR INFORME →
           </button>
-        ))}
-      </div>
+        }
+      />
 
       <div style={{ padding: '20px 26px' }}>
-        {tab === 'biblioteca' && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-            <PanelBox title="Temes més debatuts" subtitle="setmana" tone="amber">
-              {loading ? (
-                <div style={{ padding: '20px 0', textAlign: 'center' }}><Loader2 className="w-5 h-5 animate-spin mx-auto" style={{ color: 'var(--wr-amber)' }} /></div>
-              ) : temas.length === 0 ? (
-                <div style={{ padding: '30px 0', textAlign: 'center', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--fog)' }}>Sense dades encara</div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  {temas.map((t: any, i: number) => (
-                    <TrendingBar key={i} label={traduirTema(t.tema || t.nombre)} value={t.n || t.count || 0} max={maxTema} tone={i < 2 ? 'red' : 'amber'} />
-                  ))}
-                </div>
-              )}
-            </PanelBox>
-
-            <PanelBox title="Coherència regidors AC" subtitle="alineació" tone="phos">
-              {loading ? (
-                <div style={{ padding: '20px 0', textAlign: 'center' }}><Loader2 className="w-5 h-5 animate-spin mx-auto" style={{ color: 'var(--wr-phosphor)' }} /></div>
-              ) : coherencia.length === 0 ? (
-                <div style={{ padding: '30px 0', textAlign: 'center', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--fog)' }}>Sense dades encara</div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {coherencia.map((c: any, i: number) => {
-                    const score = c.indice_coherencia ?? 100;
-                    return (
-                      <div key={i}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                          <span style={{ fontSize: 12, color: 'var(--paper)' }}>{c.nombre}</span>
-                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: score >= 80 ? 'var(--wr-phosphor)' : score >= 50 ? 'var(--wr-amber)' : 'var(--wr-red-2)', fontWeight: 700 }}>{score}%</span>
-                        </div>
-                        <div style={{ height: 3, background: 'var(--line)' }}>
-                          <div style={{ height: '100%', width: `${score}%`, background: score >= 80 ? 'var(--wr-phosphor)' : score >= 50 ? 'var(--wr-amber)' : 'var(--wr-red-2)' }} />
-                        </div>
-                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--fog)', marginTop: 2 }}>{c.municipio} · {c.total_votaciones} vots</div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </PanelBox>
+        {loading ? (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '60px 0' }}>
+            <Loader2 className="w-5 h-5 animate-spin" style={{ color: 'var(--wr-phosphor)' }} />
           </div>
-        )}
-
-        {tab === 'subscripcions' && (
+        ) : subs.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px 0' }}>
-            <div style={{ fontFamily: 'var(--font-serif)', fontSize: 32, color: 'var(--paper)', marginBottom: 12 }}>
-              Subscripcions
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--fog)', letterSpacing: '.1em', textTransform: 'uppercase', marginBottom: 12 }}>
+              Sense subscripcions actives
             </div>
-            <p style={{ fontSize: 14, color: 'var(--bone)', maxWidth: 480, margin: '0 auto 24px', lineHeight: 1.5 }}>
-              Rep briefs automàtics per email o Telegram amb els temes que t&apos;interessen. Configura la freqüència i els filtres.
+            <p style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: 'var(--bone)', marginBottom: 24 }}>
+              Crea la teva primera subscripció per rebre briefs automàtics.
             </p>
-            <a href="/suscripciones" style={{
-              display: 'inline-flex', alignItems: 'center', gap: 8,
-              background: 'var(--wr-amber)', color: 'var(--ink)', border: 'none',
-              padding: '12px 18px', fontFamily: 'var(--font-mono)', fontSize: 12,
+            <button onClick={() => setModalOpen(true)} style={{
+              background: 'var(--wr-red)', color: 'var(--paper)',
+              border: '1px solid var(--wr-red)', padding: '10px 16px',
+              fontFamily: 'var(--font-mono)', fontSize: 11,
               letterSpacing: '.1em', textTransform: 'uppercase', fontWeight: 700,
-              textDecoration: 'none',
-            }}>◼ GESTIONAR SUBSCRIPCIONS →</a>
+              cursor: 'pointer',
+            }}>
+              ◼ CREAR SUBSCRIPCIÓ →
+            </button>
+          </div>
+        ) : (
+          <div style={{ background: 'var(--ink-2)', border: '1px solid var(--line)' }}>
+            <div style={{
+              display: 'grid', gridTemplateColumns: '2fr 2.5fr 80px 1.5fr 1.5fr 80px',
+              padding: '8px 14px', borderBottom: '1px solid var(--line)',
+              fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--fog)',
+              letterSpacing: '.12em', textTransform: 'uppercase',
+            }}>
+              <span>Nom</span>
+              <span>Temes / Consulta</span>
+              <span>Canal</span>
+              <span>Freqüència</span>
+              <span>Última enviada</span>
+              <span>Estat</span>
+            </div>
+            {subs.map((s, i) => (
+              <div key={s.id} style={{
+                display: 'grid', gridTemplateColumns: '2fr 2.5fr 80px 1.5fr 1.5fr 80px',
+                padding: '12px 14px', alignItems: 'center',
+                borderBottom: i < subs.length - 1 ? '1px solid var(--line)' : 'none',
+              }}>
+                <span style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: 'var(--paper)', fontWeight: 500 }}>
+                  {s.nombre}
+                </span>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--bone)', letterSpacing: '.04em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {s.prompt_libre
+                    ? `"${s.prompt_libre.slice(0, 60)}${s.prompt_libre.length > 60 ? '…' : ''}"`
+                    : s.temas.map(t => traduirTema(t)).join(', ') || '—'}
+                </span>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--bone)', textTransform: 'uppercase', letterSpacing: '.08em' }}>
+                  {s.canal}
+                </span>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--fog)' }}>
+                  <code>{s.cron_expr}</code>
+                </span>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--fog)' }}>
+                  {s.last_sent_at ? s.last_sent_at.slice(0, 16) : '—'}
+                </span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '.08em', textTransform: 'uppercase', color: s.activo ? 'var(--wr-phosphor)' : 'var(--fog)' }}>
+                  <span style={{ width: 6, height: 6, borderRadius: 6, background: s.activo ? 'var(--wr-phosphor)' : 'var(--fog)', marginRight: 6, flexShrink: 0 }} />
+                  {s.activo ? 'Actiu' : 'Inactiu'}
+                </span>
+              </div>
+            ))}
           </div>
         )}
+      </div>
 
-        {tab === 'generar' && (
-          <div>
-            <div style={{ textAlign: 'center', padding: '40px 0 30px' }}>
-              <div style={{ fontFamily: 'var(--font-serif)', fontSize: 32, color: 'var(--paper)', marginBottom: 12 }}>
-                Generar informe <em style={{ color: 'var(--wr-red-2)' }}>sota demanda</em>
-              </div>
-              <p style={{ fontSize: 14, color: 'var(--bone)', maxWidth: 480, margin: '0 auto 24px', lineHeight: 1.5 }}>
-                La IA analitza totes les dades processades i genera un informe executiu complet.
-              </p>
-              <button onClick={generateReport} disabled={generating} style={{
-                display: 'inline-flex', alignItems: 'center', gap: 8,
-                background: 'var(--wr-red)', color: 'var(--paper)', border: '1px solid var(--wr-red)',
-                padding: '14px 20px', fontFamily: 'var(--font-mono)', fontSize: 12,
-                letterSpacing: '.1em', textTransform: 'uppercase', fontWeight: 700,
-                cursor: 'pointer', opacity: generating ? 0.5 : 1,
-                boxShadow: '0 0 24px -6px rgba(255,90,60,.4)',
+      {modalOpen && (
+        <div
+          onClick={() => setModalOpen(false)}
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,.7)', zIndex: 9999,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: 'var(--ink-2)', border: '1px solid var(--line)',
+              width: '100%', maxWidth: 560, maxHeight: '90vh', overflowY: 'auto',
+            }}
+          >
+            <div style={{
+              padding: '16px 20px', borderBottom: '1px solid var(--line)',
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              position: 'sticky', top: 0, background: 'var(--ink-2)',
+            }}>
+              <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: 22, fontWeight: 400, color: 'var(--paper)', margin: 0, letterSpacing: '-.01em' }}>
+                Nova subscripció
+              </h2>
+              <button onClick={() => setModalOpen(false)} style={{
+                background: 'none', border: '1px solid var(--line)', color: 'var(--fog)',
+                width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', flexShrink: 0,
               }}>
-                {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-                {generating ? 'Generant...' : '◼ GENERAR INFORME →'}
+                ✕
               </button>
             </div>
 
-            {report && (
-              <PanelBox title="Informe generat" subtitle="IA" tone="phos">
-                <div className="markdown-body" style={{ fontSize: 13 }}>
-                  {report.split('\n').map((line, i) => {
-                    if (line.startsWith('###')) return <h3 key={i} style={{ fontFamily: 'var(--font-serif)', fontSize: 18, color: 'var(--paper)', margin: '16px 0 6px', fontWeight: 400 }}>{line.replace(/^#+\s*/, '')}</h3>;
-                    if (line.startsWith('##')) return <h2 key={i} style={{ fontFamily: 'var(--font-serif)', fontSize: 22, color: 'var(--paper)', margin: '16px 0 6px', fontWeight: 400 }}>{line.replace(/^#+\s*/, '')}</h2>;
-                    if (line.startsWith('#')) return <h1 key={i} style={{ fontFamily: 'var(--font-serif)', fontSize: 28, color: 'var(--paper)', margin: '16px 0 8px', fontWeight: 400 }}>{line.replace(/^#+\s*/, '')}</h1>;
-                    if (line.startsWith('- ') || line.startsWith('• ')) return <p key={i} style={{ marginLeft: 16, fontSize: 12, color: 'var(--bone)' }}>• {line.replace(/^[-•]\s*/, '')}</p>;
-                    if (line.trim()) return <p key={i} style={{ fontSize: 12, color: 'var(--bone)', lineHeight: 1.5 }}>{line}</p>;
-                    return <br key={i} />;
-                  })}
+            <div style={{ padding: 20 }}>
+              <div style={{ marginBottom: 16 }}>
+                <label style={labelStyle}>Nom</label>
+                <input
+                  placeholder="Ex: Brief setmanal medi ambient"
+                  value={nombre}
+                  onChange={e => setNombre(e.target.value)}
+                  style={inputStyle}
+                />
+              </div>
+
+              <div style={{ marginBottom: 12, display: 'flex', gap: 1 }}>
+                {(['temas', 'libre'] as const).map(m => (
+                  <button key={m} onClick={() => setModo(m)} style={{
+                    flex: 1, padding: '8px 12px',
+                    background: modo === m ? 'var(--wr-red)' : 'var(--ink)',
+                    border: '1px solid var(--line)',
+                    color: modo === m ? 'var(--paper)' : 'var(--fog)',
+                    fontFamily: 'var(--font-mono)', fontSize: 10,
+                    letterSpacing: '.1em', textTransform: 'uppercase', cursor: 'pointer',
+                  }}>
+                    {m === 'temas' ? 'Temes predefinits' : 'Consulta lliure'}
+                  </button>
+                ))}
+              </div>
+
+              {modo === 'temas' ? (
+                <div style={{ marginBottom: 16 }}>
+                  <div style={labelStyle}>Temes</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {TEMAS.map(t => (
+                      <button
+                        key={t}
+                        onClick={() => setTemas(temas.includes(t) ? temas.filter(x => x !== t) : [...temas, t])}
+                        style={{
+                          padding: '4px 10px',
+                          background: temas.includes(t) ? 'var(--wr-red)' : 'var(--ink)',
+                          border: `1px solid ${temas.includes(t) ? 'var(--wr-red)' : 'var(--line)'}`,
+                          color: temas.includes(t) ? 'var(--paper)' : 'var(--fog)',
+                          fontFamily: 'var(--font-mono)', fontSize: 10,
+                          letterSpacing: '.06em', cursor: 'pointer',
+                        }}
+                      >
+                        {traduirTema(t)}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </PanelBox>
-            )}
+              ) : (
+                <div style={{ marginBottom: 16 }}>
+                  <div style={labelStyle}>Consulta en llenguatge natural</div>
+                  <textarea
+                    value={promptLibre}
+                    onChange={e => setPromptLibre(e.target.value)}
+                    rows={3}
+                    placeholder="Ex: Tot el que es parli d'Aliança Catalana..."
+                    style={{ ...inputStyle, resize: 'vertical' }}
+                  />
+                </div>
+              )}
+
+              <div style={{ marginBottom: 16 }}>
+                <label style={labelStyle}>Canal</label>
+                <select
+                  value={canal}
+                  onChange={e => setCanal(e.target.value as 'email' | 'telegram' | 'both')}
+                  style={{ ...inputStyle }}
+                >
+                  <option value="email">Email</option>
+                  <option value="telegram">Telegram</option>
+                  <option value="both">Tots dos</option>
+                </select>
+              </div>
+
+              <div style={{ marginBottom: 20 }}>
+                <label style={labelStyle}>Quan s&apos;enviarà</label>
+                <CronPicker value={cron} onChange={setCron} />
+              </div>
+
+              <button
+                onClick={create}
+                disabled={!canCreate || creating}
+                style={{
+                  width: '100%', background: 'var(--wr-red)', color: 'var(--paper)',
+                  border: '1px solid var(--wr-red)', padding: '12px 16px',
+                  fontFamily: 'var(--font-mono)', fontSize: 11,
+                  letterSpacing: '.1em', textTransform: 'uppercase', fontWeight: 700,
+                  cursor: canCreate && !creating ? 'pointer' : 'not-allowed',
+                  opacity: canCreate && !creating ? 1 : 0.4,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  boxSizing: 'border-box',
+                }}
+              >
+                {creating && <Loader2 className="w-4 h-4 animate-spin" />}
+                ◼ CREAR SUBSCRIPCIÓ →
+              </button>
+            </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

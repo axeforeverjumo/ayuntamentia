@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type ReactNode, type CSSProperties } from 'react';
+import { useState, useEffect, type ReactNode, type CSSProperties } from 'react';
 import { CornerBrack } from '@/components/landing/primitives';
 
 type PanelTone = 'default' | 'red' | 'amber' | 'phos';
@@ -12,6 +12,13 @@ interface PanelBoxProps {
   children: ReactNode;
   style?: CSSProperties;
   info?: string;
+}
+
+export interface HelpInfo {
+  title?: string;
+  description: string;
+  dataSource: string;
+  tips: string[];
 }
 
 const toneMap: Record<PanelTone, string> = {
@@ -47,35 +54,94 @@ export function PanelBox({ title, subtitle, tone = 'default', children, style, i
   );
 }
 
-export function InfoTooltip({ text }: { text: string }) {
-  const [show, setShow] = useState(false);
+export function HelpModal({ text }: { text: string | HelpInfo }) {
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [open]);
+
   return (
-    <span
-      style={{ position: 'relative', display: 'inline-flex' }}
-      onMouseEnter={() => setShow(true)}
-      onMouseLeave={() => setShow(false)}
-      onClick={() => setShow(!show)}
-    >
-      <span style={{
-        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-        width: 16, height: 16, borderRadius: 16,
-        border: '1px solid var(--line)', color: 'var(--fog)',
-        fontFamily: 'var(--font-mono)', fontSize: 9, cursor: 'help',
-        marginLeft: 8, flexShrink: 0,
-      }}
-    >
-        i
+    <>
+      <span
+        onClick={() => setOpen(true)}
+        style={{
+          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+          width: 20, height: 20, borderRadius: 20,
+          border: '2px solid var(--bone)', color: 'var(--bone)',
+          fontFamily: 'var(--font-mono)', fontSize: 11, cursor: 'pointer',
+          marginLeft: 10, flexShrink: 0, userSelect: 'none',
+        }}
+      >
+        ?
       </span>
-      {show && (
-        <span style={{
-          position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)',
-          marginTop: 6, padding: '8px 12px', background: 'var(--ink-3)', border: '1px solid var(--line)',
-          color: 'var(--bone)', fontFamily: 'var(--font-sans)', fontSize: 12, lineHeight: 1.4,
-          whiteSpace: 'normal', width: 280, zIndex: 100, boxShadow: '0 8px 24px rgba(0,0,0,.5)',
-        }}>
-          {text}
-        </span>
+
+      {open && (
+        <div
+          onClick={() => setOpen(false)}
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,.65)', zIndex: 9999,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: 'var(--ink-2)', border: '1px solid var(--line)',
+              maxWidth: 500, width: '100%', padding: 24,
+            }}
+          >
+            {typeof text === 'string' ? (
+              <p style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: 'var(--bone)', lineHeight: 1.6, margin: '0 0 20px' }}>
+                {text}
+              </p>
+            ) : (
+              <>
+                {text.title && (
+                  <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: 22, fontWeight: 400, color: 'var(--paper)', margin: '0 0 14px', letterSpacing: '-.01em' }}>
+                    {text.title}
+                  </h2>
+                )}
+                <p style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: 'var(--bone)', lineHeight: 1.6, margin: '0 0 14px' }}>
+                  {text.description}
+                </p>
+                <div style={{
+                  fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--wr-phosphor)',
+                  letterSpacing: '.08em', marginBottom: 14,
+                  display: 'flex', alignItems: 'center', gap: 8,
+                }}>
+                  <span style={{ fontSize: 8 }}>●</span>
+                  {text.dataSource}
+                </div>
+                <ul style={{ listStyle: 'none', margin: '0 0 20px', padding: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {text.tips.map((tip, i) => (
+                    <li key={i} style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: 'var(--bone)', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                      <span style={{ color: 'var(--wr-phosphor)', flexShrink: 0, marginTop: 1 }}>→</span>
+                      {tip}
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+            <button
+              onClick={() => setOpen(false)}
+              style={{
+                background: 'transparent', border: '1px solid var(--line)', color: 'var(--fog)',
+                fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.1em',
+                textTransform: 'uppercase', padding: '6px 14px', cursor: 'pointer',
+              }}
+            >
+              ✕ Tancar
+            </button>
+          </div>
+        </div>
       )}
-    </span>
+    </>
   );
 }
+
+/** @deprecated Use HelpModal */
+export const InfoTooltip = HelpModal;

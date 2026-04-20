@@ -1,14 +1,14 @@
 'use client';
 
 import { type ReactNode } from 'react';
-import { InfoTooltip } from './PanelBox';
+import { HelpModal, type HelpInfo } from './PanelBox';
 
 interface PageHeaderProps {
   crumb: string;
   title: ReactNode;
   subtitle?: string;
   actions?: ReactNode;
-  info?: string;
+  info?: string | HelpInfo;
 }
 
 export function PageHeader({ crumb, title, subtitle, actions, info }: PageHeaderProps) {
@@ -32,7 +32,7 @@ export function PageHeader({ crumb, title, subtitle, actions, info }: PageHeader
             display: 'flex', alignItems: 'center',
           }}>
             {title}
-            {info && <InfoTooltip text={info} />}
+            {info && <HelpModal text={info} />}
           </h1>
           {subtitle && (
             <p style={{ fontFamily: 'var(--font-sans)', fontSize: 14, color: 'var(--fog)', marginTop: 8, margin: '8px 0 0' }}>

@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { PageHeader } from '@/components/warroom/PageHeader';
-import { HelpBanner } from '@/components/warroom/HelpBanner';
 import { KPICard, KPIGrid } from '@/components/warroom/KPICard';
 import { PanelBox } from '@/components/warroom/PanelBox';
 import { StatusLine, StatusBadge } from '@/components/warroom/StatusBadge';
@@ -167,7 +166,16 @@ export default function ReputacioPage() {
       <PageHeader
         crumb="Operacions / Reputació"
         title={<>Reputació i <em style={{ color: 'var(--wr-red-2)', fontWeight: 400 }}>premsa.</em></>}
-        info="Monitoratge de premsa catalana en temps real. 9 diaris catalans, classificació automàtica per partit i sentiment. Actualització cada 30 minuts."
+        info={{
+          title: 'Reputació i premsa',
+          description: "Monitoratge de 9 diaris catalans en temps real. Veu què diu la premsa de cada partit, detecta articles negatius i proposa estratègies de millora amb el War Room. La funció 'Neteja' és l'arma secreta: selecciona un article negatiu i la IA et proposa 3 accions concretes.",
+          dataSource: 'Vilaweb, ARA, NacióDigital, El Punt Avui, ACN, Betevé, La Vanguardia, El Periódico, Catalunya Press · actualització cada 30 min',
+          tips: [
+            "Clica un partit a les barres de mencions per veure'n el detall",
+            "Al tab 'Neteja', el botó 'Netejar' obre el War Room amb una estratègia de millora automàtica",
+            "Fes sync manual amb el botó 'Sync ara' per obtenir els últims articles",
+          ],
+        }}
         actions={
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <StatusLine color="var(--wr-phosphor)">
@@ -180,17 +188,6 @@ export default function ReputacioPage() {
             }}>▸ Sync ara</button>
           </div>
         }
-      />
-      <HelpBanner
-        pageKey="reputacio"
-        title="Reputació i premsa"
-        description="Monitoratge de 9 diaris catalans en temps real. Veu què diu la premsa de cada partit, detecta articles negatius i proposa estratègies de millora amb el War Room. La funció 'Neteja' és l'arma secreta: selecciona un article negatiu i la IA et proposa 3 accions concretes."
-        dataSource="Vilaweb, ARA, NacióDigital, El Punt Avui, ACN, Betevé, La Vanguardia, El Periódico, Catalunya Press · actualització cada 30 min"
-        tips={[
-          "Clica un partit a les barres de mencions per veure'n el detall",
-          "Al tab 'Neteja', el botó 'Netejar' obre el War Room amb una estratègia de millora automàtica",
-          "Fes sync manual amb el botó 'Sync ara' per obtenir els últims articles",
-        ]}
       />
 
       {/* Tabs */}
