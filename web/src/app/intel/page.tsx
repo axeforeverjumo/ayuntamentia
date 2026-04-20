@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import apiClient from '@/lib/ApiClient';
 import { PageHeader } from '@/components/warroom/PageHeader';
+
+const API = process.env.NEXT_PUBLIC_API_URL || '';
 import { PanelBox } from '@/components/warroom/PanelBox';
 import { StatusLine, StatusBadge } from '@/components/warroom/StatusBadge';
 import { TrendingBar } from '@/components/warroom/AlertFeed';
@@ -37,9 +38,9 @@ export default function IntelPage() {
   useEffect(() => {
     const q = new URLSearchParams({ order, limit: '50' });
     if (partido) q.set('partido', partido);
-    apiClient.get<Ranking[]>(`/api/intel/ranking-concejales?${q}`).then(setRanking).catch(() => {});
-    apiClient.get<Tendencia[]>('/api/intel/tendencias').then(setTend).catch(() => {});
-    apiClient.get<Promesa[]>('/api/intel/promesas-incumplidas').then(setProm).catch(() => {});
+    fetch(`${API}/api/intel/ranking-concejales?${q}`).then(r => r.ok ? r.json() : []).then(d => setRanking(Array.isArray(d) ? d : [])).catch(() => {});
+    fetch(`${API}/api/intel/tendencias`).then(r => r.ok ? r.json() : []).then(d => setTend(Array.isArray(d) ? d : [])).catch(() => {});
+    fetch(`${API}/api/intel/promesas-incumplidas`).then(r => r.ok ? r.json() : []).then(d => setProm(Array.isArray(d) ? d : [])).catch(() => {});
   }, [partido, order]);
 
   const maxTend = tend.length > 0 ? Math.max(...tend.map(t => t.actual)) : 1;
@@ -50,6 +51,7 @@ export default function IntelPage() {
       <PageHeader
         crumb="Operacions / Intel·ligència"
         title={<>Intel·ligència <em style={{ color: 'var(--wr-amber)', fontWeight: 400 }}>estratègica.</em></>}
+        info="Anàlisi estratègica del posicionament polític. Rànquing d'alineació dels regidors, tendències emergents als plens, vigilància de rivals i detecció de promeses incomplertes."
         actions={<StatusLine color="var(--wr-phosphor)">947 municipis · anàlisi continu</StatusLine>}
       />
 

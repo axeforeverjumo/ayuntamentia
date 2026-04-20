@@ -80,7 +80,7 @@ function ArticleCard({ article, partit, compact }: { article: any; partit?: stri
             }}>Llegir →</a>
           )}
           {partit && (
-            <Link href={`/chat?q=${encodeURIComponent(`Analitza aquesta notícia sobre ${partit}: "${article.titol}". Com ens afecta i quina resposta recomanaries?`)}`} style={{
+            <Link href={`/chat?mode=monitor&q=${encodeURIComponent(buildAnalitzaPrompt(partit, article))}`} style={{
               padding: '4px 8px', background: 'rgba(212,58,31,.08)', border: '1px solid rgba(212,58,31,.3)',
               color: 'var(--wr-red-2)', fontFamily: 'var(--font-mono)', fontSize: 9,
               textDecoration: 'none', textAlign: 'center',
@@ -90,6 +90,53 @@ function ArticleCard({ article, partit, compact }: { article: any; partit?: stri
       </div>
     </div>
   );
+}
+
+function cleanResum(html?: string) {
+  return (html || '').replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim().slice(0, 400);
+}
+
+function buildAnalitzaPrompt(partit: string, a: any) {
+  const resum = cleanResum(a.resum);
+  return [
+    `Analitza aquesta notícia sobre ${partit}:`,
+    ``,
+    `TITULAR: "${a.titol}"`,
+    a.font ? `FONT: ${a.font}` : '',
+    a.data ? `DATA: ${a.data}` : '',
+    a.sentiment ? `SENTIMENT DETECTAT: ${a.sentiment}` : '',
+    resum ? `RESUM: ${resum}` : '',
+    a.url ? `URL: ${a.url}` : '',
+    ``,
+    `Dona'm:`,
+    `1) Context i enquadrament polític (per què surt ara).`,
+    `2) Impacte real sobre ${partit} i electorat objectiu.`,
+    `3) Riscos i oportunitats immediates (72h).`,
+    `4) Resposta recomanada: to, portaveu, canals.`,
+  ].filter(Boolean).join('\n');
+}
+
+function buildNetejaPrompt(partit: string, a: any) {
+  const resum = cleanResum(a.resum);
+  return [
+    `MISSIÓ: Neteja reputacional. La premsa parla negativament de ${partit}.`,
+    ``,
+    `TITULAR: "${a.titol}"`,
+    a.font ? `FONT: ${a.font}` : '',
+    a.data ? `DATA: ${a.data}` : '',
+    typeof a.score === 'number' ? `SCORE NEGATIVITAT: ${a.score.toFixed(2)}` : '',
+    resum ? `RESUM: ${resum}` : '',
+    a.url ? `URL: ${a.url}` : '',
+    ``,
+    `Entrega un pla operatiu complet en català:`,
+    `1) DIAGNÒSTIC (2–3 línies): quin frame fa mal i per què.`,
+    `2) NARRATIVA ALTERNATIVA: 3 enfocaments que desplacen el focus sense negar fets.`,
+    `3) MISSATGES CLAU (×3): frases curtes llestes per portaveu.`,
+    `4) XARXES: 1 tweet (≤260c), 1 post Instagram, 1 guió TikTok 20s.`,
+    `5) ACCIONS 72h: pas a pas amb responsables suggerits (portaveu, alcaldia, grup municipal).`,
+    `6) SEGUIMENT: indicadors per saber si la neteja funciona (mencions, sentiment, cobertura).`,
+    `7) RISCOS: què NO s'ha de dir i per què.`,
+  ].filter(Boolean).join('\n');
 }
 
 export default function ReputacioPage() {
@@ -360,7 +407,7 @@ export default function ReputacioPage() {
                           textDecoration: 'none', textAlign: 'center',
                         }}>Llegir →</a>
                       )}
-                      <Link href={`/chat?q=${encodeURIComponent(`La premsa parla negativament d'${partit} sobre: "${a.titol}". Proposa 3 accions concretes per millorar la percepció pública sobre aquest tema, amb narratives alternatives i missatges clau per xarxes socials.`)}`} style={{
+                      <Link href={`/chat?mode=netejar&q=${encodeURIComponent(buildNetejaPrompt(partit, a))}`} style={{
                         padding: '6px 12px', background: 'var(--wr-red)', color: 'var(--paper)',
                         border: '1px solid var(--wr-red)', fontFamily: 'var(--font-mono)', fontSize: 10,
                         letterSpacing: '.08em', textTransform: 'uppercase', fontWeight: 700,

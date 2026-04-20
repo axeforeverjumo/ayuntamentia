@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Loader2, Trash2, Plus } from 'lucide-react';
 import { ChatMessage } from '@/components/ui/ChatMessage';
 import { ProgressiveLoader } from '@/components/ui/ProgressiveLoader';
@@ -15,6 +16,7 @@ const MODES = [
   { id: 'monitor', label: 'Monitor', color: 'var(--wr-phosphor)', hint: 'Què es diu de...', icon: '◉' },
   { id: 'atacar', label: 'Atacar', color: 'var(--wr-red-2)', hint: 'Munició contra rivals', icon: '◎' },
   { id: 'defensar', label: 'Defensar', color: '#93c5fd', hint: 'Argumentari pel partit', icon: '◇' },
+  { id: 'netejar', label: 'Netejar', color: '#ff5a3c', hint: 'Reparar reputació', icon: '◼' },
   { id: 'comparar', label: 'Comparar', color: '#c4b5fd', hint: 'Posició vs rivals', icon: '⬡' },
   { id: 'oportunitat', label: 'Oportunitat', color: 'var(--wr-amber)', hint: "Forats d'agenda", icon: '◆' },
 ] as const;
@@ -23,6 +25,7 @@ const SEEDS: Record<string, string[]> = {
   monitor: ['Què ha dit el PP sobre habitatge el darrer mes?', 'Posicionament JxCat en seguretat', 'Evolució tema soroll nocturn 60 dies'],
   atacar: ['Dossier contradiccions PP · civisme', 'Promeses trencades PSC a Terrassa', 'Contradiccions ERC BES parlament vs municipal'],
   defensar: ['Com defensar el nostre vot sobre ordenança civisme?', 'Argumentari fiscalitat comercial', 'Resposta a acusació de transfuguisme'],
+  netejar: ['Estratègia per neutralitzar cobertura negativa sobre AC', 'Narratives alternatives davant crítiques de civisme', 'Pla 72h davant atac mediàtic'],
   comparar: ['PP vs JxCat en urbanisme 2026', 'Dades votació habitatge · tots els partits', 'Qui ha proposat més sobre seguretat?'],
   oportunitat: ['On pot créixer el partit ara?', "Forats d'agenda sense cobrir · comarques altes", 'Temes amb menció ciutadana alta i 0 debats'],
 };
@@ -43,20 +46,37 @@ function loadConversations(): Conversation[] {
 function saveConversations(convs: Conversation[]) { localStorage.setItem('ayuntamentia_chats', JSON.stringify(convs)); }
 
 export default function ChatPage() {
+  return (
+    <Suspense fallback={<div style={{ color: 'var(--fog)', padding: 24 }}>Carregant War Room…</div>}>
+      <ChatPageInner />
+    </Suspense>
+  );
+}
+
+function ChatPageInner() {
+  const searchParams = useSearchParams();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [input, setInput] = useState('');
   const [mode, setMode] = useState('monitor');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const autoFiredRef = useRef(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const loaded = loadConversations();
     setConversations(loaded);
-    if (loaded.length > 0) setActiveId(loaded[0].id);
-  }, []);
+    const qMode = searchParams.get('mode');
+    if (qMode && MODES.some(m => m.id === qMode)) setMode(qMode);
+    // Start a fresh conversation when coming with a pre-filled prompt from /reputacio etc.
+    if (searchParams.get('q')) {
+      setActiveId(null);
+    } else if (loaded.length > 0) {
+      setActiveId(loaded[0].id);
+    }
+  }, [searchParams]);
 
   const activeConv = conversations.find(c => c.id === activeId);
   const messages = activeConv?.messages || [];
@@ -122,6 +142,19 @@ export default function ChatPage() {
       setIsLoading(false);
     }
   };
+
+  // Auto-fire a preformed prompt coming from /reputacio (or other modules).
+  useEffect(() => {
+    const q = searchParams.get('q');
+    if (!q || autoFiredRef.current || isLoading) return;
+    autoFiredRef.current = true;
+    sendMessage(q);
+    // Clean the URL so a refresh doesn't re-trigger.
+    if (typeof window !== 'undefined') {
+      window.history.replaceState({}, '', '/chat');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   return (
     <div style={{ display: 'flex', height: '100vh', background: 'var(--ink)' }}>
