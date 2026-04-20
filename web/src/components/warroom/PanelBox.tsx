@@ -25,7 +25,7 @@ export function PanelBox({ title, subtitle, tone = 'default', children, style, i
   const color = toneMap[tone];
   return (
     <div style={{
-      background: '#080808', border: '1px solid var(--line)',
+      background: 'var(--ink-2)', border: '1px solid var(--line)',
       position: 'relative', ...style,
     }}>
       <CornerBrack />
@@ -69,7 +69,7 @@ export function InfoTooltip({ text }: { text: string }) {
       {show && (
         <span style={{
           position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)',
-          marginTop: 6, padding: '8px 12px', background: '#111', border: '1px solid var(--line)',
+          marginTop: 6, padding: '8px 12px', background: 'var(--ink-3)', border: '1px solid var(--line)',
           color: 'var(--bone)', fontFamily: 'var(--font-sans)', fontSize: 12, lineHeight: 1.4,
           whiteSpace: 'normal', width: 280, zIndex: 100, boxShadow: '0 8px 24px rgba(0,0,0,.5)',
         }}>

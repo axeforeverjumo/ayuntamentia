@@ -4,9 +4,9 @@ type BadgeTone = 'red' | 'amber' | 'phos' | 'bone';
 
 export function StatusBadge({ children, tone = 'bone' }: { children: React.ReactNode; tone?: BadgeTone }) {
   const colors: Record<BadgeTone, { bg: string; color: string; bd: string }> = {
-    red: { bg: '#1a0a08', color: '#e0684f', bd: '#5a1b10' },
-    amber: { bg: '#1a1506', color: '#d4a017', bd: '#5a4310' },
-    phos: { bg: '#0c160a', color: '#8bd35b', bd: '#2a4a1a' },
+    red: { bg: 'color-mix(in srgb, var(--wr-red-2) 12%, transparent)', color: 'var(--wr-red-2)', bd: 'color-mix(in srgb, var(--wr-red-2) 35%, transparent)' },
+    amber: { bg: 'color-mix(in srgb, var(--wr-amber) 12%, transparent)', color: 'var(--wr-amber)', bd: 'color-mix(in srgb, var(--wr-amber) 35%, transparent)' },
+    phos: { bg: 'color-mix(in srgb, var(--wr-phosphor) 12%, transparent)', color: 'var(--wr-phosphor)', bd: 'color-mix(in srgb, var(--wr-phosphor) 35%, transparent)' },
     bone: { bg: 'transparent', color: 'var(--bone)', bd: 'var(--line)' },
   };
   const c = colors[tone];

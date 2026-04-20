@@ -49,7 +49,7 @@ export function KPICard({ label, value, tone = 'default', format, suffix, sublab
 
   return (
     <div style={{
-      background: `linear-gradient(135deg, #080808, ${bg})`,
+      background: `linear-gradient(135deg, var(--ink-2), ${bg})`,
       border: '1px solid var(--line)',
       padding: '18px 20px 16px',
       position: 'relative',

@@ -115,7 +115,7 @@ body {
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { scrollbar-width: none; }
 .thin-scroll::-webkit-scrollbar { width: 4px; height: 4px; }
-.thin-scroll::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+.thin-scroll::-webkit-scrollbar-thumb { background: var(--line); border-radius: 2px; }
 .thin-scroll::-webkit-scrollbar-track { background: transparent; }
 
 /* ---- War Room animations ---- */

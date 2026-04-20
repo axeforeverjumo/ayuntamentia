@@ -89,7 +89,7 @@ export function Sidebar() {
   return (
     <aside
       className="fixed left-0 top-0 h-full w-60 flex flex-col z-40"
-      style={{ background: '#0a0a0a', borderRight: '1px solid var(--line)' }}
+      style={{ background: 'var(--ink)', borderRight: '1px solid var(--line)' }}
     >
       {/* Brand */}
       <div className="px-4 py-3.5" style={{ borderBottom: '1px solid var(--line)' }}>
@@ -114,7 +114,7 @@ export function Sidebar() {
         </Link>
         <div
           className="mt-2.5 flex items-center gap-2"
-          style={{ padding: '7px 10px', background: '#111', border: '1px solid var(--line)' }}
+          style={{ padding: '7px 10px', background: 'var(--ink-3)', border: '1px solid var(--line)' }}
         >
           <span className="pulse-dot" style={{ width: 7, height: 7, borderRadius: 7, background: 'var(--wr-phosphor)', boxShadow: '0 0 6px var(--wr-phosphor)' }} />
           <div style={{ lineHeight: 1.1 }}>

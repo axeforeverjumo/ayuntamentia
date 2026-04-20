@@ -67,7 +67,7 @@ export function MapaCatalunyaInteractiu({ municipios, filtroPartido, onSelect }:
   const maxHeat = Math.max(...filtered.map(p => p.heat), 1);
 
   return (
-    <div style={{ background: '#080808', border: '1px solid var(--line)', position: 'relative' }}>
+    <div style={{ background: 'var(--ink-2)', border: '1px solid var(--line)', position: 'relative' }}>
       <CornerBrack />
       {/* Header */}
       <div style={{
@@ -96,7 +96,7 @@ export function MapaCatalunyaInteractiu({ municipios, filtroPartido, onSelect }:
       {/* Map */}
       <div className="scanline" style={{
         position: 'relative', padding: 16,
-        background: 'radial-gradient(ellipse at 50% 40%, #0a1508 0%, #040404 70%)',
+        background: 'radial-gradient(ellipse at 50% 40%, var(--ink-3) 0%, var(--ink-2) 70%)',
         minHeight: 400,
       }}>
         {/* Grid */}
@@ -153,7 +153,7 @@ export function MapaCatalunyaInteractiu({ municipios, filtroPartido, onSelect }:
           return (
             <div style={{
               position: 'absolute', bottom: 16, left: 16, padding: '10px 14px',
-              background: '#111', border: '1px solid var(--line)',
+              background: 'var(--ink-3)', border: '1px solid var(--line)',
               fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--paper)',
               zIndex: 10, minWidth: 160,
             }}>
