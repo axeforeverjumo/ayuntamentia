@@ -8,6 +8,7 @@ import {
   BarChart2, AlertCircle, CheckCircle2, Loader2, Calendar,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ContextualChat } from "@/components/ui/ContextualChat";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "";
 
@@ -186,6 +187,12 @@ export default function MunicipioDetailPage() {
           </div>
         </div>
       </div>
+      <ContextualChat
+        contextType="municipi"
+        contextId={String(id)}
+        contextLabel={data.nombre}
+        contextPrompt={`Respon NOMÉS sobre el municipi de ${data.nombre} (${data.comarca}, ${data.provincia}). Utilitza les actes processades d'aquest municipi, les seves votacions i els seus regidors. No parlis d'altres municipis.`}
+      />
     </div>
   );
 }
