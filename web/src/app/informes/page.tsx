@@ -132,11 +132,11 @@ export default function InformesPage() {
         actions={
           <button onClick={() => setModalOpen(true)} style={{
             display: 'inline-flex', alignItems: 'center', gap: 8,
-            background: 'var(--wr-red)', color: 'var(--paper)',
-            border: '1px solid var(--wr-red)', padding: '10px 16px',
+            background: 'var(--brand)', color: '#E8F1F9',
+            border: '1px solid var(--brand)', borderRadius: 'var(--r-md)', padding: '10px 16px',
             fontFamily: 'var(--font-mono)', fontSize: 11,
             letterSpacing: '.1em', textTransform: 'uppercase', fontWeight: 700,
-            cursor: 'pointer',
+            cursor: 'pointer', boxShadow: '0 0 20px -6px rgba(15,76,129,.4)',
           }}>
             ◼ GENERAR INFORME →
           </button>
@@ -157,8 +157,8 @@ export default function InformesPage() {
               Crea la teva primera subscripció per rebre briefs automàtics.
             </p>
             <button onClick={() => setModalOpen(true)} style={{
-              background: 'var(--wr-red)', color: 'var(--paper)',
-              border: '1px solid var(--wr-red)', padding: '10px 16px',
+              background: 'var(--brand)', color: '#E8F1F9',
+              border: '1px solid var(--brand)', borderRadius: 'var(--r-md)', padding: '10px 16px',
               fontFamily: 'var(--font-mono)', fontSize: 11,
               letterSpacing: '.1em', textTransform: 'uppercase', fontWeight: 700,
               cursor: 'pointer',
@@ -230,7 +230,7 @@ export default function InformesPage() {
           <div
             onClick={e => e.stopPropagation()}
             style={{
-              background: 'var(--ink-2)', border: '1px solid var(--line)',
+              background: 'var(--bg-surface)', border: '.5px solid var(--border)', borderRadius: 'var(--r-lg)',
               width: '100%', maxWidth: 520, maxHeight: '90vh', overflowY: 'auto',
             }}
           >
@@ -238,7 +238,7 @@ export default function InformesPage() {
               padding: '16px 20px', borderBottom: '1px solid var(--line)',
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
             }}>
-              <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: 22, fontWeight: 400, color: 'var(--paper)', margin: 0 }}>
+              <h2 style={{ fontFamily: 'var(--font-sans)', fontSize: 18, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>
                 {selectedSub.nombre}
               </h2>
               <button onClick={() => setSelectedSub(null)} style={{
@@ -344,7 +344,7 @@ export default function InformesPage() {
           <div
             onClick={e => e.stopPropagation()}
             style={{
-              background: 'var(--ink-2)', border: '1px solid var(--line)',
+              background: 'var(--bg-surface)', border: '.5px solid var(--border)', borderRadius: 'var(--r-lg)',
               width: '100%', maxWidth: 560, maxHeight: '90vh', overflowY: 'auto',
             }}
           >
@@ -353,7 +353,7 @@ export default function InformesPage() {
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
               position: 'sticky', top: 0, background: 'var(--ink-2)',
             }}>
-              <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: 22, fontWeight: 400, color: 'var(--paper)', margin: 0, letterSpacing: '-.01em' }}>
+              <h2 style={{ fontFamily: 'var(--font-sans)', fontSize: 18, fontWeight: 500, color: 'var(--text-primary)', margin: 0, letterSpacing: '-.01em' }}>
                 Nova subscripció
               </h2>
               <button onClick={() => setModalOpen(false)} style={{
@@ -380,7 +380,7 @@ export default function InformesPage() {
                 {(['temas', 'libre'] as const).map(m => (
                   <button key={m} onClick={() => setModo(m)} style={{
                     flex: 1, padding: '8px 12px',
-                    background: modo === m ? 'var(--wr-red)' : 'var(--ink)',
+                    background: modo === m ? 'var(--brand)' : 'var(--ink)',
                     border: '1px solid var(--line)',
                     color: modo === m ? 'var(--paper)' : 'var(--fog)',
                     fontFamily: 'var(--font-mono)', fontSize: 10,
@@ -401,8 +401,8 @@ export default function InformesPage() {
                         onClick={() => setTemas(temas.includes(t) ? temas.filter(x => x !== t) : [...temas, t])}
                         style={{
                           padding: '4px 10px',
-                          background: temas.includes(t) ? 'var(--wr-red)' : 'var(--ink)',
-                          border: `1px solid ${temas.includes(t) ? 'var(--wr-red)' : 'var(--line)'}`,
+                          background: temas.includes(t) ? 'var(--brand)' : 'var(--ink)',
+                          border: `1px solid ${temas.includes(t) ? 'var(--brand)' : 'var(--line)'}`,
                           color: temas.includes(t) ? 'var(--paper)' : 'var(--fog)',
                           fontFamily: 'var(--font-mono)', fontSize: 10,
                           letterSpacing: '.06em', cursor: 'pointer',
@@ -448,14 +448,14 @@ export default function InformesPage() {
                 onClick={create}
                 disabled={!canCreate || creating}
                 style={{
-                  width: '100%', background: 'var(--wr-red)', color: 'var(--paper)',
-                  border: '1px solid var(--wr-red)', padding: '12px 16px',
+                  width: '100%', background: 'var(--brand)', color: '#E8F1F9',
+                  border: '1px solid var(--brand)', borderRadius: 'var(--r-md)', padding: '12px 16px',
                   fontFamily: 'var(--font-mono)', fontSize: 11,
                   letterSpacing: '.1em', textTransform: 'uppercase', fontWeight: 700,
                   cursor: canCreate && !creating ? 'pointer' : 'not-allowed',
                   opacity: canCreate && !creating ? 1 : 0.4,
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                  boxSizing: 'border-box',
+                  boxSizing: 'border-box', boxShadow: '0 0 20px -6px rgba(15,76,129,.4)',
                 }}
               >
                 {creating && <Loader2 className="w-4 h-4 animate-spin" />}

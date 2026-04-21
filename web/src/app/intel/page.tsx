@@ -7,7 +7,7 @@ import { KPICard, KPIGrid } from '@/components/warroom/KPICard';
 import { PanelBox } from '@/components/warroom/PanelBox';
 import { StatusLine, StatusBadge } from '@/components/warroom/StatusBadge';
 import { TrendingBar } from '@/components/warroom/AlertFeed';
-import { Gauge, DotGrid, CornerBrack } from '@/components/landing/primitives';
+import { Gauge } from '@/components/landing/primitives';
 import { traduirTema } from '@/lib/temesCatala';
 
 const API = process.env.NEXT_PUBLIC_API_URL || '';
@@ -79,7 +79,7 @@ export default function IntelPage() {
     <div style={{ minHeight: '100vh', background: 'var(--ink)' }}>
       <PageHeader
         crumb="Operacions / Intel·ligència"
-        title={<>Intel·ligència <em style={{ color: 'var(--wr-amber)', fontWeight: 400 }}>estratègica.</em></>}
+        title={<>Intel·ligència <span style={{ color: 'var(--brand-l)', fontWeight: 400, fontStyle: 'italic' }}>estratègica.</span></>}
         info={{
           title: 'Intel·ligència estratègica',
           description: "Anàlisi profunda del posicionament polític. Detecta qui no va alineat dins de cada partit (Rànquing), quins temes estan escalant (Tendències), la vulnerabilitat dels rivals (Competitiva) i les promeses que no es compleixen (Promeses).",
@@ -98,7 +98,7 @@ export default function IntelPage() {
         {TABS.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)} style={{
             flex: 1, padding: '10px 16px', background: tab === t.id ? 'var(--ink-3)' : 'transparent',
-            border: 'none', borderBottom: tab === t.id ? `2px solid ${t.color}` : '2px solid transparent',
+            border: 'none', borderBottom: tab === t.id ? `2px solid var(--brand-l)` : '2px solid transparent',
             borderRight: '1px solid var(--line)',
             color: tab === t.id ? 'var(--paper)' : 'var(--fog)',
             fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '.1em',
@@ -141,7 +141,7 @@ export default function IntelPage() {
                           background: r.pct_alineacion < 60 ? 'rgba(212,58,31,.04)' : 'transparent',
                         }}>
                           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
-                            <span style={{ fontFamily: 'var(--font-serif)', fontSize: 18, color: 'var(--paper)', lineHeight: 1 }}>
+                            <span style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', lineHeight: 1 }}>
                               {r.nombre}
                             </span>
                             <span style={{
@@ -242,7 +242,7 @@ export default function IntelPage() {
             {/* Empty state if no data yet */}
             {top5Divergents.length === 0 && (
               <div style={{ textAlign: 'center', padding: '80px 0' }}>
-                <div style={{ fontFamily: 'var(--font-serif)', fontSize: 28, color: 'var(--paper)', marginBottom: 10 }}>Sense dades de regidors</div>
+                <div style={{ fontFamily: 'var(--font-sans)', fontSize: 22, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 10 }}>Sense dades de regidors</div>
                 <p style={{ fontSize: 13, color: 'var(--fog)', maxWidth: 400, margin: '0 auto' }}>
                   Quan es processin actes amb votacions, el rànquing apareixerà aquí.
                 </p>
@@ -258,9 +258,7 @@ export default function IntelPage() {
             {/* Signal board */}
             <PanelBox title="Signal board" subtitle="temes actius · variació 30 dies" tone="amber">
               <div style={{ position: 'relative', overflow: 'hidden' }}>
-                <CornerBrack />
-                <DotGrid size={22} opacity={0.03} />
-                <div style={{ position: 'relative', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, background: 'var(--line)' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, background: 'var(--line)' }}>
                   {/* Creixement */}
                   <div style={{ background: 'var(--ink-2)', padding: '18px 16px' }}>
                     <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--wr-phosphor)', letterSpacing: '.16em', textTransform: 'uppercase', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -271,7 +269,7 @@ export default function IntelPage() {
                         {tend.filter(t => t.delta > 0).sort((a, b) => b.delta - a.delta).slice(0, 8).map((t, i) => (
                           <div key={i}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
-                              <span style={{ fontFamily: 'var(--font-serif)', fontSize: 15, color: 'var(--paper)', lineHeight: 1 }}>
+                              <span style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', lineHeight: 1 }}>
                                 {traduirTema(t.tema)}
                               </span>
                               <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
@@ -306,7 +304,7 @@ export default function IntelPage() {
                         {tend.filter(t => t.delta < 0).sort((a, b) => a.delta - b.delta).slice(0, 8).map((t, i) => (
                           <div key={i}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
-                              <span style={{ fontFamily: 'var(--font-serif)', fontSize: 15, color: 'var(--paper)', lineHeight: 1 }}>
+                              <span style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', lineHeight: 1 }}>
                                 {traduirTema(t.tema)}
                               </span>
                               <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--wr-red-2)', fontWeight: 700 }}>
@@ -359,7 +357,7 @@ export default function IntelPage() {
                           padding: '8px 12px', borderBottom: '1px dashed var(--line-soft)',
                           alignItems: 'center',
                         }}>
-                          <span style={{ fontFamily: 'var(--font-serif)', fontSize: 14, color: 'var(--paper)' }}>
+                          <span style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: 'var(--text-primary)' }}>
                             {traduirTema(t.tema)}
                           </span>
                           <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 6 }}>
@@ -416,16 +414,16 @@ export default function IntelPage() {
                     <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--fog)', letterSpacing: '.16em', textTransform: 'uppercase', marginBottom: 4 }}>
                       Anàlisi de rivals · Dades reals del rànquing
                     </div>
-                    <div style={{ fontFamily: 'var(--font-serif)', fontSize: 28, color: 'var(--paper)', fontWeight: 400 }}>
-                      Partits <em style={{ color: 'var(--wr-red-2)' }}>vulnerables.</em>
+                    <div style={{ fontFamily: 'var(--font-sans)', fontSize: 22, fontWeight: 500, color: 'var(--text-primary)' }}>
+                      Partits <span style={{ color: 'var(--brand-l)', fontStyle: 'italic' }}>vulnerables.</span>
                     </div>
                   </div>
                   <Link href="/chat?mode=atacar" style={{
                     display: 'inline-flex', alignItems: 'center', gap: 8,
-                    background: 'var(--wr-red)', color: 'var(--paper)', border: '1px solid var(--wr-red)',
-                    padding: '10px 16px', fontFamily: 'var(--font-mono)', fontSize: 11,
+                    background: 'var(--brand)', color: '#E8F1F9', border: '1px solid var(--brand)',
+                    borderRadius: 'var(--r-md)', padding: '10px 16px', fontFamily: 'var(--font-mono)', fontSize: 11,
                     letterSpacing: '.1em', textTransform: 'uppercase', fontWeight: 700,
-                    textDecoration: 'none', boxShadow: '0 0 20px -6px rgba(255,90,60,.4)',
+                    textDecoration: 'none', boxShadow: '0 0 20px -6px rgba(15,76,129,.4)',
                   }}>
                     ◼ Analitzar rival al War Room →
                   </Link>
@@ -438,10 +436,9 @@ export default function IntelPage() {
                       background: 'var(--ink-2)', border: '1px solid var(--line)',
                       padding: '20px 18px', position: 'relative', overflow: 'hidden',
                     }}>
-                      {i === 0 && <CornerBrack />}
-                      <div style={{ position: 'relative' }}>
+                        <div style={{ position: 'relative' }}>
                         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
-                          <span style={{ fontFamily: 'var(--font-serif)', fontSize: 32, color: 'var(--paper)', lineHeight: 1 }}>
+                          <span style={{ fontFamily: 'var(--font-sans)', fontSize: 26, fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1 }}>
                             {p.name}
                           </span>
                           {i === 0 && (
@@ -463,7 +460,7 @@ export default function IntelPage() {
                             <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--fog)', letterSpacing: '.1em', textTransform: 'uppercase', marginBottom: 4 }}>
                               Divergents
                             </div>
-                            <div style={{ fontFamily: 'var(--font-serif)', fontSize: 24, color: 'var(--wr-amber)', lineHeight: 1 }}>
+                            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 22, fontWeight: 600, color: 'var(--wr-amber)', lineHeight: 1 }}>
                               {p.divergents}
                             </div>
                           </div>
@@ -472,7 +469,7 @@ export default function IntelPage() {
                               Vulnerabilitat
                             </div>
                             <div style={{
-                              fontFamily: 'var(--font-serif)', fontSize: 24, lineHeight: 1,
+                              fontFamily: 'var(--font-sans)', fontSize: 22, fontWeight: 600, lineHeight: 1,
                               color: p.vulnerabilitat > 50 ? 'var(--wr-red-2)' : p.vulnerabilitat > 25 ? 'var(--wr-amber)' : 'var(--wr-phosphor)',
                               fontStyle: 'italic',
                             }}>
@@ -498,7 +495,7 @@ export default function IntelPage() {
               </>
             ) : (
               <div style={{ textAlign: 'center', padding: '80px 0' }}>
-                <div style={{ fontFamily: 'var(--font-serif)', fontSize: 32, color: 'var(--paper)', marginBottom: 12 }}>Sense dades rivals</div>
+                <div style={{ fontFamily: 'var(--font-sans)', fontSize: 24, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 12 }}>Sense dades rivals</div>
                 <p style={{ fontSize: 14, color: 'var(--bone)', maxWidth: 480, margin: '0 auto 24px', lineHeight: 1.5 }}>
                   Quan hi hagi prou dades de regidors d&apos;altres partits, la intel·ligència competitiva apareixerà aquí.
                 </p>
@@ -516,7 +513,7 @@ export default function IntelPage() {
                 {prom.map((p, i) => (
                   <div key={i} style={{ background: 'var(--ink-2)', border: '1px solid var(--line)', padding: '18px 20px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                      <span style={{ fontFamily: 'var(--font-serif)', fontSize: 22, color: 'var(--paper)' }}>{traduirTema(p.tema)}</span>
+                      <span style={{ fontFamily: 'var(--font-sans)', fontSize: 16, fontWeight: 500, color: 'var(--text-primary)' }}>{traduirTema(p.tema)}</span>
                       <StatusBadge tone="red">{p.rechazadas} rebutjades</StatusBadge>
                     </div>
                     <p style={{ fontSize: 13, color: 'var(--bone)', lineHeight: 1.5 }}>
@@ -535,9 +532,7 @@ export default function IntelPage() {
                   background: 'var(--ink-2)', border: '1px solid var(--line)',
                   padding: '40px 36px', position: 'relative', overflow: 'hidden', marginBottom: 16,
                 }}>
-                  <CornerBrack />
-                  <DotGrid size={24} opacity={0.04} />
-                  <div style={{ position: 'relative', textAlign: 'center' }}>
+                  <div style={{ textAlign: 'center' }}>
                     {/* Parlament SVG icon */}
                     <div style={{
                       width: 72, height: 72, margin: '0 auto 24px',
@@ -553,10 +548,10 @@ export default function IntelPage() {
                       Sistema en espera
                     </div>
                     <h2 style={{
-                      fontFamily: 'var(--font-serif)', fontSize: 36, color: 'var(--paper)',
-                      fontWeight: 400, margin: '0 0 16px', lineHeight: 1,
+                      fontFamily: 'var(--font-sans)', fontSize: 26, color: 'var(--text-primary)',
+                      fontWeight: 500, margin: '0 0 16px', lineHeight: 1.1,
                     }}>
-                      Sense dades del <em style={{ color: 'var(--wr-amber)' }}>Parlament.</em>
+                      Sense dades del <span style={{ color: 'var(--brand-l)', fontStyle: 'italic' }}>Parlament.</span>
                     </h2>
                     <p style={{ fontSize: 14, color: 'var(--bone)', lineHeight: 1.6, maxWidth: 520, margin: '0 auto 28px' }}>
                       Quan es processin sessions parlamentàries, el sistema creuarà automàticament les propostes amb les votacions municipals per detectar incoherències entre el discurs nacional i l&apos;acció local.

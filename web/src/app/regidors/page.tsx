@@ -4,7 +4,6 @@ import { useEffect, useState, useMemo } from 'react';
 import { PageHeader } from '@/components/warroom/PageHeader';
 import { PanelBox } from '@/components/warroom/PanelBox';
 import { StatusLine, StatusBadge } from '@/components/warroom/StatusBadge';
-import { Gauge } from '@/components/landing/primitives';
 
 const API = process.env.NEXT_PUBLIC_API_URL || '';
 
@@ -53,7 +52,7 @@ export default function RegidorsPage() {
     <div style={{ minHeight: '100vh', background: 'var(--ink)' }}>
       <PageHeader
         crumb="Operacions / Regidors"
-        title={<>Regidors <em style={{ color: view === 'propis' ? 'var(--wr-phosphor)' : 'var(--wr-red-2)', fontWeight: 400 }}>{view === 'propis' ? 'propis.' : 'rivals.'}</em></>}
+        title={<>Regidors <span style={{ color: view === 'propis' ? 'var(--brand-l)' : 'var(--wr-red-2)', fontWeight: 400, fontStyle: 'italic' }}>{view === 'propis' ? 'propis.' : 'rivals.'}</span></>}
         actions={<StatusLine color="var(--wr-phosphor)">{regidors.length} regidors carregats</StatusLine>}
         info={{
           title: 'Regidors i càrrecs electes',
@@ -134,7 +133,7 @@ export default function RegidorsPage() {
           </div>
         ) : regidors.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '80px 0' }}>
-            <div style={{ fontFamily: 'var(--font-serif)', fontSize: 32, color: 'var(--paper)', marginBottom: 12 }}>Sense dades</div>
+            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 24, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 12 }}>Sense dades</div>
             <p style={{ fontSize: 14, color: 'var(--bone)', maxWidth: 400, margin: '0 auto' }}>
               Quan es processin actes amb votacions, els perfils de regidors apareixeran aquí amb alineació, divergències i historial.
             </p>

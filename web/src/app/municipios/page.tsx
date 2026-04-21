@@ -17,7 +17,6 @@ import {
 import { SearchInput } from '@/components/ui/SearchInput';
 import { apiClient } from '@/lib/ApiClient';
 import type { Municipio } from '@/lib/types';
-import { cn } from '@/lib/utils';
 
 const PROVINCIAS = ['Totes', 'Barcelona', 'Girona', 'Lleida', 'Tarragona'];
 
@@ -95,10 +94,10 @@ export default function MunicipiosPage() {
         ))}
       </div>
 
-      <div style={{ padding: '20px 26px' }} className="space-y-6">
+      <div style={{ padding: '20px 26px', display: 'flex', flexDirection: 'column', gap: 20 }}>
 
       {/* Filters */}
-      <div className="flex items-center gap-3 flex-wrap">
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
         <SearchInput
           value={search}
           onChange={setSearch}
@@ -106,61 +105,42 @@ export default function MunicipiosPage() {
           className="w-72"
         />
 
-        <div className="flex items-center gap-1 bg-[#161b22] border border-[#30363d] rounded-lg p-1">
+        <div style={{ display: 'flex', background: 'var(--bg-surface)', border: '.5px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 4, gap: 2 }}>
           {PROVINCIAS.map((p) => (
             <button
               key={p}
               onClick={() => setProvincia(p)}
-              className={cn(
-                'px-3 py-1.5 text-xs rounded-md transition-colors',
-                provincia === p
-                  ? 'bg-[#1c2128] text-[#e6edf3] font-medium'
-                  : 'text-[#8b949e] hover:text-[#e6edf3]',
-              )}
+              style={{
+                padding: '5px 12px', borderRadius: 'var(--r-md)', fontSize: 11,
+                fontWeight: provincia === p ? 500 : 400, border: 'none', cursor: 'pointer',
+                background: provincia === p ? 'var(--brand)' : 'transparent',
+                color: provincia === p ? '#E8F1F9' : 'var(--text-secondary)',
+                transition: 'all .15s',
+              }}
             >
               {p}
             </button>
           ))}
         </div>
 
-        <div className="flex items-center gap-1 bg-[#161b22] border border-[#30363d] rounded-lg p-1">
-          <button
-            onClick={() => setTieneAC(null)}
-            className={cn(
-              'px-3 py-1.5 text-xs rounded-md transition-colors',
-              tieneAC === null
-                ? 'bg-[#1c2128] text-[#e6edf3] font-medium'
-                : 'text-[#8b949e] hover:text-[#e6edf3]',
-            )}
-          >
-            Tots
-          </button>
-          <button
-            onClick={() => setTieneAC(true)}
-            className={cn(
-              'px-3 py-1.5 text-xs rounded-md transition-colors',
-              tieneAC === true
-                ? 'bg-[#1c2128] text-[#e6edf3] font-medium'
-                : 'text-[#8b949e] hover:text-[#e6edf3]',
-            )}
-          >
-            Amb AC
-          </button>
-          <button
-            onClick={() => setTieneAC(false)}
-            className={cn(
-              'px-3 py-1.5 text-xs rounded-md transition-colors',
-              tieneAC === false
-                ? 'bg-[#1c2128] text-[#e6edf3] font-medium'
-                : 'text-[#8b949e] hover:text-[#e6edf3]',
-            )}
-          >
-            Sense AC
-          </button>
+        <div style={{ display: 'flex', background: 'var(--bg-surface)', border: '.5px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 4, gap: 2 }}>
+          {[{ v: null, l: 'Tots' }, { v: true, l: 'Amb AC' }, { v: false, l: 'Sense AC' }].map(({ v, l }) => (
+            <button
+              key={String(v)}
+              onClick={() => setTieneAC(v as boolean | null)}
+              style={{
+                padding: '5px 12px', borderRadius: 'var(--r-md)', fontSize: 11,
+                fontWeight: tieneAC === v ? 500 : 400, border: 'none', cursor: 'pointer',
+                background: tieneAC === v ? 'var(--brand)' : 'transparent',
+                color: tieneAC === v ? '#E8F1F9' : 'var(--text-secondary)',
+                transition: 'all .15s',
+              }}
+            >{l}</button>
+          ))}
         </div>
 
         {filtered.length !== municipios.length && (
-          <span className="text-xs text-[#8b949e] ml-auto">
+          <span style={{ fontSize: 11, color: 'var(--text-meta)', marginLeft: 'auto' }}>
             Mostrant {filtered.length} de {municipios.length}
           </span>
         )}
@@ -168,17 +148,17 @@ export default function MunicipiosPage() {
 
       {/* Error state */}
       {error && (
-        <div className="flex items-center gap-3 p-4 rounded-lg bg-[#450a0a] border border-[#7f1d1d]">
-          <AlertCircle className="w-4 h-4 text-[#f87171] flex-shrink-0" />
-          <p className="text-sm text-[#f87171]">{error}</p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderRadius: 'var(--r-lg)', background: 'rgba(220,38,38,.08)', border: '.5px solid rgba(220,38,38,.3)' }}>
+          <AlertCircle style={{ width: 16, height: 16, color: '#dc2626', flexShrink: 0 }} />
+          <p style={{ fontSize: 13, color: '#dc2626', margin: 0 }}>{error}</p>
         </div>
       )}
 
       {/* Loading */}
       {loading && (
-        <div className="flex items-center justify-center py-16">
-          <Loader2 className="w-6 h-6 text-[#2563eb] animate-spin" />
-          <span className="ml-2 text-sm text-[#8b949e]">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '64px 0' }}>
+          <Loader2 style={{ width: 20, height: 20, color: 'var(--brand)' }} className="animate-spin" />
+          <span style={{ marginLeft: 8, fontSize: 13, color: 'var(--text-meta)' }}>
             Carregant municipis...
           </span>
         </div>
@@ -186,12 +166,12 @@ export default function MunicipiosPage() {
 
       {/* Empty state */}
       {!loading && !error && filtered.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-16 bg-[#161b22] border border-[#30363d] rounded-lg">
-          <Building2 className="w-10 h-10 text-[#6e7681] mb-3" />
-          <p className="text-sm font-medium text-[#8b949e]">
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '64px 0', background: 'var(--bg-surface)', border: '.5px solid var(--border)', borderRadius: 'var(--r-lg)' }}>
+          <Building2 style={{ width: 40, height: 40, color: 'var(--text-meta)', marginBottom: 12 }} />
+          <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-secondary)', margin: '0 0 4px' }}>
             Cap municipi trobat
           </p>
-          <p className="text-xs text-[#6e7681] mt-1">
+          <p style={{ fontSize: 12, color: 'var(--text-meta)', margin: 0 }}>
             Intenta canviar els filtres de cerca
           </p>
         </div>
@@ -199,7 +179,7 @@ export default function MunicipiosPage() {
 
       {/* Municipalities grid */}
       {!loading && !error && filtered.length > 0 && (
-        <div className="grid grid-cols-3 gap-3">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
           {filtered.map((municipio) => (
             <MunicipioCard key={municipio.id} municipio={municipio} />
           ))}
@@ -214,56 +194,55 @@ function MunicipioCard({ municipio }: { municipio: Municipio }) {
   return (
     <Link
       href={`/municipios/${municipio.id}`}
-      className="bg-[#161b22] border border-[#30363d] rounded-lg p-4 hover:border-[#484f58] hover:bg-[#1c2128] transition-all group"
+      style={{
+        display: 'block', background: 'var(--bg-surface)', border: '.5px solid var(--border)',
+        borderRadius: 'var(--r-lg)', padding: 16, textDecoration: 'none', transition: 'border-color .15s',
+      }}
     >
-      <div className="flex items-start justify-between mb-3">
-        <div className="min-w-0 flex-1">
-          <h3 className="text-sm font-semibold text-[#e6edf3] group-hover:text-[#60a5fa] transition-colors truncate">
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <h3 style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', margin: '0 0 2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {municipio.nombre}
           </h3>
-          <p className="text-xs text-[#8b949e] mt-0.5 truncate">
+          <p style={{ fontSize: 11, color: 'var(--text-meta)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {municipio.comarca} · {municipio.provincia}
           </p>
         </div>
-        <ChevronRight className="w-4 h-4 text-[#6e7681] flex-shrink-0 ml-2 group-hover:text-[#60a5fa] transition-colors" />
+        <ChevronRight style={{ width: 14, height: 14, color: 'var(--text-meta)', flexShrink: 0, marginLeft: 8 }} />
       </div>
 
-      <div className="grid grid-cols-2 gap-2 text-xs">
-        <div className="flex items-center gap-1.5 text-[#8b949e]">
-          <FileText className="w-3.5 h-3.5 text-[#6e7681]" />
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'var(--text-secondary)' }}>
+          <FileText style={{ width: 12, height: 12, color: 'var(--text-meta)' }} />
           <span>{municipio.actas_procesadas} actes</span>
         </div>
-        <div className="flex items-center gap-1.5 text-[#8b949e]">
-          <Users className="w-3.5 h-3.5 text-[#6e7681]" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'var(--text-secondary)' }}>
+          <Users style={{ width: 12, height: 12, color: 'var(--text-meta)' }} />
           <span>{municipio.num_concejales} concejals</span>
         </div>
-        <div className="flex items-center gap-1.5 text-[#8b949e]">
-          <MapPin className="w-3.5 h-3.5 text-[#6e7681]" />
-          <span>
-            {(municipio.poblacion || 0).toLocaleString('ca-ES')} hab.
-          </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'var(--text-secondary)' }}>
+          <MapPin style={{ width: 12, height: 12, color: 'var(--text-meta)' }} />
+          <span>{(municipio.poblacion || 0).toLocaleString('ca-ES')} hab.</span>
         </div>
-        <div className="flex items-center gap-1.5">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11 }}>
           {municipio.tiene_ac ? (
-            <CheckCircle2 className="w-3.5 h-3.5 text-[#4ade80]" />
+            <CheckCircle2 style={{ width: 12, height: 12, color: '#16a34a' }} />
           ) : (
-            <span className="w-3.5 h-3.5 rounded-full border border-[#30363d] inline-block" />
+            <span style={{ width: 12, height: 12, borderRadius: '50%', border: '.5px solid var(--border)', display: 'inline-block' }} />
           )}
-          <span
-            className={municipio.tiene_ac ? 'text-[#4ade80]' : 'text-[#6e7681]'}
-          >
+          <span style={{ color: municipio.tiene_ac ? '#16a34a' : 'var(--text-meta)' }}>
             {municipio.tiene_ac ? 'Té AC' : 'Sense AC'}
           </span>
         </div>
       </div>
 
-      <div className="mt-3 pt-3 border-t border-[#21262d]">
+      <div style={{ marginTop: 12, paddingTop: 10, borderTop: '.5px solid var(--border)' }}>
         {municipio.ultima_acta ? (
-          <p style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--fog)' }}>
+          <p style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-meta)', margin: 0 }}>
             Últim ple: fa {Math.floor((Date.now() - new Date(municipio.ultima_acta).getTime()) / 86400000)} dies
           </p>
         ) : (
-          <p style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--fog)' }}>
+          <p style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-meta)', margin: 0 }}>
             Sense plens processats
           </p>
         )}

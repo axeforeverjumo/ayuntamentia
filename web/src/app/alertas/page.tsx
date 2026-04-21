@@ -178,8 +178,8 @@ export default function AlertasPage() {
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--fog)', letterSpacing: '.16em', textTransform: 'uppercase', marginBottom: 8 }}>
               Operacions / Alertes
             </div>
-            <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: 44, lineHeight: 1, margin: 0, letterSpacing: '-.02em', fontWeight: 400, color: 'var(--paper)', display: 'flex', alignItems: 'center', gap: 14 }}>
-              Alertes <em style={{ color: 'var(--wr-red-2)' }}>actives.</em>
+            <h1 style={{ fontFamily: 'var(--font-sans)', fontSize: 26, lineHeight: 1.1, margin: 0, fontWeight: 500, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 14 }}>
+              Alertes <span style={{ color: 'var(--brand-l)' }}>actives.</span>
               {stats && stats.nuevas > 0 && (
                 <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '.14em', textTransform: 'uppercase', padding: '4px 10px', background: 'rgba(212,58,31,.08)', border: '1px solid rgba(212,58,31,.3)', color: 'var(--wr-red-2)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                   <span className="pulse-dot" style={{ width: 6, height: 6, background: 'var(--wr-red-2)', borderRadius: 6 }} />
@@ -198,10 +198,11 @@ export default function AlertasPage() {
               onClick={openNewRegla}
               style={{
                 display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px',
-                background: 'var(--wr-red)', color: 'var(--paper)', border: '1px solid var(--wr-red)',
+                background: 'var(--brand)', color: '#E8F1F9', border: '1px solid var(--brand)',
+                borderRadius: 'var(--r-md)',
                 fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '.1em',
                 textTransform: 'uppercase', fontWeight: 700, cursor: 'pointer',
-                boxShadow: '0 0 20px -6px rgba(255,90,60,.4)',
+                boxShadow: '0 0 20px -6px rgba(15,76,129,.3)',
               }}
             >
               <Plus className="w-3.5 h-3.5" />
@@ -224,111 +225,93 @@ export default function AlertasPage() {
         </div>
 
         {/* Tabs */}
-        <div className="flex bg-gradient-to-r from-[#0f141b] to-[#161b22] border border-[#21262d] rounded-xl p-1 gap-1 w-fit">
-          <button
-            onClick={() => setTab('alertas')}
-            className={cn(
-              'inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-medium transition-all',
-              tab === 'alertas'
-                ? 'bg-gradient-to-r from-[#1a0b2e] to-[#0a1e26] text-[#e6edf3] border border-[#7c3aed]/40'
-                : 'text-[#8b949e] hover:text-[#e6edf3]',
-            )}
-          >
-            <Bell className="w-3 h-3" />
-            Alertes {stats && <span className="text-[10px] text-[#6e7681]">({stats.nuevas})</span>}
-          </button>
-          <button
-            onClick={() => setTab('reglas')}
-            className={cn(
-              'inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-medium transition-all',
-              tab === 'reglas'
-                ? 'bg-gradient-to-r from-[#1a0b2e] to-[#0a1e26] text-[#e6edf3] border border-[#7c3aed]/40'
-                : 'text-[#8b949e] hover:text-[#e6edf3]',
-            )}
-          >
-            <Zap className="w-3 h-3" />
-            Les meves regles <span className="text-[10px] text-[#6e7681]">({reglas.length})</span>
-          </button>
+        <div style={{ display: 'flex', gap: 0, borderBottom: '1px solid var(--border)', marginTop: 8 }}>
+          {(['alertas', 'reglas'] as const).map(t => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '9px 16px', background: 'transparent', border: 'none',
+                borderBottom: tab === t ? '2px solid var(--brand-l)' : '2px solid transparent',
+                color: tab === t ? 'var(--text-primary)' : 'var(--text-meta)',
+                fontSize: 12, fontWeight: 500, letterSpacing: '.06em',
+                textTransform: 'uppercase', cursor: 'pointer', transition: 'color .15s',
+              }}
+            >
+              {t === 'alertas' ? <Bell className="w-3 h-3" /> : <Zap className="w-3 h-3" />}
+              {t === 'alertas'
+                ? <>Alertes {stats && <span style={{ fontSize: 10, color: 'var(--text-meta)', marginLeft: 3 }}>({stats.nuevas})</span>}</>
+                : <>Les meves regles <span style={{ fontSize: 10, color: 'var(--text-meta)', marginLeft: 3 }}>({reglas.length})</span></>
+              }
+            </button>
+          ))}
         </div>
 
         {/* Stats */}
         {stats && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <StatCard
-              icon={Bell} label="Totals" value={stats.total}
-              sub={`${stats.nuevas} sense revisar`}
-              gradient="from-[#7c3aed]/15 to-[#06b6d4]/15"
-              border="border-[#7c3aed]/30" iconColor="text-[#c4b5fd]"
-            />
-            <StatCard
-              icon={AlertTriangle} label="Alta prioritat" value={stats.altas_nuevas}
-              sub="requereixen atenció"
-              gradient="from-[#dc2626]/15 to-[#2a0a0a]"
-              border="border-[#dc2626]/40" iconColor="text-[#f87171]"
-            />
-            <StatCard
-              icon={AlertCircle} label="Prioritat mitja" value={stats.medias_nuevas}
-              sub="patrons a vigilar"
-              gradient="from-[#d97706]/15 to-[#2a1f08]"
-              border="border-[#d97706]/40" iconColor="text-[#fbbf24]"
-            />
-            <StatCard
-              icon={TrendingUp} label="Aquesta setmana" value={stats.semana}
-              sub="alertes noves"
-              gradient="from-[#16a34a]/15 to-[#052e16]"
-              border="border-[#16a34a]/40" iconColor="text-[#4ade80]"
-            />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginTop: 16 }}>
+            {[
+              { icon: Bell, label: 'Totals', value: stats.total, sub: `${stats.nuevas} sense revisar`, color: 'var(--brand-l)', border: 'rgba(15,76,129,.3)' },
+              { icon: AlertTriangle, label: 'Alta prioritat', value: stats.altas_nuevas, sub: 'requereixen atenció', color: '#f87171', border: 'rgba(220,38,38,.4)' },
+              { icon: AlertCircle, label: 'Prioritat mitja', value: stats.medias_nuevas, sub: 'patrons a vigilar', color: '#fbbf24', border: 'rgba(217,119,6,.4)' },
+              { icon: TrendingUp, label: 'Aquesta setmana', value: stats.semana, sub: 'alertes noves', color: '#4ade80', border: 'rgba(22,163,74,.4)' },
+            ].map(({ icon: Icon, label, value, sub, color, border }) => (
+              <div key={label} style={{
+                background: 'var(--bg-surface)', border: `.5px solid ${border}`,
+                borderRadius: 'var(--r-lg)', padding: '16px',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <Icon style={{ width: 16, height: 16, color }} />
+                  <span style={{ fontSize: 9.5, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--text-meta)' }}>{label}</span>
+                </div>
+                <p style={{ fontSize: 24, fontWeight: 700, color, margin: 0 }}>{value}</p>
+                <p style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>{sub}</p>
+              </div>
+            ))}
           </div>
         )}
 
         {tab === 'alertas' && (<>
         {/* Filters row 1: severity + estado */}
-        <div className="flex items-center gap-3 flex-wrap">
-          <Filter className="w-4 h-4 text-[#8b949e]" />
-          <div className="flex bg-gradient-to-r from-[#0f141b] to-[#161b22] border border-[#21262d] rounded-xl p-1 gap-1">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginTop: 12 }}>
+          <Filter style={{ width: 16, height: 16, color: 'var(--text-meta)', flexShrink: 0 }} />
+          <div style={{ display: 'flex', background: 'var(--bg-surface)', border: '.5px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 4, gap: 2 }}>
             {(['totes', 'alta', 'media', 'baja'] as const).map((f) => {
               const count = f === 'totes' ? alertas.length : counts[f];
               return (
                 <button
                   key={f}
                   onClick={() => setFilter(f)}
-                  className={cn(
-                    'px-3 py-1.5 rounded-lg text-xs font-medium transition-all capitalize',
-                    filter === f
-                      ? 'bg-gradient-to-r from-[#1a0b2e] to-[#0a1e26] text-[#e6edf3] border border-[#7c3aed]/40'
-                      : 'text-[#8b949e] hover:text-[#e6edf3]',
-                  )}
+                  style={{
+                    padding: '5px 12px', borderRadius: 'var(--r-md)',
+                    fontSize: 11, fontWeight: 500, border: 'none', cursor: 'pointer',
+                    background: filter === f ? 'var(--brand)' : 'transparent',
+                    color: filter === f ? '#E8F1F9' : 'var(--text-secondary)',
+                    transition: 'all .15s',
+                  }}
                 >
                   {f === 'totes' ? 'Totes' : SEVERITY_META[f].label}
-                  <span className="ml-1.5 text-[10px] text-[#6e7681]">({count})</span>
+                  <span style={{ marginLeft: 5, fontSize: 10, opacity: .7 }}>({count})</span>
                 </button>
               );
             })}
           </div>
 
-          <div className="flex bg-gradient-to-r from-[#0f141b] to-[#161b22] border border-[#21262d] rounded-xl p-1 gap-1 ml-auto">
-            <button
-              onClick={() => setEstadoFilter('nueva')}
-              className={cn(
-                'px-3 py-1.5 rounded-lg text-xs font-medium transition-all',
-                estadoFilter === 'nueva'
-                  ? 'bg-gradient-to-r from-[#2a1f08] to-[#1f1a0d] text-[#fbbf24] border border-[#d97706]/40'
-                  : 'text-[#8b949e] hover:text-[#e6edf3]',
-              )}
-            >
-              Sense revisar
-            </button>
-            <button
-              onClick={() => setEstadoFilter('todas')}
-              className={cn(
-                'px-3 py-1.5 rounded-lg text-xs font-medium transition-all',
-                estadoFilter === 'todas'
-                  ? 'bg-gradient-to-r from-[#1a0b2e] to-[#0a1e26] text-[#e6edf3] border border-[#7c3aed]/40'
-                  : 'text-[#8b949e] hover:text-[#e6edf3]',
-              )}
-            >
-              Totes
-            </button>
+          <div style={{ display: 'flex', background: 'var(--bg-surface)', border: '.5px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 4, gap: 2, marginLeft: 'auto' }}>
+            {([['nueva', 'Sense revisar'], ['todas', 'Totes']] as const).map(([v, l]) => (
+              <button
+                key={v}
+                onClick={() => setEstadoFilter(v)}
+                style={{
+                  padding: '5px 12px', borderRadius: 'var(--r-md)',
+                  fontSize: 11, fontWeight: 500, border: 'none', cursor: 'pointer',
+                  background: estadoFilter === v ? 'var(--brand)' : 'transparent',
+                  color: estadoFilter === v ? '#E8F1F9' : 'var(--text-secondary)',
+                  transition: 'all .15s',
+                }}
+              >{l}</button>
+            ))}
           </div>
         </div>
 
@@ -364,34 +347,34 @@ export default function AlertasPage() {
 
         {/* Error state */}
         {error && (
-          <div className="flex items-center gap-3 p-4 rounded-xl bg-gradient-to-r from-[#450a0a] to-[#2a0a0a] border border-[#dc2626]/40">
-            <AlertCircle className="w-4 h-4 text-[#f87171] flex-shrink-0" />
-            <p className="text-sm text-[#fca5a5]">{error}</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, borderRadius: 'var(--r-lg)', background: 'rgba(192,57,43,.08)', border: '.5px solid rgba(192,57,43,.4)' }}>
+            <AlertCircle style={{ width: 16, height: 16, color: '#f87171', flexShrink: 0 }} />
+            <p style={{ fontSize: 13, color: '#fca5a5', margin: 0 }}>{error}</p>
           </div>
         )}
 
         {/* Loading */}
         {loading && (
-          <div className="flex items-center justify-center py-16">
-            <div className="flex items-center gap-3">
-              <Loader2 className="w-5 h-5 text-[#c4b5fd] animate-spin" />
-              <span className="text-sm text-[#8b949e]">Carregant alertes…</span>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '64px 0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <Loader2 style={{ width: 20, height: 20, color: 'var(--brand-l)' }} className="animate-spin" />
+              <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Carregant alertes…</span>
             </div>
           </div>
         )}
 
         {/* Alerts list */}
         {!loading && (
-          <div className="space-y-3">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 4 }}>
             {filteredAlertas.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 bg-gradient-to-br from-[#0f141b] to-[#161b22] border border-[#21262d] rounded-2xl">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#052e16] to-[#0a1e26] border border-[#16a34a]/30 flex items-center justify-center mb-3">
-                  <CheckCircle2 className="w-6 h-6 text-[#4ade80]" />
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '64px 0', background: 'var(--bg-surface)', border: '.5px solid var(--border)', borderRadius: 'var(--r-lg)' }}>
+                <div style={{ width: 56, height: 56, borderRadius: 'var(--r-lg)', background: 'rgba(22,163,74,.1)', border: '.5px solid rgba(22,163,74,.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+                  <CheckCircle2 style={{ width: 24, height: 24, color: '#4ade80' }} />
                 </div>
-                <p className="text-sm font-medium text-[#e6edf3]">
+                <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', margin: '0 0 4px' }}>
                   {estadoFilter === 'nueva' ? 'Cap alerta pendent' : 'Cap alerta'}
                 </p>
-                <p className="text-xs text-[#6e7681] mt-1">
+                <p style={{ fontSize: 12, color: 'var(--text-meta)', margin: 0 }}>
                   {filter !== 'totes' ? `No hi ha alertes de prioritat ${SEVERITY_META[filter].label.toLowerCase()}` : 'Sistema net'}
                 </p>
               </div>
@@ -451,34 +434,38 @@ function ReglasList({
 }) {
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-16">
-        <Loader2 className="w-5 h-5 text-[#c4b5fd] animate-spin" />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '64px 0' }}>
+        <Loader2 style={{ width: 20, height: 20, color: 'var(--brand-l)' }} className="animate-spin" />
       </div>
     );
   }
   if (reglas.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 bg-gradient-to-br from-[#0f141b] to-[#161b22] border border-[#21262d] rounded-2xl">
-        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#7c3aed]/20 to-[#06b6d4]/20 border border-[#7c3aed]/30 flex items-center justify-center mb-3">
-          <Zap className="w-6 h-6 text-[#c4b5fd]" />
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '64px 0', background: 'var(--bg-surface)', border: '.5px solid var(--border)', borderRadius: 'var(--r-lg)', marginTop: 12 }}>
+        <div style={{ width: 56, height: 56, borderRadius: 'var(--r-lg)', background: 'rgba(15,76,129,.1)', border: '.5px solid rgba(15,76,129,.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+          <Zap style={{ width: 24, height: 24, color: 'var(--brand-l)' }} />
         </div>
-        <p className="text-sm font-medium text-[#e6edf3]">Cap regla configurada</p>
-        <p className="text-xs text-[#6e7681] mt-1 max-w-md text-center">
+        <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', margin: '0 0 4px' }}>Cap regla configurada</p>
+        <p style={{ fontSize: 12, color: 'var(--text-meta)', margin: '0 0 16px', maxWidth: 360, textAlign: 'center' }}>
           Crea regles per vigilar partits, temes, regidors o paraules clau.
-          T'avisarem quan hi hagi coincidències noves als plens.
+          T&apos;avisarem quan hi hagi coincidències noves als plens.
         </p>
         <button
           onClick={onCreate}
-          className="mt-4 inline-flex items-center gap-2 px-4 py-2 text-xs rounded-xl bg-gradient-to-r from-[#7c3aed] to-[#06b6d4] text-white hover:from-[#8b5cf6] hover:to-[#22d3ee] transition-colors shadow-lg shadow-[#7c3aed]/20"
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 8, padding: '8px 16px',
+            background: 'var(--brand)', color: '#E8F1F9', border: '1px solid var(--brand)',
+            borderRadius: 'var(--r-md)', fontSize: 12, cursor: 'pointer',
+          }}
         >
-          <Plus className="w-3.5 h-3.5" />
+          <Plus style={{ width: 14, height: 14 }} />
           Crea la primera regla
         </button>
       </div>
     );
   }
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12, marginTop: 12 }}>
       {reglas.map((r) => (
         <ReglaCard key={r.id} regla={r} onEdit={onEdit} onDelete={onDelete} onToggle={onToggle} />
       ))}
@@ -497,116 +484,85 @@ function ReglaCard({
   const hasAny = (regla.partidos?.length || 0) + (regla.temas?.length || 0) +
                   (regla.concejales?.length || 0) + (regla.palabras_clave?.length || 0);
   return (
-    <div className={cn(
-      'relative rounded-2xl border p-4 transition-all overflow-hidden',
-      'bg-gradient-to-br from-[#0f141b] to-[#161b22]',
-      regla.activa ? 'border-[#7c3aed]/30' : 'border-[#21262d] opacity-70',
-    )}>
-      {regla.activa && (
-        <div className="absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl opacity-10 bg-[#7c3aed] pointer-events-none" />
-      )}
-      <div className="relative">
-        <div className="flex items-start justify-between gap-2 mb-2">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="text-[13px] font-semibold text-[#e6edf3]">{regla.nombre}</h3>
-            <span className={cn(
-              'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium',
-              regla.activa ? 'bg-[#052e16] text-[#4ade80] border border-[#16a34a]/30' : 'bg-[#1c2128] text-[#6e7681] border border-[#30363d]',
-            )}>
-              <span className={cn('w-1 h-1 rounded-full', regla.activa ? 'bg-[#4ade80] animate-pulse' : 'bg-[#6e7681]')} />
+    <div style={{
+      position: 'relative', borderRadius: 'var(--r-lg)', padding: 16,
+      background: 'var(--bg-surface)',
+      border: `.5px solid ${regla.activa ? 'rgba(15,76,129,.4)' : 'var(--border)'}`,
+      opacity: regla.activa ? 1 : 0.7, overflow: 'hidden',
+    }}>
+      <div>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <h3 style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>{regla.nombre}</h3>
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px',
+              borderRadius: 'var(--r-full)', fontSize: 10, fontWeight: 500,
+              background: regla.activa ? 'rgba(22,163,74,.12)' : 'var(--bg-elevated)',
+              color: regla.activa ? '#4ade80' : 'var(--text-meta)',
+              border: `.5px solid ${regla.activa ? 'rgba(22,163,74,.3)' : 'var(--border)'}`,
+            }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: regla.activa ? '#4ade80' : 'var(--text-meta)' }} />
               {regla.activa ? 'Activa' : 'Pausada'}
             </span>
           </div>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => onToggle(regla)}
-              title={regla.activa ? 'Pausar' : 'Activar'}
-              className="w-7 h-7 rounded-lg border border-[#30363d] text-[#8b949e] hover:text-[#c4b5fd] hover:border-[#484f58] flex items-center justify-center transition-colors"
-            >
-              {regla.activa ? <X className="w-3 h-3" /> : <Zap className="w-3 h-3" />}
-            </button>
-            <button
-              onClick={() => onEdit(regla)}
-              title="Editar"
-              className="w-7 h-7 rounded-lg border border-[#30363d] text-[#8b949e] hover:text-[#e6edf3] hover:border-[#484f58] flex items-center justify-center transition-colors"
-            >
-              <Edit2 className="w-3 h-3" />
-            </button>
-            <button
-              onClick={() => onDelete(regla.id)}
-              title="Eliminar"
-              className="w-7 h-7 rounded-lg border border-[#30363d] text-[#8b949e] hover:text-[#f87171] hover:border-[#dc2626]/50 flex items-center justify-center transition-colors"
-            >
-              <Trash2 className="w-3 h-3" />
-            </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            {[
+              { onClick: () => onToggle(regla), title: regla.activa ? 'Pausar' : 'Activar', icon: regla.activa ? <X style={{ width: 12, height: 12 }} /> : <Zap style={{ width: 12, height: 12 }} /> },
+              { onClick: () => onEdit(regla), title: 'Editar', icon: <Edit2 style={{ width: 12, height: 12 }} /> },
+              { onClick: () => onDelete(regla.id), title: 'Eliminar', icon: <Trash2 style={{ width: 12, height: 12 }} /> },
+            ].map((btn, i) => (
+              <button key={i} onClick={btn.onClick} title={btn.title} style={{
+                width: 28, height: 28, borderRadius: 'var(--r-md)',
+                border: '.5px solid var(--border)', color: 'var(--text-meta)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'transparent', cursor: 'pointer',
+              }}>{btn.icon}</button>
+            ))}
           </div>
         </div>
 
         {regla.descripcion && (
-          <p className="text-[11px] text-[#c9d1d9] mb-2 leading-relaxed">{regla.descripcion}</p>
+          <p style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 8, lineHeight: 1.5 }}>{regla.descripcion}</p>
         )}
 
-        <div className="flex flex-wrap gap-1 mb-2.5">
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 10 }}>
           {regla.partidos?.map((p) => <PartidoChip key={`p-${p}`} partido={p} size="xs" />)}
           {regla.temas?.map((t) => (
-            <span key={`t-${t}`} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-[#2a1f04] border border-[#d97706]/30 text-[#fbbf24]">
-              <Tag className="w-2.5 h-2.5" />
-              {t.replace(/_/g, ' ')}
+            <span key={`t-${t}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 'var(--r-full)', fontSize: 10, background: 'rgba(217,119,6,.1)', border: '.5px solid rgba(217,119,6,.3)', color: '#fbbf24' }}>
+              <Tag style={{ width: 10, height: 10 }} />{t.replace(/_/g, ' ')}
             </span>
           ))}
           {regla.concejales?.map((c) => (
-            <span key={`c-${c}`} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-[#0a1930] border border-[#1e40af]/30 text-[#93c5fd]">
+            <span key={`c-${c}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 'var(--r-full)', fontSize: 10, background: 'rgba(15,76,129,.1)', border: '.5px solid rgba(15,76,129,.3)', color: 'var(--brand-l)' }}>
               👤 {c}
             </span>
           ))}
           {regla.palabras_clave?.map((k) => (
-            <span key={`k-${k}`} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-[#1a0b2e] border border-[#7c3aed]/30 text-[#c4b5fd]">
+            <span key={`k-${k}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 'var(--r-full)', fontSize: 10, background: 'var(--bg-elevated)', border: '.5px solid var(--border)', color: 'var(--text-secondary)' }}>
               💬 {k}
             </span>
           ))}
         </div>
 
-        <div className="flex items-center gap-3 text-[10px] text-[#8b949e]">
-          <span className="inline-flex items-center gap-1">
-            <Bell className="w-2.5 h-2.5" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 10, color: 'var(--text-meta)' }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            <Bell style={{ width: 10, height: 10 }} />
             {regla.total_alertas ?? 0} alertes
             {(regla.alertas_nuevas ?? 0) > 0 && (
-              <span className="ml-0.5 text-[#fbbf24]">({regla.alertas_nuevas} noves)</span>
+              <span style={{ marginLeft: 2, color: '#fbbf24' }}>({regla.alertas_nuevas} noves)</span>
             )}
           </span>
           {regla.last_run_at && (
-            <span className="inline-flex items-center gap-1">
-              <Clock className="w-2.5 h-2.5" />
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              <Clock style={{ width: 10, height: 10 }} />
               Última: {new Date(regla.last_run_at).toLocaleString('ca-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
             </span>
           )}
           {hasAny === 0 && (
-            <span className="text-[#f87171] ml-auto">⚠️ Sense filtres</span>
+            <span style={{ color: '#f87171', marginLeft: 'auto' }}>⚠️ Sense filtres</span>
           )}
         </div>
       </div>
-    </div>
-  );
-}
-
-function StatCard({ icon: Icon, label, value, sub, gradient, border, iconColor }: {
-  icon: typeof Bell; label: string; value: number | string; sub: string;
-  gradient: string; border: string; iconColor: string;
-}) {
-  return (
-    <div className={cn(
-      'relative overflow-hidden rounded-2xl p-4 border bg-gradient-to-br from-[#0f141b] to-[#161b22]',
-      border,
-    )}>
-      <div className={cn('absolute -top-10 -right-10 w-28 h-28 rounded-full bg-gradient-to-br opacity-40 blur-2xl pointer-events-none', gradient)} />
-      <div className="relative flex items-center justify-between mb-2">
-        <Icon className={cn('w-4 h-4', iconColor)} />
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-[#6e7681]">
-          {label}
-        </span>
-      </div>
-      <p className={cn('text-2xl font-bold relative', iconColor)}>{value}</p>
-      <p className="text-[11px] text-[#8b949e] mt-0.5 relative">{sub}</p>
     </div>
   );
 }
@@ -628,89 +584,89 @@ function AlertaCard({
   const tipoLabel = TIPO_LABEL[alerta.tipo] || alerta.tipo;
   const isResolved = alerta.estado === 'resuelta' || alerta.estado === 'descartada';
 
+  const severityBg = alerta.severidad === 'alta' ? 'rgba(220,38,38,.08)' : alerta.severidad === 'media' ? 'rgba(217,119,6,.08)' : 'rgba(22,163,74,.08)';
+  const severityBorder = alerta.severidad === 'alta' ? 'rgba(220,38,38,.4)' : alerta.severidad === 'media' ? 'rgba(217,119,6,.4)' : 'rgba(22,163,74,.4)';
+
   return (
     <div
       onClick={onClick}
-      className={cn(
-        'relative overflow-hidden rounded-2xl border border-l-2 p-4 transition-all cursor-pointer',
-        'bg-gradient-to-br from-[#0f141b] to-[#161b22]',
-        'hover:border-[#484f58] hover:shadow-lg',
-        meta.border, meta.borderL, meta.glow,
-        isResolved && 'opacity-50',
-      )}
+      style={{
+        position: 'relative', overflow: 'hidden', borderRadius: 'var(--r-lg)',
+        border: `.5px solid ${severityBorder}`, borderLeft: `3px solid ${alerta.severidad === 'alta' ? '#dc2626' : alerta.severidad === 'media' ? '#d97706' : '#16a34a'}`,
+        padding: 16, cursor: 'pointer', background: 'var(--bg-surface)',
+        opacity: isResolved ? 0.5 : 1, transition: 'border-color .15s',
+      }}
     >
-      <div className="absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl opacity-[0.07] pointer-events-none"
-           style={{ background: alerta.severidad === 'alta' ? '#dc2626' : alerta.severidad === 'media' ? '#d97706' : '#16a34a' }} />
-
-      <div className="relative flex items-start gap-3">
-        <div className={cn(
-          'flex-shrink-0 w-9 h-9 rounded-xl border flex items-center justify-center',
-          meta.bg, meta.border,
-        )}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+        <div style={{
+          flexShrink: 0, width: 36, height: 36, borderRadius: 'var(--r-md)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: severityBg, border: `.5px solid ${severityBorder}`,
+        }}>
           <SeverityIcon className={cn('w-4 h-4', meta.text)} />
         </div>
 
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap mb-2">
-            <span className={cn(
-              'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider border',
-              meta.bg, meta.text, meta.border,
-            )}>
-              <span className={cn('w-1 h-1 rounded-full', meta.text.replace('text-', 'bg-'))} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px',
+              borderRadius: 'var(--r-full)', fontSize: 10, fontWeight: 600,
+              textTransform: 'uppercase', letterSpacing: '.06em',
+              background: severityBg, border: `.5px solid ${severityBorder}`,
+            }} className={meta.text}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'currentColor' }} />
               {meta.label}
             </span>
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium"
-              style={alerta.tipo === 'incoherencia_interna'
-                ? { background: 'rgba(161,255,90,.08)', border: '1px solid rgba(161,255,90,.3)', color: 'var(--wr-phosphor)', fontWeight: 700 }
-                : { background: '#1c2128', border: '1px solid #30363d', color: '#8b949e' }
-              }>
-              {alerta.tipo === 'incoherencia_interna' ? '◆ ' : ''}<Tag className="w-2.5 h-2.5" />
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px',
+              borderRadius: 'var(--r-full)', fontSize: 10, fontWeight: 500,
+              ...(alerta.tipo === 'incoherencia_interna'
+                ? { background: 'rgba(161,255,90,.08)', border: '.5px solid rgba(161,255,90,.3)', color: 'var(--wr-phosphor)' }
+                : { background: 'var(--bg-elevated)', border: '.5px solid var(--border)', color: 'var(--text-meta)' }),
+            }}>
+              {alerta.tipo === 'incoherencia_interna' ? '◆ ' : ''}<Tag style={{ width: 10, height: 10 }} />
               {tipoLabel}
             </span>
             {partido && <PartidoChip partido={partido} size="xs" />}
             {alerta.estado === 'vista' && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#0a1930] border border-[#1e40af]/30 text-[#93c5fd]">
-                <Eye className="w-2.5 h-2.5" />
-                Vista
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 'var(--r-full)', fontSize: 10, background: 'rgba(15,76,129,.1)', border: '.5px solid rgba(15,76,129,.3)', color: 'var(--brand-l)' }}>
+                <Eye style={{ width: 10, height: 10 }} />Vista
               </span>
             )}
             {alerta.estado === 'resuelta' && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#052e16] border border-[#16a34a]/30 text-[#4ade80]">
-                <CheckCircle2 className="w-2.5 h-2.5" />
-                Resolta
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 'var(--r-full)', fontSize: 10, background: 'rgba(22,163,74,.1)', border: '.5px solid rgba(22,163,74,.3)', color: '#4ade80' }}>
+                <CheckCircle2 style={{ width: 10, height: 10 }} />Resolta
               </span>
             )}
           </div>
 
-          <h3 className="text-[14px] font-semibold text-[#f3f6fa] mb-1.5 leading-snug">
+          <h3 style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 6px', lineHeight: 1.3 }}>
             {alerta.titulo}
           </h3>
-          <p className="text-[12px] text-[#c9d1d9] leading-relaxed mb-3">
+          <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5, margin: '0 0 12px' }}>
             {alerta.descripcion}
           </p>
 
-          <div className="flex items-center gap-3 text-[10px] text-[#8b949e] flex-wrap">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 10, color: 'var(--text-meta)', flexWrap: 'wrap' }}>
             {alerta.municipio && (
-              <span className="inline-flex items-center gap-1">
-                <Building2 className="w-3 h-3" />
-                {alerta.municipio}
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <Building2 style={{ width: 12, height: 12 }} />{alerta.municipio}
               </span>
             )}
             {alerta.punto_titulo && (
-              <span className="inline-flex items-center gap-1 max-w-md truncate">
-                <Sparkles className="w-3 h-3 flex-shrink-0" />
-                <span className="truncate">{alerta.punto_titulo}</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, maxWidth: '32rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <Sparkles style={{ width: 12, height: 12, flexShrink: 0 }} />
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{alerta.punto_titulo}</span>
               </span>
             )}
-            <span className="inline-flex items-center gap-1 ml-auto">
-              <Clock className="w-3 h-3" />
-              {formatFechaLarga(alerta.created_at)}
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginLeft: 'auto' }}>
+              <Clock style={{ width: 12, height: 12 }} />{formatFechaLarga(alerta.created_at)}
             </span>
           </div>
         </div>
 
         {!isResolved && (
-          <div className="flex-shrink-0 flex flex-col gap-1.5">
+          <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -720,35 +676,35 @@ function AlertaCard({
                 setTimeout(() => setCopied(false), 2000);
               }}
               title="Compartir alerta"
-              className="w-8 h-8 rounded-lg flex items-center justify-center bg-[#0f141b] border border-[#21262d] text-[#8b949e] hover:border-[#7c3aed]/50 hover:text-[#c4b5fd] transition-colors"
+              style={{ width: 32, height: 32, borderRadius: 'var(--r-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-elevated)', border: '.5px solid var(--border)', color: 'var(--text-meta)', cursor: 'pointer' }}
             >
-              {copied ? <span style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--wr-phosphor)' }}>✓</span> : <Share2 className="w-3.5 h-3.5" />}
+              {copied ? <span style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--wr-phosphor)' }}>✓</span> : <Share2 style={{ width: 14, height: 14 }} />}
             </button>
             {alerta.estado === 'nueva' && (
               <button
                 onClick={(e) => { e.stopPropagation(); onMarkViewed(alerta.id); }}
                 disabled={isPending}
                 title="Marcar com a vista"
-                className="w-8 h-8 rounded-lg flex items-center justify-center bg-[#0f141b] border border-[#21262d] text-[#8b949e] hover:border-[#1e40af]/50 hover:text-[#93c5fd] transition-colors disabled:opacity-50"
+                style={{ width: 32, height: 32, borderRadius: 'var(--r-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-elevated)', border: '.5px solid var(--border)', color: 'var(--text-meta)', cursor: 'pointer', opacity: isPending ? 0.5 : 1 }}
               >
-                <Eye className="w-3.5 h-3.5" />
+                <Eye style={{ width: 14, height: 14 }} />
               </button>
             )}
             <button
               onClick={(e) => { e.stopPropagation(); onResolve(alerta.id); }}
               disabled={isPending}
               title="Marcar com a resolta"
-              className="w-8 h-8 rounded-lg flex items-center justify-center bg-[#0f141b] border border-[#21262d] text-[#8b949e] hover:border-[#16a34a]/50 hover:text-[#4ade80] transition-colors disabled:opacity-50"
+              style={{ width: 32, height: 32, borderRadius: 'var(--r-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-elevated)', border: '.5px solid var(--border)', color: 'var(--text-meta)', cursor: 'pointer', opacity: isPending ? 0.5 : 1 }}
             >
-              <CheckCircle2 className="w-3.5 h-3.5" />
+              <CheckCircle2 style={{ width: 14, height: 14 }} />
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); onDismiss(alerta.id); }}
               disabled={isPending}
               title="Descartar"
-              className="w-8 h-8 rounded-lg flex items-center justify-center bg-[#0f141b] border border-[#21262d] text-[#8b949e] hover:border-[#dc2626]/50 hover:text-[#f87171] transition-colors disabled:opacity-50"
+              style={{ width: 32, height: 32, borderRadius: 'var(--r-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-elevated)', border: '.5px solid var(--border)', color: 'var(--text-meta)', cursor: 'pointer', opacity: isPending ? 0.5 : 1 }}
             >
-              <X className="w-3.5 h-3.5" />
+              <X style={{ width: 14, height: 14 }} />
             </button>
           </div>
         )}

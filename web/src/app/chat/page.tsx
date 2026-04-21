@@ -13,7 +13,7 @@ import type { ChatMessage as ChatMessageType, ChatResponse } from '@/lib/types';
 import type { WorkspaceMode } from '@/lib/workspaceStorage';
 import { PageHeader } from '@/components/warroom/PageHeader';
 import { StatusBadge, LiveDot, StatusLine } from '@/components/warroom/StatusBadge';
-import { Gauge, DotGrid, CornerBrack } from '@/components/landing/primitives';
+import { Gauge } from '@/components/landing/primitives';
 
 const MODES = [
   { id: 'monitor', label: 'Monitor', color: 'var(--wr-phosphor)', hint: 'Què es diu de...', icon: '◉' },
@@ -187,9 +187,9 @@ function ChatPageInner() {
               style={{
                 display: 'flex', alignItems: 'center', gap: 8,
                 padding: '8px 10px', marginBottom: 2, cursor: 'pointer',
-                background: activeId === conv.id ? 'var(--paper)' : 'transparent',
-                color: activeId === conv.id ? 'var(--ink)' : 'var(--bone)',
-                borderLeft: activeId === conv.id ? '3px solid var(--wr-red)' : '3px solid transparent',
+                background: activeId === conv.id ? 'var(--bg-elevated)' : 'transparent',
+                color: activeId === conv.id ? 'var(--text-primary)' : 'var(--bone)',
+                borderLeft: activeId === conv.id ? '3px solid var(--brand-l)' : '3px solid transparent',
                 fontSize: 12,
               }}
             >
@@ -231,9 +231,10 @@ function ChatPageInner() {
             return (
               <button key={m.id} onClick={() => setMode(m.id)} style={{
                 display: 'flex', alignItems: 'center', gap: 7, padding: '7px 11px',
-                background: active ? 'var(--ink-4)' : 'transparent',
-                border: '1px solid ' + (active ? m.color : 'var(--line)'),
-                color: active ? m.color : 'var(--bone)',
+                background: active ? 'var(--brand)' : 'transparent',
+                border: '1px solid ' + (active ? 'var(--brand)' : 'var(--line)'),
+                color: active ? '#E8F1F9' : 'var(--bone)',
+                borderRadius: 'var(--r-md)',
                 cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: 11,
                 letterSpacing: '.06em', textTransform: 'uppercase',
               }}>
@@ -255,13 +256,12 @@ function ChatPageInner() {
         <div className="thin-scroll" style={{ flex: 1, overflow: 'auto', padding: '22px 26px 0' }}>
           {messages.length === 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', textAlign: 'center' }}>
-              <DotGrid size={28} opacity={0.04} />
-              <div style={{ position: 'relative', maxWidth: 580 }}>
+              <div style={{ maxWidth: 580 }}>
                 <StatusBadge tone="red">◼ {modeDef.label.toUpperCase()} MODE · ACTIU</StatusBadge>
                 <h2 style={{
-                  fontFamily: 'var(--font-serif)', fontSize: 'clamp(36px, 5vw, 64px)',
-                  margin: '18px 0 14px', lineHeight: .95, letterSpacing: '-.02em',
-                  color: 'var(--paper)', fontWeight: 400,
+                  fontFamily: 'var(--font-sans)', fontSize: 'clamp(28px, 4vw, 48px)',
+                  margin: '18px 0 14px', lineHeight: 1.05, letterSpacing: '-.01em',
+                  color: 'var(--text-primary)', fontWeight: 500,
                 }}>
                   {modeDef.id === 'atacar' ? <>Tria el <em style={{ color: modeDef.color }}>rival.</em></> :
                    modeDef.id === 'defensar' ? <>Prepara l&apos;<em style={{ color: modeDef.color }}>argumentari.</em></> :
@@ -345,7 +345,7 @@ function ChatPageInner() {
             <form onSubmit={e => { e.preventDefault(); sendMessage(input); }} style={{
               display: 'grid', gridTemplateColumns: '1fr auto',
               background: 'var(--ink)', border: '1px solid var(--line)',
-              borderTop: `3px solid ${modeDef.color}`,
+              borderTop: '3px solid var(--brand)',
             }}>
               <input
                 ref={inputRef}
@@ -359,8 +359,8 @@ function ChatPageInner() {
                 }}
               />
               <button type="submit" disabled={!input.trim() || isLoading} style={{
-                background: isLoading ? 'var(--ink-4)' : modeDef.color,
-                color: 'var(--ink)', border: 'none', padding: '0 20px', cursor: 'pointer',
+                background: isLoading ? 'var(--ink-4)' : 'var(--brand)',
+                color: '#E8F1F9', border: 'none', padding: '0 20px', cursor: 'pointer',
                 fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '.1em',
                 textTransform: 'uppercase', fontWeight: 700,
                 opacity: !input.trim() || isLoading ? 0.4 : 1,

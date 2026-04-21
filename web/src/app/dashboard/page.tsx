@@ -7,9 +7,7 @@ import { KPICard, KPIGrid } from '@/components/warroom/KPICard';
 import { PanelBox } from '@/components/warroom/PanelBox';
 import { StatusLine, StatusBadge } from '@/components/warroom/StatusBadge';
 import { AlertFeed, TrendingBar } from '@/components/warroom/AlertFeed';
-import { TacticalRadar } from '@/components/landing/TacticalRadar';
 import { traduirTema } from '@/lib/temesCatala';
-import { Gauge, DotGrid, CornerBrack } from '@/components/landing/primitives';
 import { MapaCatalunyaInteractiu } from '@/components/warroom/MapaCatalunya';
 import { useRouter } from 'next/navigation';
 
@@ -181,16 +179,15 @@ export default function DashboardPage() {
           <div style={{
             background: 'var(--ink-2)', border: '1px solid var(--line)',
             padding: '28px 24px', position: 'relative', overflow: 'hidden',
+            borderRadius: 'var(--r-lg)',
           }}>
-            <CornerBrack />
-            <DotGrid size={24} opacity={0.06} />
             <div style={{ position: 'relative' }}>
               <StatusBadge tone="red">◼ WAR ROOM · 5 MODES</StatusBadge>
               <h2 style={{
-                fontFamily: 'var(--font-serif)', fontSize: 36, margin: '16px 0 12px',
-                lineHeight: 1, letterSpacing: '-.01em', color: 'var(--paper)', fontWeight: 400,
+                fontFamily: 'var(--font-sans)', fontSize: 26, margin: '16px 0 12px',
+                lineHeight: 1.1, letterSpacing: '-.01em', color: 'var(--paper)', fontWeight: 500,
               }}>
-                Pregunta. <em style={{ color: 'var(--wr-red-2)' }}>Dispara.</em>
+                Pregunta. <span style={{ color: 'var(--brand-l)' }}>Dispara.</span>
               </h2>
               <p style={{ fontSize: 13, color: 'var(--bone)', lineHeight: 1.5, margin: '0 0 20px', maxWidth: 400 }}>
                 Monitor · Atacar · Defensar · Comparar · Oportunitat. Cada mode preparat per donar-te munició política amb cita literal.
@@ -214,11 +211,11 @@ export default function DashboardPage() {
 
               <Link href="/chat" style={{
                 display: 'inline-flex', alignItems: 'center', gap: 8,
-                background: 'var(--wr-red)', color: 'var(--paper)', border: '1px solid var(--wr-red)',
+                background: 'var(--brand)', color: '#E8F1F9', border: '1px solid var(--brand)',
                 padding: '12px 18px', fontFamily: 'var(--font-mono)', fontSize: 12,
                 letterSpacing: '.1em', textTransform: 'uppercase', fontWeight: 700,
-                textDecoration: 'none',
-                boxShadow: '0 0 24px -6px rgba(255,90,60,.4)',
+                textDecoration: 'none', borderRadius: 'var(--r-md)',
+                boxShadow: '0 0 24px -6px rgba(15,76,129,.3)',
               }}>
                 ◼ OBRIR WAR ROOM →
               </Link>
@@ -250,7 +247,7 @@ export default function DashboardPage() {
               </div>
             ) : (
               <div style={{ padding: '40px 0', textAlign: 'center' }}>
-                <div style={{ fontFamily: 'var(--font-serif)', fontSize: 24, color: 'var(--paper)', marginBottom: 8 }}>
+                <div style={{ fontFamily: 'var(--font-sans)', fontSize: 20, fontWeight: 500, color: 'var(--paper)', marginBottom: 8 }}>
                   Properament
                 </div>
                 <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--fog)', letterSpacing: '.1em', textTransform: 'uppercase' }}>

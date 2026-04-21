@@ -4,19 +4,12 @@ import { useState, useCallback, useTransition, useEffect, Suspense } from 'react
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
-  Search,
-  FileText,
-  ChevronLeft,
-  ChevronRight,
-  Filter,
-  X,
-  Loader2,
-  AlertCircle,
+  Search, FileText, ChevronLeft, ChevronRight, Filter, X, Loader2, AlertCircle,
 } from 'lucide-react';
 import { SearchInput } from '@/components/ui/SearchInput';
 import { apiClient } from '@/lib/ApiClient';
 import type { SearchResponse, SearchResult } from '@/lib/types';
-import { formatDate, cn } from '@/lib/utils';
+import { formatDate } from '@/lib/utils';
 
 const RESULTS_PER_PAGE = 10;
 
@@ -28,19 +21,9 @@ interface Filters {
   fecha_hasta: string;
 }
 
-const emptyFilters: Filters = {
-  municipio: '',
-  partido: '',
-  tema: '',
-  fecha_desde: '',
-  fecha_hasta: '',
-};
+const emptyFilters: Filters = { municipio: '', partido: '', tema: '', fecha_desde: '', fecha_hasta: '' };
 
-function buildQueryString(
-  q: string,
-  filters: Filters,
-  page: number,
-): string {
+function buildQueryString(q: string, filters: Filters, page: number): string {
   const params = new URLSearchParams();
   if (q) params.set('q', q);
   if (filters.municipio) params.set('municipio', filters.municipio);
@@ -52,6 +35,16 @@ function buildQueryString(
   params.set('per_page', String(RESULTS_PER_PAGE));
   return params.toString();
 }
+
+const inputStyle: React.CSSProperties = {
+  width: '100%', padding: '8px 10px', fontSize: 13,
+  background: 'var(--bg-elevated)', border: '.5px solid var(--border-em)',
+  borderRadius: 'var(--r-md)', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box',
+};
+
+const labelStyle: React.CSSProperties = {
+  display: 'block', fontSize: 11, color: 'var(--text-meta)', marginBottom: 4,
+};
 
 function BuscarPageInner() {
   const searchParams = useSearchParams();
@@ -66,61 +59,38 @@ function BuscarPageInner() {
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const performSearch = useCallback(
-    async (q: string, f: Filters, p: number) => {
-      if (!q.trim()) return;
+  const performSearch = useCallback(async (q: string, f: Filters, p: number) => {
+    if (!q.trim()) return;
+    setError(null);
+    startTransition(async () => {
+      try {
+        const qs = buildQueryString(q, f, p);
+        const data = await apiClient.get<SearchResponse>(`/api/search/?${qs}`);
+        setResults(data.results);
+        setTotal(data.total);
+        setHasSearched(true);
+      } catch {
+        setError('Error en la cerca. Torna-ho a intentar.');
+        setResults([]);
+        setTotal(0);
+        setHasSearched(true);
+      }
+    });
+  }, []);
 
-      setError(null);
-      startTransition(async () => {
-        try {
-          const qs = buildQueryString(q, f, p);
-          const data = await apiClient.get<SearchResponse>(
-            `/api/search/?${qs}`,
-          );
-          setResults(data.results);
-          setTotal(data.total);
-          setHasSearched(true);
-        } catch {
-          setError('Error en la cerca. Torna-ho a intentar.');
-          setResults([]);
-          setTotal(0);
-          setHasSearched(true);
-        }
-      });
-    },
-    [],
-  );
-
-  // Auto-search if ?q= is in URL
   useEffect(() => {
-    if (initialQ) {
-      performSearch(initialQ, emptyFilters, 1);
-    }
+    if (initialQ) performSearch(initialQ, emptyFilters, 1);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleSearch = () => {
-    setPage(1);
-    performSearch(query, filters, 1);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') handleSearch();
-  };
-
+  const handleSearch = () => { setPage(1); performSearch(query, filters, 1); };
+  const handleKeyDown = (e: React.KeyboardEvent) => { if (e.key === 'Enter') handleSearch(); };
   const handlePageChange = (newPage: number) => {
     setPage(newPage);
     performSearch(query, filters, newPage);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
-
-  const updateFilter = (key: keyof Filters, value: string) => {
-    setFilters((prev) => ({ ...prev, [key]: value }));
-  };
-
-  const clearFilters = () => {
-    setFilters(emptyFilters);
-  };
-
+  const updateFilter = (key: keyof Filters, value: string) => setFilters(prev => ({ ...prev, [key]: value }));
+  const clearFilters = () => setFilters(emptyFilters);
   const activeFilterCount = Object.values(filters).filter(Boolean).length;
   const totalPages = Math.ceil(total / RESULTS_PER_PAGE);
 
@@ -128,316 +98,233 @@ function BuscarPageInner() {
     <div style={{ minHeight: '100vh', background: 'var(--ink)' }}>
       <div style={{ padding: '22px 26px 18px', borderBottom: '1px solid var(--line)' }}>
         <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--fog)', letterSpacing: '.16em', textTransform: 'uppercase', marginBottom: 8 }}>Operacions / Cercar</div>
-        <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: 44, lineHeight: 1, margin: 0, letterSpacing: '-.02em', fontWeight: 400, color: 'var(--paper)' }}>
-          Cerca <em style={{ color: 'var(--bone)' }}>universal.</em>
+        <h1 style={{ fontFamily: 'var(--font-sans)', fontSize: 26, lineHeight: 1.1, margin: 0, fontWeight: 500, color: 'var(--text-primary)' }}>
+          Cerca <span style={{ color: 'var(--brand-l)', fontStyle: 'italic' }}>universal.</span>
         </h1>
       </div>
-      <div style={{ padding: '20px 26px', maxWidth: 900 }} className="space-y-6">
+      <div style={{ padding: '20px 26px', maxWidth: 900, display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-      {/* Search bar */}
-      <div className="space-y-3">
-        <div className="flex gap-2">
-          <SearchInput
-            value={query}
-            onChange={setQuery}
-            placeholder="Cerca actes, votacions, concejals..."
-            className="flex-1"
-          />
-          <button
-            onClick={() => setShowFilters((v) => !v)}
-            className={cn(
-              'flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm border transition-colors',
-              showFilters || activeFilterCount > 0
-                ? 'bg-[#1e3a8a] border-[#2563eb] text-[#60a5fa]'
-                : 'bg-[#161b22] border-[#30363d] text-[#8b949e] hover:border-[#484f58]',
-            )}
-          >
-            <Filter className="w-4 h-4" />
-            Filtres
-            {activeFilterCount > 0 && (
-              <span className="w-4 h-4 rounded-full bg-[#2563eb] text-white text-[10px] flex items-center justify-center">
-                {activeFilterCount}
-              </span>
-            )}
-          </button>
-          <button
-            onClick={handleSearch}
-            onKeyDown={handleKeyDown}
-            disabled={!query.trim() || isPending}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm bg-[#2563eb] text-white hover:bg-[#1d4ed8] disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
-          >
-            {isPending ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Search className="w-4 h-4" />
-            )}
-            Cercar
-          </button>
+        {/* Search bar */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ flex: 1 }}>
+              <SearchInput
+                value={query}
+                onChange={setQuery}
+                placeholder="Cerca actes, votacions, concejals..."
+                className="flex-1"
+              />
+            </div>
+            <button
+              onClick={() => setShowFilters(v => !v)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px',
+                background: showFilters || activeFilterCount > 0 ? 'rgba(15,76,129,.1)' : 'var(--bg-surface)',
+                border: `.5px solid ${showFilters || activeFilterCount > 0 ? 'var(--brand)' : 'var(--border)'}`,
+                color: showFilters || activeFilterCount > 0 ? 'var(--brand-l)' : 'var(--text-secondary)',
+                borderRadius: 'var(--r-md)', fontSize: 13, cursor: 'pointer', transition: 'all .15s',
+              }}
+            >
+              <Filter style={{ width: 14, height: 14 }} />
+              Filtres
+              {activeFilterCount > 0 && (
+                <span style={{ width: 18, height: 18, borderRadius: 'var(--r-full)', background: 'var(--brand)', color: '#E8F1F9', fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {activeFilterCount}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={handleSearch}
+              onKeyDown={handleKeyDown}
+              disabled={!query.trim() || isPending}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px',
+                background: 'var(--brand)', color: '#E8F1F9',
+                border: '1px solid var(--brand)', borderRadius: 'var(--r-md)',
+                fontSize: 13, fontWeight: 500, cursor: !query.trim() || isPending ? 'not-allowed' : 'pointer',
+                opacity: !query.trim() || isPending ? 0.5 : 1, transition: 'opacity .15s',
+                boxShadow: '0 0 20px -6px rgba(15,76,129,.4)',
+              }}
+            >
+              {isPending ? <Loader2 style={{ width: 14, height: 14 }} className="animate-spin" /> : <Search style={{ width: 14, height: 14 }} />}
+              Cercar
+            </button>
+          </div>
+
+          {/* Filter panel */}
+          {showFilters && (
+            <div style={{ background: 'var(--bg-surface)', border: '.5px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>Filtres avançats</p>
+                {activeFilterCount > 0 && (
+                  <button onClick={clearFilters} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--text-meta)', background: 'none', border: 'none', cursor: 'pointer' }}>
+                    <X style={{ width: 12, height: 12 }} /> Netejar filtres
+                  </button>
+                )}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+                {[
+                  { key: 'municipio' as const, label: 'Municipi', placeholder: 'Nom del municipi' },
+                  { key: 'partido' as const, label: 'Partit', placeholder: 'Nom del partit' },
+                  { key: 'tema' as const, label: 'Tema', placeholder: 'Tema o matèria' },
+                ].map(({ key, label, placeholder }) => (
+                  <div key={key}>
+                    <label style={labelStyle}>{label}</label>
+                    <input type="text" value={filters[key]} onChange={e => updateFilter(key, e.target.value)} placeholder={placeholder} style={inputStyle} />
+                  </div>
+                ))}
+                <div>
+                  <label style={labelStyle}>Des de</label>
+                  <input type="date" value={filters.fecha_desde} onChange={e => updateFilter('fecha_desde', e.target.value)} style={{ ...inputStyle, colorScheme: 'dark' }} />
+                </div>
+                <div>
+                  <label style={labelStyle}>Fins a</label>
+                  <input type="date" value={filters.fecha_hasta} onChange={e => updateFilter('fecha_hasta', e.target.value)} style={{ ...inputStyle, colorScheme: 'dark' }} />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Filter panel */}
-        {showFilters && (
-          <div className="bg-[#161b22] border border-[#30363d] rounded-lg p-4 space-y-4">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-medium text-[#e6edf3]">Filtres avançats</p>
-              {activeFilterCount > 0 && (
-                <button
-                  onClick={clearFilters}
-                  className="flex items-center gap-1 text-xs text-[#8b949e] hover:text-[#e6edf3] transition-colors"
-                >
-                  <X className="w-3 h-3" />
-                  Netejar filtres
-                </button>
-              )}
+        {/* Error state */}
+        {error && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', borderRadius: 'var(--r-lg)', background: 'rgba(220,38,38,.08)', border: '.5px solid rgba(220,38,38,.3)' }}>
+            <AlertCircle style={{ width: 16, height: 16, color: '#dc2626', flexShrink: 0 }} />
+            <p style={{ fontSize: 13, color: '#dc2626', margin: 0 }}>{error}</p>
+          </div>
+        )}
+
+        {/* Loading state */}
+        {isPending && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 0' }}>
+            <Loader2 style={{ width: 22, height: 22, color: 'var(--brand)' }} className="animate-spin" />
+            <span style={{ marginLeft: 8, fontSize: 13, color: 'var(--text-meta)' }}>Cercant...</span>
+          </div>
+        )}
+
+        {/* Results */}
+        {!isPending && hasSearched && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>
+                {total === 0 ? 'Cap resultat trobat' : (
+                  <><span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{total.toLocaleString('ca-ES')}</span> resultats per a &ldquo;{query}&rdquo;</>
+                )}
+              </p>
+              {total > 0 && <p style={{ fontSize: 11, color: 'var(--text-meta)', margin: 0 }}>Pàgina {page} de {totalPages}</p>}
             </div>
-            <div className="grid grid-cols-3 gap-3">
-              <div>
-                <label className="text-xs text-[#8b949e] block mb-1">
-                  Municipi
-                </label>
-                <input
-                  type="text"
-                  value={filters.municipio}
-                  onChange={(e) => updateFilter('municipio', e.target.value)}
-                  placeholder="Nom del municipi"
-                  className="w-full px-3 py-2 text-sm bg-[#0d1117] border border-[#30363d] rounded-lg text-[#e6edf3] placeholder:text-[#6e7681] focus:outline-none focus:ring-1 focus:ring-[#2563eb]"
-                />
+
+            {results.length === 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '64px 0', background: 'var(--bg-surface)', border: '.5px solid var(--border)', borderRadius: 'var(--r-lg)' }}>
+                <Search style={{ width: 36, height: 36, color: 'var(--text-meta)', marginBottom: 12 }} />
+                <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-secondary)', margin: '0 0 4px' }}>Cap resultat per a &ldquo;{query}&rdquo;</p>
+                <p style={{ fontSize: 12, color: 'var(--text-meta)', margin: 0 }}>Prova amb altres paraules clau o menys filtres</p>
               </div>
-              <div>
-                <label className="text-xs text-[#8b949e] block mb-1">
-                  Partit
-                </label>
-                <input
-                  type="text"
-                  value={filters.partido}
-                  onChange={(e) => updateFilter('partido', e.target.value)}
-                  placeholder="Nom del partit"
-                  className="w-full px-3 py-2 text-sm bg-[#0d1117] border border-[#30363d] rounded-lg text-[#e6edf3] placeholder:text-[#6e7681] focus:outline-none focus:ring-1 focus:ring-[#2563eb]"
-                />
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {results.map(result => <SearchResultCard key={result.id} result={result} />)}
               </div>
-              <div>
-                <label className="text-xs text-[#8b949e] block mb-1">
-                  Tema
-                </label>
-                <input
-                  type="text"
-                  value={filters.tema}
-                  onChange={(e) => updateFilter('tema', e.target.value)}
-                  placeholder="Tema o matèria"
-                  className="w-full px-3 py-2 text-sm bg-[#0d1117] border border-[#30363d] rounded-lg text-[#e6edf3] placeholder:text-[#6e7681] focus:outline-none focus:ring-1 focus:ring-[#2563eb]"
-                />
+            )}
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, paddingTop: 8 }}>
+                <button onClick={() => handlePageChange(page - 1)} disabled={page === 1}
+                  style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 10px', fontSize: 13, background: 'var(--bg-surface)', border: '.5px solid var(--border)', borderRadius: 'var(--r-md)', color: 'var(--text-secondary)', cursor: page === 1 ? 'not-allowed' : 'pointer', opacity: page === 1 ? 0.4 : 1 }}>
+                  <ChevronLeft style={{ width: 14, height: 14 }} /> Anterior
+                </button>
+                <div style={{ display: 'flex', gap: 4 }}>
+                  {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                    const pageNum = i + 1;
+                    return (
+                      <button key={pageNum} onClick={() => handlePageChange(pageNum)}
+                        style={{ width: 32, height: 32, fontSize: 13, borderRadius: 'var(--r-md)', border: '.5px solid var(--border)', background: pageNum === page ? 'var(--brand)' : 'var(--bg-surface)', color: pageNum === page ? '#E8F1F9' : 'var(--text-secondary)', cursor: 'pointer' }}>
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+                </div>
+                <button onClick={() => handlePageChange(page + 1)} disabled={page === totalPages}
+                  style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 10px', fontSize: 13, background: 'var(--bg-surface)', border: '.5px solid var(--border)', borderRadius: 'var(--r-md)', color: 'var(--text-secondary)', cursor: page === totalPages ? 'not-allowed' : 'pointer', opacity: page === totalPages ? 0.4 : 1 }}>
+                  Següent <ChevronRight style={{ width: 14, height: 14 }} />
+                </button>
               </div>
-              <div>
-                <label className="text-xs text-[#8b949e] block mb-1">
-                  Des de
-                </label>
-                <input
-                  type="date"
-                  value={filters.fecha_desde}
-                  onChange={(e) => updateFilter('fecha_desde', e.target.value)}
-                  className="w-full px-3 py-2 text-sm bg-[#0d1117] border border-[#30363d] rounded-lg text-[#e6edf3] focus:outline-none focus:ring-1 focus:ring-[#2563eb] [color-scheme:dark]"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-[#8b949e] block mb-1">
-                  Fins a
-                </label>
-                <input
-                  type="date"
-                  value={filters.fecha_hasta}
-                  onChange={(e) => updateFilter('fecha_hasta', e.target.value)}
-                  className="w-full px-3 py-2 text-sm bg-[#0d1117] border border-[#30363d] rounded-lg text-[#e6edf3] focus:outline-none focus:ring-1 focus:ring-[#2563eb] [color-scheme:dark]"
-                />
-              </div>
+            )}
+          </div>
+        )}
+
+        {/* Initial empty state */}
+        {!isPending && !hasSearched && (
+          <div style={{ padding: '40px 0', textAlign: 'center' }}>
+            <div style={{ width: 60, height: 60, margin: '0 auto 16px', border: '.5px solid var(--border)', display: 'grid', placeItems: 'center', background: 'var(--bg-surface)', borderRadius: 'var(--r-md)' }}>
+              <Search style={{ width: 26, height: 26, color: 'var(--text-meta)' }} />
+            </div>
+            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 22, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 8 }}>
+              Cerca <span style={{ color: 'var(--brand-l)', fontStyle: 'italic' }}>universal</span>
+            </div>
+            <p style={{ fontSize: 14, color: 'var(--text-secondary)', maxWidth: 420, margin: '0 auto 24px', lineHeight: 1.5 }}>
+              Cerca en actes, votacions i declaracions de tots els 947 municipis de Catalunya.
+            </p>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-meta)', letterSpacing: '.14em', textTransform: 'uppercase', marginBottom: 12 }}>
+              Cerques suggerides
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxWidth: 400, margin: '0 auto' }}>
+              {['habitatge social', 'civisme terrasses', 'seguretat ciutadana', 'pressupost 2026', 'immigració'].map(q => (
+                <button key={q} onClick={() => { setQuery(q); performSearch(q, filters, 1); }} style={{
+                  padding: '10px 14px', background: 'var(--bg-surface)', border: '.5px solid var(--border)',
+                  borderRadius: 'var(--r-md)', color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', fontSize: 13,
+                  cursor: 'pointer', textAlign: 'left', transition: 'border-color .15s',
+                }}>
+                  → {q}
+                </button>
+              ))}
             </div>
           </div>
         )}
       </div>
-
-      {/* Error state */}
-      {error && (
-        <div className="flex items-center gap-3 p-4 rounded-lg bg-[#450a0a] border border-[#7f1d1d]">
-          <AlertCircle className="w-4 h-4 text-[#f87171] flex-shrink-0" />
-          <p className="text-sm text-[#f87171]">{error}</p>
-        </div>
-      )}
-
-      {/* Loading state */}
-      {isPending && (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-6 h-6 text-[#2563eb] animate-spin" />
-          <span className="ml-2 text-sm text-[#8b949e]">Cercant...</span>
-        </div>
-      )}
-
-      {/* Results */}
-      {!isPending && hasSearched && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-[#8b949e]">
-              {total === 0 ? (
-                'Cap resultat trobat'
-              ) : (
-                <>
-                  <span className="text-[#e6edf3] font-medium">
-                    {total.toLocaleString('ca-ES')}
-                  </span>{' '}
-                  resultats per a &ldquo;{query}&rdquo;
-                </>
-              )}
-            </p>
-            {total > 0 && (
-              <p className="text-xs text-[#6e7681]">
-                Pàgina {page} de {totalPages}
-              </p>
-            )}
-          </div>
-
-          {results.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 bg-[#161b22] border border-[#30363d] rounded-lg">
-              <Search className="w-10 h-10 text-[#6e7681] mb-3" />
-              <p className="text-sm font-medium text-[#8b949e]">
-                Cap resultat per a &ldquo;{query}&rdquo;
-              </p>
-              <p className="text-xs text-[#6e7681] mt-1">
-                Prova amb altres paraules clau o menys filtres
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {results.map((result) => (
-                <SearchResultCard key={result.id} result={result} />
-              ))}
-            </div>
-          )}
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2 pt-2">
-              <button
-                onClick={() => handlePageChange(page - 1)}
-                disabled={page === 1}
-                className="flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg border border-[#30363d] text-[#8b949e] hover:bg-[#161b22] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              >
-                <ChevronLeft className="w-4 h-4" />
-                Anterior
-              </button>
-
-              <div className="flex items-center gap-1">
-                {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
-                  const pageNum = i + 1;
-                  return (
-                    <button
-                      key={pageNum}
-                      onClick={() => handlePageChange(pageNum)}
-                      className={cn(
-                        'w-8 h-8 text-sm rounded-lg transition-colors',
-                        pageNum === page
-                          ? 'bg-[#2563eb] text-white'
-                          : 'border border-[#30363d] text-[#8b949e] hover:bg-[#161b22]',
-                      )}
-                    >
-                      {pageNum}
-                    </button>
-                  );
-                })}
-              </div>
-
-              <button
-                onClick={() => handlePageChange(page + 1)}
-                disabled={page === totalPages}
-                className="flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg border border-[#30363d] text-[#8b949e] hover:bg-[#161b22] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              >
-                Següent
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Initial empty state with suggestions */}
-      {!isPending && !hasSearched && (
-        <div style={{ padding: '40px 0', textAlign: 'center' }}>
-          <div style={{ width: 64, height: 64, margin: '0 auto 16px', border: '1px solid var(--line)', display: 'grid', placeItems: 'center', background: 'var(--ink-2)' }}>
-            <Search className="w-7 h-7" style={{ color: 'var(--bone)' }} />
-          </div>
-          <div style={{ fontFamily: 'var(--font-serif)', fontSize: 28, color: 'var(--paper)', marginBottom: 8 }}>
-            Cerca <em style={{ color: 'var(--bone)' }}>universal</em>
-          </div>
-          <p style={{ fontSize: 14, color: 'var(--fog)', maxWidth: 420, margin: '0 auto 28px', lineHeight: 1.5 }}>
-            Cerca en actes, votacions i declaracions de tots els 947 municipis de Catalunya.
-          </p>
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--fog)', letterSpacing: '.14em', textTransform: 'uppercase', marginBottom: 12 }}>
-            Cerques suggerides
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxWidth: 400, margin: '0 auto' }}>
-            {['habitatge social', 'civisme terrasses', 'seguretat ciutadana', 'pressupost 2026', 'immigració'].map(q => (
-              <button key={q} onClick={() => { setQuery(q); performSearch(q, filters, 1); }} style={{
-                padding: '10px 14px', background: 'transparent', border: '1px dashed var(--line)',
-                color: 'var(--bone)', fontFamily: 'var(--font-sans)', fontSize: 13,
-                cursor: 'pointer', textAlign: 'left',
-              }}>
-                → {q}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
     </div>
   );
 }
 
 export default function BuscarPage() {
   return (
-    <Suspense fallback={<div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" /></div>}>
+    <Suspense fallback={<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 256 }}><Loader2 style={{ width: 22, height: 22, color: 'var(--brand)' }} className="animate-spin" /></div>}>
       <BuscarPageInner />
     </Suspense>
   );
 }
 
 function SearchResultCard({ result }: { result: SearchResult }) {
-  const href =
-    result.tipo === 'acta'
-      ? `/actas/${result.id}`
-      : result.tipo === 'municipio'
-        ? `/municipios/${result.id}`
-        : `/actas/${result.id}`;
-
+  const href = result.tipo === 'municipio' ? `/municipios/${result.id}` : `/actas/${result.id}`;
   return (
-    <Link
-      href={href}
-      className="block bg-[#161b22] border border-[#30363d] rounded-lg p-4 hover:border-[#484f58] hover:bg-[#1c2128] transition-all group"
-    >
-      <div className="flex items-start gap-3">
-        <div className="w-8 h-8 rounded-lg bg-[#1c2128] border border-[#30363d] flex items-center justify-center flex-shrink-0 mt-0.5">
-          <FileText className="w-4 h-4 text-[#8b949e]" />
+    <Link href={href} style={{
+      display: 'block', background: 'var(--bg-surface)', border: '.5px solid var(--border)',
+      borderRadius: 'var(--r-lg)', padding: 16, textDecoration: 'none', transition: 'border-color .15s',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+        <div style={{ width: 32, height: 32, borderRadius: 'var(--r-md)', background: 'var(--bg-elevated)', border: '.5px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2 }}>
+          <FileText style={{ width: 14, height: 14, color: 'var(--text-meta)' }} />
         </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap mb-1">
-            <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-[#1c2128] text-[#8b949e] border border-[#30363d] uppercase tracking-wider">
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 4 }}>
+            <span style={{ padding: '1px 6px', borderRadius: 'var(--r-full)', fontSize: 10, fontWeight: 500, background: 'var(--bg-elevated)', color: 'var(--text-meta)', border: '.5px solid var(--border)', textTransform: 'uppercase', letterSpacing: '.06em' }}>
               {result.tipo}
             </span>
-            <span className="text-xs text-[#8b949e]">{result.municipio}</span>
+            <span style={{ fontSize: 11, color: 'var(--text-meta)' }}>{result.municipio}</span>
             {result.partido && (
               <>
-                <span className="text-xs text-[#6e7681]">·</span>
-                <span className="text-xs text-[#8b949e]">{result.partido}</span>
+                <span style={{ fontSize: 11, color: 'var(--text-meta)' }}>·</span>
+                <span style={{ fontSize: 11, color: 'var(--text-meta)' }}>{result.partido}</span>
               </>
             )}
-            <span className="text-xs text-[#6e7681] ml-auto flex-shrink-0">
-              {formatDate(result.fecha)}
-            </span>
+            <span style={{ fontSize: 11, color: 'var(--text-meta)', marginLeft: 'auto', flexShrink: 0 }}>{formatDate(result.fecha)}</span>
           </div>
-          <h3 className="text-sm font-medium text-[#e6edf3] group-hover:text-[#60a5fa] transition-colors mb-1">
+          <h3 style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', margin: '0 0 4px', lineHeight: 1.3 }}>
             {result.titulo}
           </h3>
           {result.snippet && (
-            <p
-              className="text-xs text-[#8b949e] leading-relaxed"
-              dangerouslySetInnerHTML={{ __html: result.snippet }}
-            />
+            <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}
+              dangerouslySetInnerHTML={{ __html: result.snippet }} />
           )}
         </div>
       </div>

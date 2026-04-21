@@ -60,14 +60,27 @@ type FormState = {
 };
 
 const emptyForm: FormState = {
-  email: '',
-  password: '',
-  nombre: '',
-  rol: 'delegado',
-  activo: true,
-  anonimizar_nombres: false,
-  areas: [],
-  municipio_ids: [],
+  email: '', password: '', nombre: '', rol: 'delegado',
+  activo: true, anonimizar_nombres: false, areas: [], municipio_ids: [],
+};
+
+const inputStyle: React.CSSProperties = {
+  width: '100%', padding: '8px 10px', fontSize: 13,
+  background: 'var(--bg-elevated)', border: '.5px solid var(--border-em)',
+  borderRadius: 'var(--r-md)', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box',
+};
+
+const labelStyle: React.CSSProperties = {
+  display: 'block', fontSize: 11, color: 'var(--text-meta)', marginBottom: 4,
+};
+
+const thStyle: React.CSSProperties = {
+  textAlign: 'left', padding: '8px 12px', fontSize: 10, color: 'var(--text-meta)',
+  letterSpacing: '.1em', textTransform: 'uppercase', fontWeight: 500, fontFamily: 'var(--font-mono)',
+};
+
+const tdStyle: React.CSSProperties = {
+  padding: '10px 12px', fontSize: 13, borderTop: '.5px solid var(--border)', color: 'var(--text-primary)',
 };
 
 export default function AdminPage() {
@@ -76,7 +89,6 @@ export default function AdminPage() {
   const [usage, setUsage] = useState<UsageRow[]>([]);
   const [summary, setSummary] = useState<Summary[]>([]);
   const [error, setError] = useState<string | null>(null);
-
   const [modalMode, setModalMode] = useState<'closed' | 'create' | 'edit'>('closed');
   const [form, setForm] = useState<FormState>(emptyForm);
   const [saving, setSaving] = useState(false);
@@ -91,7 +103,6 @@ export default function AdminPage() {
   }
   useEffect(loadAll, []);
 
-  // Búsqueda municipios
   useEffect(() => {
     if (modalMode === 'closed') return;
     const q = municipioSearch.trim();
@@ -104,60 +115,29 @@ export default function AdminPage() {
   }, [municipioSearch, modalMode]);
 
   function openCreate() {
-    setForm({ ...emptyForm });
-    setMunicipiosSelected([]);
-    setMunicipioSearch('');
-    setModalMode('create');
-    setError(null);
+    setForm({ ...emptyForm }); setMunicipiosSelected([]); setMunicipioSearch('');
+    setModalMode('create'); setError(null);
   }
 
   async function openEdit(u: User) {
-    setForm({
-      user_id: u.user_id,
-      email: '',
-      password: '',
-      nombre: u.nombre,
-      rol: u.rol,
-      activo: u.activo,
-      anonimizar_nombres: u.anonimizar_nombres,
-      areas: u.areas,
-      municipio_ids: u.municipio_ids,
-    });
+    setForm({ user_id: u.user_id, email: '', password: '', nombre: u.nombre, rol: u.rol, activo: u.activo, anonimizar_nombres: u.anonimizar_nombres, areas: u.areas, municipio_ids: u.municipio_ids });
     setMunicipioSearch('');
-    // Cargar nombres de los municipios ya asignados
     if (u.municipio_ids.length > 0) {
       try {
         const all = await apiClient.get<Municipio[]>(`/api/admin/municipios?limit=200`);
         setMunicipiosSelected(all.filter((m) => u.municipio_ids.includes(m.id)));
-      } catch {
-        setMunicipiosSelected([]);
-      }
-    } else {
-      setMunicipiosSelected([]);
-    }
-    setModalMode('edit');
-    setError(null);
+      } catch { setMunicipiosSelected([]); }
+    } else { setMunicipiosSelected([]); }
+    setModalMode('edit'); setError(null);
   }
 
-  function closeModal() {
-    if (saving) return;
-    setModalMode('closed');
-    setError(null);
-  }
-
-  function toggleArea(a: string) {
-    setForm((f) => ({
-      ...f,
-      areas: f.areas.includes(a) ? f.areas.filter((x) => x !== a) : [...f.areas, a],
-    }));
-  }
-
+  function closeModal() { if (saving) return; setModalMode('closed'); setError(null); }
+  function toggleArea(a: string) { setForm((f) => ({ ...f, areas: f.areas.includes(a) ? f.areas.filter((x) => x !== a) : [...f.areas, a] })); }
   function addMunicipio(m: Municipio) {
     if (form.municipio_ids.includes(m.id)) return;
     setMunicipiosSelected((s) => [...s, m]);
     setForm((f) => ({ ...f, municipio_ids: [...f.municipio_ids, m.id] }));
-    setMunicipioSearch('');
-    setMunicipioResults([]);
+    setMunicipioSearch(''); setMunicipioResults([]);
   }
   function removeMunicipio(id: number) {
     setMunicipiosSelected((s) => s.filter((m) => m.id !== id));
@@ -165,262 +145,212 @@ export default function AdminPage() {
   }
 
   async function save() {
-    setSaving(true);
-    setError(null);
+    setSaving(true); setError(null);
     try {
       if (modalMode === 'create') {
-        if (!form.email || !form.password || form.password.length < 6 || !form.nombre) {
+        if (!form.email || !form.password || form.password.length < 6 || !form.nombre)
           throw new Error('Email, password (≥6 chars) i nom són obligatoris');
-        }
-        await apiClient.post('/api/admin/users', {
-          email: form.email,
-          password: form.password,
-          nombre: form.nombre,
-          rol: form.rol,
-          activo: form.activo,
-          anonimizar_nombres: form.anonimizar_nombres,
-          areas: form.areas,
-          municipio_ids: form.municipio_ids,
-        });
+        await apiClient.post('/api/admin/users', { email: form.email, password: form.password, nombre: form.nombre, rol: form.rol, activo: form.activo, anonimizar_nombres: form.anonimizar_nombres, areas: form.areas, municipio_ids: form.municipio_ids });
       } else if (modalMode === 'edit' && form.user_id) {
-        await apiClient.put(`/api/admin/users/${form.user_id}`, {
-          nombre: form.nombre,
-          rol: form.rol,
-          activo: form.activo,
-          anonimizar_nombres: form.anonimizar_nombres,
-          areas: form.areas,
-          municipio_ids: form.municipio_ids,
-        });
+        await apiClient.put(`/api/admin/users/${form.user_id}`, { nombre: form.nombre, rol: form.rol, activo: form.activo, anonimizar_nombres: form.anonimizar_nombres, areas: form.areas, municipio_ids: form.municipio_ids });
       }
-      setModalMode('closed');
-      loadAll();
+      setModalMode('closed'); loadAll();
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e);
-      setError(msg);
-    } finally {
-      setSaving(false);
-    }
+      setError(e instanceof Error ? e.message : String(e));
+    } finally { setSaving(false); }
   }
 
   async function removeUser(u: User) {
     if (!confirm(`Eliminar usuari "${u.nombre}"? Aquesta acció és irreversible.`)) return;
-    try {
-      await apiClient.delete(`/api/admin/users/${u.user_id}`);
-      loadAll();
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e);
-      setError(msg);
-    }
+    try { await apiClient.delete(`/api/admin/users/${u.user_id}`); loadAll(); }
+    catch (e: unknown) { setError(e instanceof Error ? e.message : String(e)); }
   }
 
   return (
-    <div className="p-8 max-w-7xl">
-      <div className="flex items-center justify-between mb-6">
+    <div style={{ padding: 32, maxWidth: 1100 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>
-          <h1 className="text-2xl font-semibold mb-1">Panell d&apos;administració</h1>
-          <p className="text-sm text-[#8b949e]">Gestió d&apos;usuaris, monitorització d&apos;ús i auditoria.</p>
+          <h1 style={{ fontSize: 20, fontWeight: 500, color: 'var(--text-primary)', margin: '0 0 4px' }}>Panell d&apos;administració</h1>
+          <p style={{ fontSize: 13, color: 'var(--text-meta)', margin: 0 }}>Gestió d&apos;usuaris, monitorització d&apos;ús i auditoria.</p>
         </div>
         {tab === 'Usuaris' && (
-          <button
-            onClick={openCreate}
-            className="flex items-center gap-2 bg-[#238636] hover:bg-[#2ea043] text-white px-3 py-2 rounded text-sm"
-          >
-            <Plus className="w-4 h-4" /> Nou usuari
+          <button onClick={openCreate} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--brand)', color: '#E8F1F9', border: '1px solid var(--brand)', borderRadius: 'var(--r-md)', padding: '8px 14px', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
+            <Plus style={{ width: 14, height: 14 }} /> Nou usuari
           </button>
         )}
       </div>
 
       {error && (
-        <div className="bg-[#450a0a] border border-[#7f1d1d] text-red-300 text-sm rounded p-3 mb-4">
-          {error}
-          <button onClick={() => setError(null)} className="float-right"><X className="w-4 h-4" /></button>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderRadius: 'var(--r-md)', background: 'rgba(220,38,38,.08)', border: '.5px solid rgba(220,38,38,.3)', marginBottom: 16 }}>
+          <span style={{ fontSize: 13, color: '#dc2626' }}>{error}</span>
+          <button onClick={() => setError(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626' }}><X style={{ width: 14, height: 14 }} /></button>
         </div>
       )}
 
-      <div className="flex gap-4 border-b border-[#30363d] mb-6">
+      <div style={{ display: 'flex', gap: 0, borderBottom: '.5px solid var(--border)', marginBottom: 20 }}>
         {TABS.map((t) => (
-          <button key={t} onClick={() => setTab(t)}
-                  className={'px-3 py-2 text-sm border-b-2 -mb-px ' +
-                    (tab === t ? 'border-[#2563eb] text-white' : 'border-transparent text-[#8b949e]')}>
+          <button key={t} onClick={() => setTab(t)} style={{
+            padding: '8px 16px', fontSize: 13, background: 'transparent', border: 'none',
+            borderBottom: tab === t ? '2px solid var(--brand-l)' : '2px solid transparent',
+            color: tab === t ? 'var(--text-primary)' : 'var(--text-meta)', cursor: 'pointer', marginBottom: -1,
+          }}>
             {t}
           </button>
         ))}
       </div>
 
       {tab === 'Resum' && (
-        <table className="w-full text-sm">
-          <thead className="text-xs text-[#8b949e] uppercase">
-            <tr>
-              <th className="text-left py-2">Usuari</th>
-              <th className="text-left">Rol</th>
-              <th className="text-right px-3">Total 30d</th>
-              <th className="text-right px-3">Chat</th>
-              <th className="text-right px-3">Cerca</th>
-              <th className="text-left pl-6">Última activitat</th>
-            </tr>
-          </thead>
-          <tbody>
-            {summary.map((s) => (
-              <tr key={s.user_id} className="border-t border-[#21262d]">
-                <td className="py-2">{s.nombre}</td>
-                <td>{s.rol}</td>
-                <td className="text-right px-3">{s.total}</td>
-                <td className="text-right px-3">{s.queries_chat}</td>
-                <td className="text-right px-3">{s.queries_search}</td>
-                <td className="text-[#8b949e] pl-6">{s.last_activity?.slice(0, 16) ?? '—'}</td>
+        <div style={{ border: '.5px solid var(--border)', borderRadius: 'var(--r-lg)', overflow: 'hidden', background: 'var(--bg-surface)' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr>
+                {['Usuari', 'Rol', 'Total 30d', 'Chat', 'Cerca', 'Última activitat'].map((h, i) => (
+                  <th key={h} style={{ ...thStyle, textAlign: i >= 2 && i <= 4 ? 'right' : 'left' }}>{h}</th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {summary.map((s) => (
+                <tr key={s.user_id}>
+                  <td style={tdStyle}>{s.nombre}</td>
+                  <td style={tdStyle}><span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 'var(--r-full)', background: 'var(--bg-elevated)', border: '.5px solid var(--border)', color: 'var(--text-secondary)' }}>{s.rol}</span></td>
+                  <td style={{ ...tdStyle, textAlign: 'right', fontFamily: 'var(--font-mono)' }}>{s.total}</td>
+                  <td style={{ ...tdStyle, textAlign: 'right', fontFamily: 'var(--font-mono)' }}>{s.queries_chat}</td>
+                  <td style={{ ...tdStyle, textAlign: 'right', fontFamily: 'var(--font-mono)' }}>{s.queries_search}</td>
+                  <td style={{ ...tdStyle, color: 'var(--text-meta)', fontFamily: 'var(--font-mono)', fontSize: 11 }}>{s.last_activity?.slice(0, 16) ?? '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       {tab === 'Usuaris' && (
-        <table className="w-full text-sm">
-          <thead className="text-xs text-[#8b949e] uppercase">
-            <tr>
-              <th className="text-left py-2">Nom</th>
-              <th className="text-left">Rol</th>
-              <th className="text-left">Àrees</th>
-              <th className="text-right">Municipis</th>
-              <th className="text-center">Anonimitzar</th>
-              <th className="text-left">Estat</th>
-              <th className="text-right pr-2">Accions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.map((u) => (
-              <tr key={u.user_id} className="border-t border-[#21262d] hover:bg-[#161b22]">
-                <td className="py-2 font-medium">{u.nombre}</td>
-                <td>
-                  <span className="text-xs px-2 py-0.5 rounded bg-[#1c2128] border border-[#30363d]">{u.rol}</span>
-                </td>
-                <td className="text-[#8b949e] text-xs">{u.areas.join(', ') || '—'}</td>
-                <td className="text-right">{u.n_municipios}</td>
-                <td className="text-center">{u.anonimizar_nombres ? '🛡️' : '—'}</td>
-                <td>{u.activo ? '🟢 actiu' : '🔴 inactiu'}</td>
-                <td className="text-right">
-                  <div className="flex justify-end gap-1">
-                    <button onClick={() => openEdit(u)}
-                            className="p-1.5 rounded hover:bg-[#1c2128] text-[#8b949e] hover:text-[#e6edf3]"
-                            title="Editar">
-                      <Pencil className="w-3.5 h-3.5" />
-                    </button>
-                    <button onClick={() => removeUser(u)}
-                            className="p-1.5 rounded hover:bg-[#450a0a] text-[#8b949e] hover:text-red-400"
-                            title="Eliminar">
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </td>
+        <div style={{ border: '.5px solid var(--border)', borderRadius: 'var(--r-lg)', overflow: 'hidden', background: 'var(--bg-surface)' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr>
+                {['Nom', 'Rol', 'Àrees', 'Municipis', 'Anon.', 'Estat', 'Accions'].map(h => (
+                  <th key={h} style={{ ...thStyle, textAlign: h === 'Municipis' || h === 'Accions' ? 'right' : h === 'Anon.' ? 'center' : 'left' }}>{h}</th>
+                ))}
               </tr>
-            ))}
-            {users.length === 0 && (
-              <tr><td colSpan={7} className="text-center py-8 text-[#8b949e]">
-                Sense usuaris encara. Clica &quot;Nou usuari&quot;.
-              </td></tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {users.map((u) => (
+                <tr key={u.user_id}>
+                  <td style={{ ...tdStyle, fontWeight: 500 }}>{u.nombre}</td>
+                  <td style={tdStyle}><span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 'var(--r-full)', background: 'var(--bg-elevated)', border: '.5px solid var(--border)', color: 'var(--text-secondary)' }}>{u.rol}</span></td>
+                  <td style={{ ...tdStyle, color: 'var(--text-meta)', fontSize: 11 }}>{u.areas.join(', ') || '—'}</td>
+                  <td style={{ ...tdStyle, textAlign: 'right', fontFamily: 'var(--font-mono)' }}>{u.n_municipios}</td>
+                  <td style={{ ...tdStyle, textAlign: 'center' }}>{u.anonimizar_nombres ? '🛡️' : '—'}</td>
+                  <td style={tdStyle}>{u.activo ? '🟢 actiu' : '🔴 inactiu'}</td>
+                  <td style={{ ...tdStyle, textAlign: 'right' }}>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 4 }}>
+                      <button onClick={() => openEdit(u)} title="Editar" style={{ padding: '4px 6px', background: 'transparent', border: '.5px solid var(--border)', borderRadius: 'var(--r-md)', color: 'var(--text-meta)', cursor: 'pointer' }}>
+                        <Pencil style={{ width: 13, height: 13 }} />
+                      </button>
+                      <button onClick={() => removeUser(u)} title="Eliminar" style={{ padding: '4px 6px', background: 'transparent', border: '.5px solid rgba(220,38,38,.3)', borderRadius: 'var(--r-md)', color: '#dc2626', cursor: 'pointer' }}>
+                        <Trash2 style={{ width: 13, height: 13 }} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {users.length === 0 && (
+                <tr><td colSpan={7} style={{ ...tdStyle, textAlign: 'center', color: 'var(--text-meta)', padding: '32px' }}>
+                  Sense usuaris encara. Clica &quot;Nou usuari&quot;.
+                </td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       )}
 
       {tab === 'Audit log' && (
-        <table className="w-full text-sm">
-          <thead className="text-xs text-[#8b949e] uppercase">
-            <tr>
-              <th className="text-left py-2">Quan</th>
-              <th className="text-left">Usuari</th>
-              <th className="text-left">Acció</th>
-              <th className="text-left">Detall</th>
-            </tr>
-          </thead>
-          <tbody>
-            {usage.map((u) => (
-              <tr key={u.id} className="border-t border-[#21262d] align-top">
-                <td className="py-2 text-[#8b949e] whitespace-nowrap">{u.created_at.slice(0, 19).replace('T', ' ')}</td>
-                <td>{u.user_nombre ?? '—'}</td>
-                <td>{u.accion}</td>
-                <td className="text-[#8b949e]">
-                  {u.payload ? <code className="text-xs">{JSON.stringify(u.payload).slice(0, 120)}</code> : '—'}
-                </td>
+        <div style={{ border: '.5px solid var(--border)', borderRadius: 'var(--r-lg)', overflow: 'hidden', background: 'var(--bg-surface)' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr>
+                {['Quan', 'Usuari', 'Acció', 'Detall'].map(h => <th key={h} style={thStyle}>{h}</th>)}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {usage.map((u) => (
+                <tr key={u.id}>
+                  <td style={{ ...tdStyle, color: 'var(--text-meta)', whiteSpace: 'nowrap', fontFamily: 'var(--font-mono)', fontSize: 11 }}>{u.created_at.slice(0, 19).replace('T', ' ')}</td>
+                  <td style={tdStyle}>{u.user_nombre ?? '—'}</td>
+                  <td style={tdStyle}>{u.accion}</td>
+                  <td style={{ ...tdStyle, color: 'var(--text-meta)' }}>
+                    {u.payload ? <code style={{ fontSize: 11 }}>{JSON.stringify(u.payload).slice(0, 120)}</code> : '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
-      {/* ------ MODAL CREAR / EDITAR ------ */}
+      {/* Modal */}
       {modalMode !== 'closed' && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-6"
-             onClick={closeModal}>
-          <div className="bg-[#161b22] border border-[#30363d] rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto"
-               onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between p-4 border-b border-[#30363d]">
-              <h3 className="text-sm font-semibold">
+        <div onClick={closeModal} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: 24 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ background: 'var(--bg-surface)', border: '.5px solid var(--border)', borderRadius: 'var(--r-lg)', width: '100%', maxWidth: 640, maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderBottom: '.5px solid var(--border)' }}>
+              <h3 style={{ fontSize: 15, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>
                 {modalMode === 'create' ? 'Nou usuari' : `Editar: ${form.nombre}`}
               </h3>
-              <button onClick={closeModal} disabled={saving}
-                      className="text-[#8b949e] hover:text-[#e6edf3] disabled:opacity-50">
-                <X className="w-4 h-4" />
+              <button onClick={closeModal} disabled={saving} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-meta)', opacity: saving ? 0.5 : 1 }}>
+                <X style={{ width: 16, height: 16 }} />
               </button>
             </div>
 
-            <div className="p-5 space-y-4">
+            <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
               {modalMode === 'create' && (
-                <div className="grid grid-cols-2 gap-3">
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   <div>
-                    <label className="block text-xs text-[#8b949e] mb-1">Email *</label>
-                    <input type="email" value={form.email}
-                           onChange={(e) => setForm({ ...form, email: e.target.value })}
-                           className="w-full px-3 py-2 rounded bg-[#0d1117] border border-[#30363d] text-sm" />
+                    <label style={labelStyle}>Email *</label>
+                    <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} style={inputStyle} />
                   </div>
                   <div>
-                    <label className="block text-xs text-[#8b949e] mb-1">Contrasenya * (≥6 chars)</label>
-                    <input type="text" value={form.password}
-                           onChange={(e) => setForm({ ...form, password: e.target.value })}
-                           className="w-full px-3 py-2 rounded bg-[#0d1117] border border-[#30363d] text-sm font-mono" />
+                    <label style={labelStyle}>Contrasenya * (≥6 chars)</label>
+                    <input type="text" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} style={{ ...inputStyle, fontFamily: 'var(--font-mono)' }} />
                   </div>
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-3">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
-                  <label className="block text-xs text-[#8b949e] mb-1">Nom *</label>
-                  <input value={form.nombre}
-                         onChange={(e) => setForm({ ...form, nombre: e.target.value })}
-                         className="w-full px-3 py-2 rounded bg-[#0d1117] border border-[#30363d] text-sm" />
+                  <label style={labelStyle}>Nom *</label>
+                  <input value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} style={inputStyle} />
                 </div>
                 <div>
-                  <label className="block text-xs text-[#8b949e] mb-1">Rol</label>
-                  <select value={form.rol}
-                          onChange={(e) => setForm({ ...form, rol: e.target.value })}
-                          className="w-full px-3 py-2 rounded bg-[#0d1117] border border-[#30363d] text-sm">
+                  <label style={labelStyle}>Rol</label>
+                  <select value={form.rol} onChange={(e) => setForm({ ...form, rol: e.target.value })} style={inputStyle}>
                     {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
                   </select>
                 </div>
               </div>
 
-              <div className="flex gap-6 text-sm">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" checked={form.activo}
-                         onChange={(e) => setForm({ ...form, activo: e.target.checked })} />
+              <div style={{ display: 'flex', gap: 20, fontSize: 13 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', color: 'var(--text-secondary)' }}>
+                  <input type="checkbox" checked={form.activo} onChange={(e) => setForm({ ...form, activo: e.target.checked })} />
                   Actiu
                 </label>
-                <label className="flex items-center gap-2 cursor-pointer" title="Oculta noms de persones particulars (cargos electos mantenen nom)">
-                  <input type="checkbox" checked={form.anonimizar_nombres}
-                         onChange={(e) => setForm({ ...form, anonimizar_nombres: e.target.checked })} />
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', color: 'var(--text-secondary)' }} title="Oculta noms de persones particulars">
+                  <input type="checkbox" checked={form.anonimizar_nombres} onChange={(e) => setForm({ ...form, anonimizar_nombres: e.target.checked })} />
                   Anonimitzar noms (RGPD)
                 </label>
               </div>
 
               <div>
-                <label className="block text-xs text-[#8b949e] mb-2">Àrees assignades (deixa buit per accés total)</label>
-                <div className="flex flex-wrap gap-1.5">
+                <label style={labelStyle}>Àrees assignades (deixa buit per accés total)</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   {AREAS.map((a) => (
-                    <button key={a} type="button" onClick={() => toggleArea(a)}
-                            className={'px-2.5 py-1 rounded-full text-xs border ' +
-                              (form.areas.includes(a)
-                                ? 'bg-[#2563eb] border-[#2563eb] text-white'
-                                : 'border-[#30363d] text-[#8b949e] hover:border-[#484f58]')}>
+                    <button key={a} type="button" onClick={() => toggleArea(a)} style={{
+                      padding: '3px 10px', fontSize: 11, borderRadius: 'var(--r-full)', cursor: 'pointer',
+                      background: form.areas.includes(a) ? 'var(--brand)' : 'transparent',
+                      border: `.5px solid ${form.areas.includes(a) ? 'var(--brand)' : 'var(--border)'}`,
+                      color: form.areas.includes(a) ? '#E8F1F9' : 'var(--text-meta)',
+                    }}>
                       {a}
                     </button>
                   ))}
@@ -428,34 +358,28 @@ export default function AdminPage() {
               </div>
 
               <div>
-                <label className="block text-xs text-[#8b949e] mb-2">
-                  Municipis assignats (deixa buit per accés total)
-                </label>
-                <div className="relative mb-2">
-                  <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-[#6e7681]" />
-                  <input value={municipioSearch}
-                         onChange={(e) => setMunicipioSearch(e.target.value)}
-                         placeholder="Cerca municipi..."
-                         className="w-full pl-8 pr-3 py-2 rounded bg-[#0d1117] border border-[#30363d] text-sm" />
+                <label style={labelStyle}>Municipis assignats (deixa buit per accés total)</label>
+                <div style={{ position: 'relative', marginBottom: 8 }}>
+                  <Search style={{ width: 13, height: 13, position: 'absolute', left: 10, top: 10, color: 'var(--text-meta)' }} />
+                  <input value={municipioSearch} onChange={(e) => setMunicipioSearch(e.target.value)} placeholder="Cerca municipi..." style={{ ...inputStyle, paddingLeft: 28 }} />
                   {municipioResults.length > 0 && (
-                    <div className="absolute top-full mt-1 left-0 right-0 bg-[#0d1117] border border-[#30363d] rounded max-h-48 overflow-y-auto z-10">
+                    <div style={{ position: 'absolute', top: '100%', marginTop: 4, left: 0, right: 0, background: 'var(--bg-elevated)', border: '.5px solid var(--border)', borderRadius: 'var(--r-md)', maxHeight: 200, overflowY: 'auto', zIndex: 10 }}>
                       {municipioResults.map((m) => (
-                        <button key={m.id} type="button" onClick={() => addMunicipio(m)}
-                                className="w-full text-left px-3 py-1.5 text-sm hover:bg-[#161b22] flex justify-between">
+                        <button key={m.id} type="button" onClick={() => addMunicipio(m)} style={{ width: '100%', textAlign: 'left', padding: '8px 12px', fontSize: 13, background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', color: 'var(--text-primary)' }}>
                           <span>{m.nombre}</span>
-                          <span className="text-xs text-[#6e7681]">{m.comarca}</span>
+                          <span style={{ fontSize: 11, color: 'var(--text-meta)' }}>{m.comarca}</span>
                         </button>
                       ))}
                     </div>
                   )}
                 </div>
                 {municipiosSelected.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5">
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                     {municipiosSelected.map((m) => (
-                      <span key={m.id} className="flex items-center gap-1 px-2 py-0.5 rounded bg-[#1c2128] border border-[#30363d] text-xs">
+                      <span key={m.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 'var(--r-full)', background: 'var(--bg-elevated)', border: '.5px solid var(--border)', fontSize: 11, color: 'var(--text-secondary)' }}>
                         {m.nombre}
-                        <button onClick={() => removeMunicipio(m.id)} className="hover:text-red-400">
-                          <X className="w-3 h-3" />
+                        <button onClick={() => removeMunicipio(m.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', display: 'flex' }}>
+                          <X style={{ width: 11, height: 11 }} />
                         </button>
                       </span>
                     ))}
@@ -464,14 +388,12 @@ export default function AdminPage() {
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 p-4 border-t border-[#30363d]">
-              <button onClick={closeModal} disabled={saving}
-                      className="px-3 py-2 rounded text-sm text-[#8b949e] hover:text-[#e6edf3]">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, padding: '14px 20px', borderTop: '.5px solid var(--border)' }}>
+              <button onClick={closeModal} disabled={saving} style={{ padding: '8px 14px', background: 'transparent', border: '.5px solid var(--border)', borderRadius: 'var(--r-md)', color: 'var(--text-meta)', fontSize: 13, cursor: 'pointer' }}>
                 Cancel·lar
               </button>
-              <button onClick={save} disabled={saving}
-                      className="flex items-center gap-2 bg-[#238636] hover:bg-[#2ea043] disabled:opacity-50 text-white px-4 py-2 rounded text-sm">
-                {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+              <button onClick={save} disabled={saving} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--brand)', color: '#E8F1F9', border: '1px solid var(--brand)', borderRadius: 'var(--r-md)', padding: '8px 16px', fontSize: 13, fontWeight: 500, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.5 : 1 }}>
+                {saving && <Loader2 style={{ width: 13, height: 13 }} className="animate-spin" />}
                 {modalMode === 'create' ? 'Crear' : 'Desar canvis'}
               </button>
             </div>

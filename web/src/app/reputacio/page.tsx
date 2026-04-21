@@ -7,7 +7,7 @@ import { KPICard, KPIGrid } from '@/components/warroom/KPICard';
 import { PanelBox } from '@/components/warroom/PanelBox';
 import { StatusLine, StatusBadge } from '@/components/warroom/StatusBadge';
 import { TrendingBar } from '@/components/warroom/AlertFeed';
-import { Gauge, CornerBrack, DotGrid } from '@/components/landing/primitives';
+import { Gauge } from '@/components/landing/primitives';
 
 const API = process.env.NEXT_PUBLIC_API_URL || '';
 
@@ -19,7 +19,7 @@ const PARTIT_COLORS: Record<string, string> = {
 };
 
 function SentimentDot({ sentiment }: { sentiment: string }) {
-  const color = sentiment === 'positiu' ? 'var(--wr-phosphor)' : sentiment === 'negatiu' ? 'var(--wr-red-2)' : 'var(--fog)';
+  const color = sentiment === 'positiu' ? '#1A7A4A' : sentiment === 'negatiu' ? '#C0392B' : 'var(--fog)';
   return <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 8, background: color, boxShadow: sentiment !== 'neutre' ? `0 0 6px ${color}` : 'none' }} />;
 }
 
@@ -30,27 +30,28 @@ function SentimentMeter({ positius, negatius, neutres }: { positius: number; neg
   return (
     <div>
       <div style={{ display: 'flex', height: 10, border: '1px solid var(--line)', overflow: 'hidden', marginBottom: 6 }}>
-        <div style={{ width: `${pPos}%`, background: 'var(--wr-phosphor)', transition: 'width .8s' }} />
+        <div style={{ width: `${pPos}%`, background: '#1A7A4A', transition: 'width .8s' }} />
         <div style={{ flex: 1, background: 'var(--ink-3)' }} />
-        <div style={{ width: `${pNeg}%`, background: 'var(--wr-red-2)', transition: 'width .8s' }} />
+        <div style={{ width: `${pNeg}%`, background: '#C0392B', transition: 'width .8s' }} />
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '.08em', textTransform: 'uppercase' }}>
-        <span style={{ color: 'var(--wr-phosphor)' }}>+ {positius} positius</span>
+        <span style={{ color: '#1A7A4A' }}>+ {positius} positius</span>
         <span style={{ color: 'var(--fog)' }}>{neutres} neutres</span>
-        <span style={{ color: 'var(--wr-red-2)' }}>− {negatius} negatius</span>
+        <span style={{ color: '#C0392B' }}>− {negatius} negatius</span>
       </div>
     </div>
   );
 }
 
 function ArticleCard({ article, partit, compact }: { article: any; partit?: string; compact?: boolean }) {
-  const sentColor = article.sentiment === 'positiu' ? 'var(--wr-phosphor)' : article.sentiment === 'negatiu' ? 'var(--wr-red-2)' : 'var(--fog)';
-  const sentBg = article.sentiment === 'positiu' ? 'rgba(161,255,90,.04)' : article.sentiment === 'negatiu' ? 'rgba(212,58,31,.04)' : 'transparent';
+  const sentColor = article.sentiment === 'positiu' ? '#1A7A4A' : article.sentiment === 'negatiu' ? '#C0392B' : 'var(--fog)';
+  const sentBg = article.sentiment === 'positiu' ? 'rgba(26,122,74,.04)' : article.sentiment === 'negatiu' ? 'rgba(192,57,43,.04)' : 'transparent';
   return (
     <div style={{
       background: sentBg, borderLeft: `3px solid ${sentColor}`,
       padding: compact ? '10px 14px' : '14px 18px', marginBottom: 6,
       border: `1px solid var(--line)`, borderLeftWidth: 3, borderLeftColor: sentColor,
+      borderRadius: 'var(--r-lg)',
     }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -165,7 +166,7 @@ export default function ReputacioPage() {
     <div style={{ minHeight: '100vh', background: 'var(--ink)' }}>
       <PageHeader
         crumb="Operacions / Reputació"
-        title={<>Reputació i <em style={{ color: 'var(--wr-red-2)', fontWeight: 400 }}>premsa.</em></>}
+        title={<>Reputació i <span style={{ color: 'var(--brand-l)', fontWeight: 400, fontStyle: 'italic' }}>premsa.</span></>}
         info={{
           title: 'Reputació i premsa',
           description: "Monitoratge de 9 diaris catalans en temps real. Veu què diu la premsa de cada partit, detecta articles negatius i proposa estratègies de millora amb el War Room. La funció 'Neteja' és l'arma secreta: selecciona un article negatiu i la IA et proposa 3 accions concretes.",
@@ -195,7 +196,7 @@ export default function ReputacioPage() {
         {TABS.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)} style={{
             flex: 1, padding: '10px 16px', background: tab === t.id ? 'var(--ink-3)' : 'transparent',
-            border: 'none', borderBottom: tab === t.id ? `2px solid ${t.color}` : '2px solid transparent',
+            border: 'none', borderBottom: tab === t.id ? `2px solid var(--brand-l)` : '2px solid transparent',
             borderRight: '1px solid var(--line)',
             color: tab === t.id ? 'var(--paper)' : 'var(--fog)',
             fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '.1em',
@@ -298,11 +299,10 @@ export default function ReputacioPage() {
             {detall ? (
               <>
                 {/* Sentiment summary */}
-                <div style={{ marginBottom: 16, padding: '20px', background: 'var(--ink-2)', border: '1px solid var(--line)', position: 'relative' }}>
-                  <CornerBrack />
+                <div style={{ marginBottom: 16, padding: '20px', background: 'var(--bg-surface)', border: '.5px solid var(--border)', borderRadius: 'var(--r-lg)', position: 'relative' }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 24 }}>
                     <div>
-                      <div style={{ fontFamily: 'var(--font-serif)', fontSize: 48, color: PARTIT_COLORS[partit] || 'var(--paper)', lineHeight: 1, marginBottom: 8 }}>
+                      <div style={{ fontFamily: 'var(--font-sans)', fontSize: 36, fontWeight: 700, color: PARTIT_COLORS[partit] || 'var(--text-primary)', lineHeight: 1, marginBottom: 8 }}>
                         {partit}
                       </div>
                       <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--fog)', letterSpacing: '.1em', textTransform: 'uppercase', marginBottom: 12 }}>
@@ -317,12 +317,12 @@ export default function ReputacioPage() {
                       <SentimentMeter positius={detall.positius} negatius={detall.negatius} neutres={detall.neutres} />
                       <div style={{ marginTop: 16, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1, background: 'var(--line)', border: '1px solid var(--line)' }}>
                         {[
-                          { label: 'Positius', value: detall.positius, color: 'var(--wr-phosphor)' },
+                          { label: 'Positius', value: detall.positius, color: '#1A7A4A' },
                           { label: 'Neutres', value: detall.neutres, color: 'var(--fog)' },
-                          { label: 'Negatius', value: detall.negatius, color: 'var(--wr-red-2)' },
+                          { label: 'Negatius', value: detall.negatius, color: '#C0392B' },
                         ].map((k, i) => (
-                          <div key={i} style={{ background: 'var(--ink-2)', padding: '12px 14px', textAlign: 'center' }}>
-                            <div style={{ fontFamily: 'var(--font-serif)', fontSize: 32, color: k.color, lineHeight: 1 }}>{k.value}</div>
+                          <div key={i} style={{ background: 'var(--bg-elevated)', padding: '12px 14px', textAlign: 'center' }}>
+                            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 28, fontWeight: 600, color: k.color, lineHeight: 1 }}>{k.value}</div>
                             <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--fog)', letterSpacing: '.1em', textTransform: 'uppercase', marginTop: 4 }}>{k.label}</div>
                           </div>
                         ))}
@@ -355,30 +355,29 @@ export default function ReputacioPage() {
           <div>
             {/* Hero */}
             <div style={{
-              background: 'var(--ink-2)', border: '1px solid var(--line)', padding: '32px 28px',
-              position: 'relative', overflow: 'hidden', marginBottom: 16,
+              background: 'var(--bg-surface)', border: '.5px solid var(--border)', padding: '28px 24px',
+              borderRadius: 'var(--r-lg)', marginBottom: 16,
             }}>
-              <CornerBrack />
-              <DotGrid size={28} opacity={0.04} />
-              <div style={{ position: 'relative', display: 'grid', gridTemplateColumns: '1fr auto', gap: 24, alignItems: 'center' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 24, alignItems: 'center' }}>
                 <div>
                   <StatusBadge tone="red">◼ NETEJA DE REPUTACIÓ · INTEL·LIGÈNCIA ACTIVA</StatusBadge>
                   <h2 style={{
-                    fontFamily: 'var(--font-serif)', fontSize: 36, margin: '16px 0 10px',
-                    lineHeight: 1, color: 'var(--paper)', fontWeight: 400,
+                    fontFamily: 'var(--font-sans)', fontSize: 26, margin: '14px 0 10px',
+                    lineHeight: 1.1, color: 'var(--text-primary)', fontWeight: 500,
                   }}>
-                    On tenen <em style={{ color: 'var(--wr-red-2)' }}>mala premsa?</em>
+                    On tenen <span style={{ color: 'var(--brand-l)', fontStyle: 'italic' }}>mala premsa?</span>
                   </h2>
                   <p style={{ fontSize: 13, color: 'var(--bone)', lineHeight: 1.5, maxWidth: 500, margin: 0 }}>
                     Articles amb sentiment negatiu sobre <strong style={{ color: 'var(--paper)' }}>{partit}</strong>. Clica &quot;Netejar&quot; per obrir el War Room amb una estratègia de millora automàtica — accions concretes, narratives alternatives i seguiment.
                   </p>
                 </div>
                 <div style={{
-                  width: 120, height: 120, border: '2px solid var(--wr-red-2)',
-                  display: 'grid', placeItems: 'center', background: 'rgba(212,58,31,.04)',
+                  width: 100, height: 100, border: '.5px solid var(--border)',
+                  display: 'grid', placeItems: 'center', background: 'var(--bg-elevated)',
+                  borderRadius: 'var(--r-lg)',
                 }}>
                   <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontFamily: 'var(--font-serif)', fontSize: 42, color: 'var(--wr-red-2)', lineHeight: 1, fontStyle: 'italic' }}>
+                    <div style={{ fontFamily: 'var(--font-sans)', fontSize: 36, fontWeight: 700, color: '#C0392B', lineHeight: 1 }}>
                       {negatius.length}
                     </div>
                     <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--fog)', letterSpacing: '.1em', textTransform: 'uppercase', marginTop: 4 }}>negatius</div>
@@ -419,11 +418,11 @@ export default function ReputacioPage() {
                         }}>Llegir →</a>
                       )}
                       <Link href={`/chat?mode=netejar&q=${encodeURIComponent(buildNetejaPrompt(partit, a))}`} style={{
-                        padding: '6px 12px', background: 'var(--wr-red)', color: 'var(--paper)',
-                        border: '1px solid var(--wr-red)', fontFamily: 'var(--font-mono)', fontSize: 10,
+                        padding: '6px 12px', background: 'var(--brand)', color: '#E8F1F9',
+                        border: '1px solid var(--brand)', borderRadius: 'var(--r-md)', fontFamily: 'var(--font-mono)', fontSize: 10,
                         letterSpacing: '.08em', textTransform: 'uppercase', fontWeight: 700,
                         textDecoration: 'none', textAlign: 'center',
-                        boxShadow: '0 0 12px -3px rgba(255,90,60,.3)',
+                        boxShadow: '0 0 12px -3px rgba(15,76,129,.3)',
                       }}>◼ Netejar</Link>
                     </div>
                   </div>
@@ -434,7 +433,7 @@ export default function ReputacioPage() {
                 textAlign: 'center', padding: '60px 0', background: 'var(--ink-2)', border: '1px solid var(--line)',
               }}>
                 <div className="pulse-dot" style={{ width: 10, height: 10, borderRadius: 10, background: 'var(--wr-phosphor)', margin: '0 auto 14px' }} />
-                <div style={{ fontFamily: 'var(--font-serif)', fontSize: 28, color: 'var(--paper)', marginBottom: 8 }}>
+                <div style={{ fontFamily: 'var(--font-sans)', fontSize: 22, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 8 }}>
                   Cap notícia negativa
                 </div>
                 <p style={{ fontSize: 13, color: 'var(--wr-phosphor)', fontFamily: 'var(--font-mono)', letterSpacing: '.06em' }}>

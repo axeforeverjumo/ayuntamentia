@@ -7,7 +7,6 @@ import { PageHeader } from '@/components/warroom/PageHeader';
 import { StatusLine } from '@/components/warroom/StatusBadge';
 import { WorkspaceCard } from '@/components/ui/WorkspaceCard';
 import { SpeechBuilder } from '@/components/ui/SpeechBuilder';
-import { DotGrid } from '@/components/landing/primitives';
 import { loadWorkspace, getItemsByMode, updateWorkspaceItem } from '@/lib/workspaceStorage';
 import type { WorkspaceMode, WorkspaceItem } from '@/lib/workspaceStorage';
 
@@ -131,9 +130,8 @@ export default function WorkspacePage() {
 
         {/* Empty state */}
         {displayedItems.length === 0 && (
-          <div style={{ position: 'relative', padding: '60px 0', textAlign: 'center' }}>
-            <DotGrid opacity={0.04} />
-            <div style={{ position: 'relative' }}>
+          <div style={{ padding: '60px 0', textAlign: 'center' }}>
+            <div>
               <div style={{
                 fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--fog)',
                 letterSpacing: '.16em', textTransform: 'uppercase', marginBottom: 16,
@@ -141,8 +139,8 @@ export default function WorkspacePage() {
                 {tab.icon} {tab.label} · Workspace buit
               </div>
               <p style={{
-                fontFamily: 'var(--font-serif)', fontSize: 28, color: 'var(--paper)',
-                margin: '0 0 12px', fontWeight: 400, lineHeight: 1.1,
+                fontFamily: 'var(--font-sans)', fontSize: 24, color: 'var(--text-primary)',
+                margin: '0 0 12px', fontWeight: 500, lineHeight: 1.1,
               }}>
                 Encara no tens <em style={{ color: tab.color }}>{tab.emptyLabel}.</em>
               </p>

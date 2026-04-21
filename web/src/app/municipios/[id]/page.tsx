@@ -5,9 +5,8 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
   MapPin, Users, FileText, TrendingUp, ChevronLeft,
-  BarChart2, AlertCircle, CheckCircle2, Loader2, Calendar,
+  AlertCircle, CheckCircle2, Loader2, Calendar,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { ContextualChat } from "@/components/ui/ContextualChat";
 import { PanelBox } from "@/components/warroom/PanelBox";
 import { StatusBadge } from "@/components/warroom/StatusBadge";
@@ -38,17 +37,21 @@ export default function MunicipioDetailPage() {
       .catch(() => setAlertasList([]));
   }, [id]);
 
-  if (loading) return <div className="flex items-center justify-center h-64"><Loader2 className="w-6 h-6 text-[#2563eb] animate-spin" /></div>;
+  if (loading) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 256 }}>
+      <Loader2 style={{ width: 24, height: 24, color: 'var(--brand)' }} className="animate-spin" />
+    </div>
+  );
 
   if (error || !data) {
     return (
-      <div className="p-6">
-        <Link href="/municipios" className="flex items-center gap-1.5 text-sm text-[#8b949e] hover:text-[#e6edf3] mb-6">
-          <ChevronLeft className="w-4 h-4" /> Municipis
+      <div style={{ padding: 24 }}>
+        <Link href="/municipios" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-meta)', textDecoration: 'none', marginBottom: 24 }}>
+          <ChevronLeft style={{ width: 14, height: 14 }} /> Municipis
         </Link>
-        <div className="flex flex-col items-center py-20 bg-[#161b22] border border-[#30363d] rounded-lg">
-          <AlertCircle className="w-10 h-10 text-[#f87171] mb-3" />
-          <p className="text-sm text-[#8b949e]">No s&apos;ha pogut carregar el municipi</p>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '80px 0', background: 'var(--bg-surface)', border: '.5px solid var(--border)', borderRadius: 'var(--r-lg)' }}>
+          <AlertCircle style={{ width: 40, height: 40, color: '#dc2626', marginBottom: 12 }} />
+          <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>No s&apos;ha pogut carregar el municipi</p>
         </div>
       </div>
     );
@@ -62,32 +65,32 @@ export default function MunicipioDetailPage() {
   const maxComp = Math.max(...composicion.map((c: any) => c.count || 0), 1);
 
   return (
-    <div className="p-6 space-y-6">
-      <Link href="/municipios" className="flex items-center gap-1.5 text-sm text-[#8b949e] hover:text-[#e6edf3]">
-        <ChevronLeft className="w-4 h-4" /> Municipis
+    <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <Link href="/municipios" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-meta)', textDecoration: 'none' }}>
+        <ChevronLeft style={{ width: 14, height: 14 }} /> Municipis
       </Link>
 
       {/* Header */}
-      <div className="bg-[#161b22] border border-[#30363d] rounded-lg p-5">
-        <div className="flex items-start gap-4">
-          <div className="w-12 h-12 rounded-xl bg-[#1c2128] border border-[#30363d] flex items-center justify-center">
-            <MapPin className="w-6 h-6 text-[#8b949e]" />
+      <div style={{ background: 'var(--bg-surface)', border: '.5px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
+          <div style={{ width: 48, height: 48, borderRadius: 'var(--r-md)', background: 'var(--bg-elevated)', border: '.5px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <MapPin style={{ width: 22, height: 22, color: 'var(--text-meta)' }} />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-[#e6edf3]">{data.nombre}</h1>
-            <div className="flex items-center gap-3 mt-1 text-sm text-[#8b949e] flex-wrap">
+            <h1 style={{ fontSize: 18, fontWeight: 500, color: 'var(--text-primary)', margin: '0 0 4px' }}>{data.nombre}</h1>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-secondary)', flexWrap: 'wrap' }}>
               <span>{data.comarca}</span>
               <span>·</span>
               <span>{data.provincia}</span>
               {data.poblacion && <><span>·</span><span>{data.poblacion.toLocaleString()} hab.</span></>}
             </div>
-            <div className="flex gap-2 mt-2">
+            <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
               {data.tiene_ac && (
-                <span className="px-2 py-0.5 rounded text-xs bg-green-900/30 text-green-400 flex items-center gap-1">
-                  <CheckCircle2 className="w-3 h-3" /> Aliança Catalana present
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 'var(--r-full)', fontSize: 11, background: 'rgba(22,163,74,.1)', border: '.5px solid rgba(22,163,74,.3)', color: '#16a34a' }}>
+                  <CheckCircle2 style={{ width: 11, height: 11 }} /> Aliança Catalana present
                 </span>
               )}
-              <span className="px-2 py-0.5 rounded text-xs bg-blue-900/30 text-blue-400">
+              <span style={{ display: 'inline-flex', alignItems: 'center', padding: '2px 8px', borderRadius: 'var(--r-full)', fontSize: 11, background: 'rgba(15,76,129,.1)', border: '.5px solid rgba(15,76,129,.3)', color: 'var(--brand-l)' }}>
                 {data.actas_procesadas || 0} actes processades
               </span>
             </div>
@@ -95,29 +98,30 @@ export default function MunicipioDetailPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16 }}>
         {/* Left: composición + plenos */}
-        <div className="col-span-2 space-y-4">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {/* Composición */}
           {composicion.length > 0 && (
-            <div className="bg-[#161b22] border border-[#30363d] rounded-lg">
-              <div className="flex items-center gap-2 px-5 py-4 border-b border-[#30363d]">
-                <Users className="w-4 h-4 text-[#8b949e]" />
-                <h2 className="text-sm font-semibold text-[#e6edf3]">Composició del ple</h2>
+            <div style={{ background: 'var(--bg-surface)', border: '.5px solid var(--border)', borderRadius: 'var(--r-lg)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '14px 20px', borderBottom: '.5px solid var(--border)' }}>
+                <Users style={{ width: 14, height: 14, color: 'var(--text-meta)' }} />
+                <h2 style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>Composició del ple</h2>
               </div>
-              <div className="px-5 py-4 space-y-2">
+              <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {composicion.map((c: any) => (
-                  <div key={c.partido} className="flex items-center gap-3">
-                    <span className="text-xs text-[#e6edf3] w-32 truncate font-medium">{c.partido}</span>
-                    <div className="flex-1 bg-[#1c2128] rounded-full h-3">
+                  <div key={c.partido} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ fontSize: 11, color: 'var(--text-primary)', width: 128, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500 }}>{c.partido}</span>
+                    <div style={{ flex: 1, background: 'var(--bg-elevated)', borderRadius: 'var(--r-full)', height: 10 }}>
                       <div
-                        className={cn("h-3 rounded-full",
-                          c.partido.includes("ALIAN") ? "bg-[#2563eb]" : "bg-[#30363d]"
-                        )}
-                        style={{ width: `${(c.count / maxComp) * 100}%` }}
+                        style={{
+                          height: 10, borderRadius: 'var(--r-full)',
+                          background: c.partido.includes("ALIAN") ? 'var(--brand)' : 'var(--border)',
+                          width: `${(c.count / maxComp) * 100}%`,
+                        }}
                       />
                     </div>
-                    <span className="text-xs text-[#8b949e] w-6 text-right">{c.count}</span>
+                    <span style={{ fontSize: 11, color: 'var(--text-meta)', width: 20, textAlign: 'right' }}>{c.count}</span>
                   </div>
                 ))}
               </div>
@@ -125,23 +129,23 @@ export default function MunicipioDetailPage() {
           )}
 
           {/* Últimos plenos */}
-          <div className="bg-[#161b22] border border-[#30363d] rounded-lg">
-            <div className="flex items-center gap-2 px-5 py-4 border-b border-[#30363d]">
-              <FileText className="w-4 h-4 text-[#8b949e]" />
-              <h2 className="text-sm font-semibold text-[#e6edf3]">Últims plens</h2>
+          <div style={{ background: 'var(--bg-surface)', border: '.5px solid var(--border)', borderRadius: 'var(--r-lg)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '14px 20px', borderBottom: '.5px solid var(--border)' }}>
+              <FileText style={{ width: 14, height: 14, color: 'var(--text-meta)' }} />
+              <h2 style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>Últims plens</h2>
             </div>
-            <div className="divide-y divide-[#21262d]">
+            <div>
               {plenos.length === 0 ? (
-                <p className="text-sm text-[#8b949e] text-center py-8">Sense plens processats</p>
+                <p style={{ fontSize: 13, color: 'var(--text-meta)', textAlign: 'center', padding: '32px 20px', margin: 0 }}>Sense plens processats</p>
               ) : (
                 plenos.map((p: any) => (
                   <Link key={p.id} href={`/actas/${p.id}`}
-                    className="flex items-center justify-between px-5 py-3 hover:bg-[#1c2128] transition-colors">
-                    <div className="flex items-center gap-3">
-                      <Calendar className="w-4 h-4 text-[#6e7681]" />
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 20px', borderBottom: '.5px solid var(--border)', textDecoration: 'none', transition: 'background .15s' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <Calendar style={{ width: 14, height: 14, color: 'var(--text-meta)' }} />
                       <div>
-                        <p className="text-sm text-[#e6edf3]">{p.fecha}</p>
-                        <p className="text-xs text-[#8b949e]">{p.tipo} · {p.num_puntos} punts</p>
+                        <p style={{ fontSize: 13, color: 'var(--text-primary)', margin: '0 0 2px' }}>{p.fecha}</p>
+                        <p style={{ fontSize: 11, color: 'var(--text-meta)', margin: 0 }}>{p.tipo} · {p.num_puntos} punts</p>
                       </div>
                     </div>
                   </Link>
@@ -152,18 +156,18 @@ export default function MunicipioDetailPage() {
         </div>
 
         {/* Right sidebar */}
-        <div className="space-y-4">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {/* Concejales */}
-          <div className="bg-[#161b22] border border-[#30363d] rounded-lg">
-            <div className="flex items-center gap-2 px-4 py-3.5 border-b border-[#30363d]">
-              <Users className="w-4 h-4 text-[#8b949e]" />
-              <h2 className="text-sm font-semibold text-[#e6edf3]">Regidors ({concejales.length})</h2>
+          <div style={{ background: 'var(--bg-surface)', border: '.5px solid var(--border)', borderRadius: 'var(--r-lg)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px', borderBottom: '.5px solid var(--border)' }}>
+              <Users style={{ width: 14, height: 14, color: 'var(--text-meta)' }} />
+              <h2 style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>Regidors ({concejales.length})</h2>
             </div>
-            <div className="divide-y divide-[#21262d] max-h-80 overflow-y-auto">
+            <div style={{ maxHeight: 320, overflowY: 'auto' }}>
               {concejales.map((c: any) => (
-                <div key={c.id} className="px-4 py-2.5">
-                  <p className="text-xs text-[#e6edf3] font-medium truncate">{c.nombre}</p>
-                  <p className="text-[10px] text-[#8b949e]">{c.partido} · {c.cargo}</p>
+                <div key={c.id} style={{ padding: '8px 16px', borderBottom: '.5px solid var(--border)' }}>
+                  <p style={{ fontSize: 12, color: 'var(--text-primary)', fontWeight: 500, margin: '0 0 2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.nombre}</p>
+                  <p style={{ fontSize: 10, color: 'var(--text-meta)', margin: 0 }}>{c.partido} · {c.cargo}</p>
                 </div>
               ))}
             </div>
@@ -171,16 +175,16 @@ export default function MunicipioDetailPage() {
 
           {/* Temas */}
           {temas.length > 0 && (
-            <div className="bg-[#161b22] border border-[#30363d] rounded-lg">
-              <div className="flex items-center gap-2 px-4 py-3.5 border-b border-[#30363d]">
-                <TrendingUp className="w-4 h-4 text-[#8b949e]" />
-                <h2 className="text-sm font-semibold text-[#e6edf3]">Temes</h2>
+            <div style={{ background: 'var(--bg-surface)', border: '.5px solid var(--border)', borderRadius: 'var(--r-lg)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px', borderBottom: '.5px solid var(--border)' }}>
+                <TrendingUp style={{ width: 14, height: 14, color: 'var(--text-meta)' }} />
+                <h2 style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>Temes</h2>
               </div>
-              <div className="px-4 py-3 space-y-2">
+              <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {temas.map((t: any) => (
-                  <div key={t.tema} className="flex items-center justify-between text-xs">
-                    <span className="text-[#8b949e]">{t.tema}</span>
-                    <span className="text-[#6e7681]">{t.count}</span>
+                  <div key={t.tema} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{t.tema}</span>
+                    <span style={{ fontSize: 11, color: 'var(--text-meta)' }}>{t.count}</span>
                   </div>
                 ))}
               </div>
@@ -188,16 +192,17 @@ export default function MunicipioDetailPage() {
           )}
 
           {/* Alertas */}
-          <div className="bg-[#161b22] border border-[#30363d] rounded-lg p-4">
-            <h3 className="text-xs font-semibold text-[#8b949e] mb-2">Alertes</h3>
-            <div className="flex gap-3 text-xs">
-              <span className="text-[#f87171]">🔴 {alertas.altas || 0}</span>
-              <span className="text-[#fbbf24]">🟡 {alertas.medias || 0}</span>
-              <span className="text-[#4ade80]">🟢 {alertas.bajas || 0}</span>
+          <div style={{ background: 'var(--bg-surface)', border: '.5px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 16 }}>
+            <h3 style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-meta)', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '.06em' }}>Alertes</h3>
+            <div style={{ display: 'flex', gap: 12, fontSize: 12 }}>
+              <span style={{ color: '#dc2626' }}>🔴 {alertas.altas || 0}</span>
+              <span style={{ color: '#d97706' }}>🟡 {alertas.medias || 0}</span>
+              <span style={{ color: '#16a34a' }}>🟢 {alertas.bajas || 0}</span>
             </div>
           </div>
         </div>
       </div>
+
       {/* Alertes del municipi */}
       <PanelBox title="Alertes del municipi" tone="red" subtitle={data.nombre}>
         {alertasList.length === 0 ? (
@@ -243,7 +248,6 @@ export default function MunicipioDetailPage() {
         )}
       </PanelBox>
 
-      {/* Recepció social local */}
       <PanelBox title="Recepció social local" tone="phos" subtitle={`Mencions a premsa sobre ${data.nombre}`}>
         <p style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--fog)' }}>
           Properament — el sistema monitorarà la premsa local d&apos;aquest municipi

@@ -43,7 +43,7 @@ export default function RegidorPerfilPage() {
         <PageHeader crumb="Operacions / Regidors" title="Regidor no trobat" />
         <div style={{ padding: '60px 26px', textAlign: 'center' }}>
           <p style={{ color: 'var(--fog)', fontSize: 14 }}>No s&apos;ha trobat el perfil d&apos;aquest regidor.</p>
-          <Link href="/regidors" style={{ color: 'var(--wr-red-2)', fontFamily: 'var(--font-mono)', fontSize: 12, marginTop: 16, display: 'inline-block' }}>
+          <Link href="/regidors" style={{ color: 'var(--brand)', fontFamily: 'var(--font-mono)', fontSize: 12, marginTop: 16, display: 'inline-block' }}>
             ← Tornar al llistat
           </Link>
         </div>
