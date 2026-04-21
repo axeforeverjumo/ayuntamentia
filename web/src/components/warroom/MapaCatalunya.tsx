@@ -164,9 +164,58 @@ export function MapaCatalunyaInteractiu({ municipios, filtroPartido, onSelect }:
       {/* Map */}
       <div style={{ position: 'relative', padding: 16, minHeight: 400 }}>
         <svg viewBox={`0 0 ${W} ${H}`} width="100%" preserveAspectRatio="xMidYMid meet" style={{ display: 'block' }}>
-          {/* Catalunya outline */}
-          <path d="M 100 60 L 180 40 L 280 35 L 380 50 L 480 55 L 540 80 L 560 140 L 565 200 L 545 250 L 500 290 L 450 330 L 390 360 L 320 380 L 250 390 L 180 385 L 130 360 L 95 310 L 80 260 L 85 200 L 90 140 Z"
-            fill="transparent" stroke="var(--brand-ll)" strokeWidth="1.5" strokeDasharray="4 3" opacity=".3" />
+          {/* Catalunya outline — simplified real coastline + borders */}
+          <path d={[
+            // Pirineus (west → east along French border)
+            `M ${toSVG(42.69, 0.67).join(',')}`,  // Val d'Aran
+            `L ${toSVG(42.63, 0.95).join(',')}`,  // Vielha
+            `L ${toSVG(42.58, 1.13).join(',')}`,  // Sort area
+            `L ${toSVG(42.50, 1.40).join(',')}`,  // Andorra border
+            `L ${toSVG(42.48, 1.72).join(',')}`,  // Puigcerdà area
+            `L ${toSVG(42.50, 1.98).join(',')}`,  // Cerdanya
+            `L ${toSVG(42.45, 2.30).join(',')}`,  // Camprodon
+            `L ${toSVG(42.43, 2.62).join(',')}`,  // Prats de Molló
+            `L ${toSVG(42.38, 2.87).join(',')}`,  // Coll del Pertús
+            `L ${toSVG(42.33, 3.05).join(',')}`,  // Cap de Creus area
+            // Costa Brava (north → south)
+            `L ${toSVG(42.31, 3.17).join(',')}`,  // Portbou
+            `L ${toSVG(42.26, 3.19).join(',')}`,  // Roses
+            `L ${toSVG(42.10, 3.17).join(',')}`,  // L'Escala
+            `L ${toSVG(41.97, 3.22).join(',')}`,  // Illes Medes
+            `L ${toSVG(41.86, 3.15).join(',')}`,  // Palamós
+            `L ${toSVG(41.78, 3.05).join(',')}`,  // S. Feliu de Guíxols
+            `L ${toSVG(41.70, 2.87).join(',')}`,  // Lloret/Blanes
+            `L ${toSVG(41.63, 2.70).join(',')}`,  // Pineda
+            `L ${toSVG(41.55, 2.48).join(',')}`,  // Mataró
+            `L ${toSVG(41.45, 2.25).join(',')}`,  // Barcelona N
+            `L ${toSVG(41.38, 2.19).join(',')}`,  // Barcelona
+            `L ${toSVG(41.32, 2.08).join(',')}`,  // El Prat
+            `L ${toSVG(41.28, 1.97).join(',')}`,  // Castelldefels
+            `L ${toSVG(41.22, 1.74).join(',')}`,  // Vilanova
+            `L ${toSVG(41.19, 1.57).join(',')}`,  // El Vendrell
+            `L ${toSVG(41.13, 1.40).join(',')}`,  // Torredembarra
+            `L ${toSVG(41.10, 1.25).join(',')}`,  // Tarragona
+            `L ${toSVG(41.07, 1.10).join(',')}`,  // Cambrils/Salou
+            `L ${toSVG(40.95, 0.90).join(',')}`,  // L'Ametlla
+            `L ${toSVG(40.82, 0.75).join(',')}`,  // L'Ampolla
+            `L ${toSVG(40.72, 0.72).join(',')}`,  // Delta de l'Ebre N
+            `L ${toSVG(40.62, 0.75).join(',')}`,  // Delta de l'Ebre S
+            `L ${toSVG(40.55, 0.58).join(',')}`,  // Sant Carles de la Ràpita
+            // Western border (south → north along Aragó)
+            `L ${toSVG(40.60, 0.40).join(',')}`,  // Terra Alta
+            `L ${toSVG(40.80, 0.35).join(',')}`,  // Ribera d'Ebre
+            `L ${toSVG(41.05, 0.42).join(',')}`,  // Gandesa
+            `L ${toSVG(41.25, 0.38).join(',')}`,  // Les Garrigues
+            `L ${toSVG(41.45, 0.42).join(',')}`,  // Lleida area
+            `L ${toSVG(41.62, 0.50).join(',')}`,  // Lleida
+            `L ${toSVG(41.80, 0.55).join(',')}`,  // Balaguer
+            `L ${toSVG(42.00, 0.60).join(',')}`,  // Tremp
+            `L ${toSVG(42.20, 0.55).join(',')}`,  // Pont de Suert
+            `L ${toSVG(42.45, 0.60).join(',')}`,  // Val d'Aran S
+            `L ${toSVG(42.69, 0.67).join(',')}`,  // Val d'Aran (close)
+            'Z',
+          ].join(' ')}
+            fill="color-mix(in srgb, var(--brand-ll) 6%, transparent)" stroke="var(--brand-ll)" strokeWidth="1.2" strokeDasharray="4 3" opacity=".5" />
 
           {/* Points */}
           {filtered.map((p, i) => {
