@@ -8,19 +8,66 @@ import { PanelBox } from '@/components/warroom/PanelBox';
 import { StatusLine, StatusBadge } from '@/components/warroom/StatusBadge';
 import { AlertFeed, TrendingBar } from '@/components/warroom/AlertFeed';
 import { traduirTema } from '@/lib/temesCatala';
-import { MapaCatalunyaInteractiu } from '@/components/warroom/MapaCatalunya';
-import { useRouter } from 'next/navigation';
-
 const API = process.env.NEXT_PUBLIC_API_URL || '';
+
+function GoogleMapCatalunya() {
+  const isDark = typeof window !== 'undefined' && document.documentElement.getAttribute('data-theme') !== 'light';
+  return (
+    <div style={{
+      background: 'var(--bg-surface)', border: '.5px solid var(--border)',
+      borderRadius: 'var(--r-lg)', overflow: 'hidden', display: 'flex', flexDirection: 'column',
+    }}>
+      <div style={{
+        padding: '10px 14px', borderBottom: '.5px solid var(--border)',
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        fontFamily: 'var(--font-sans)', fontSize: 10, letterSpacing: '.08em',
+        textTransform: 'uppercase', fontWeight: 500,
+      }}>
+        <span style={{ color: 'var(--text-meta)' }}>Mapa territorial · Catalunya</span>
+      </div>
+      <div style={{ position: 'relative', flex: 1, minHeight: 400 }}>
+        <iframe
+          src="https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d800000!2d1.7!3d41.7!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4v1"
+          style={{
+            width: '100%', height: '100%', minHeight: 400,
+            border: 'none', display: 'block',
+            filter: isDark ? 'invert(1) hue-rotate(180deg) brightness(0.95) contrast(0.9) saturate(0.3)' : 'none',
+          }}
+          allowFullScreen
+          loading="lazy"
+          referrerPolicy="no-referrer-when-downgrade"
+        />
+        <div style={{
+          position: 'absolute', bottom: 12, right: 12,
+          display: 'flex', flexDirection: 'column', gap: 4,
+        }}>
+          {['+', '−'].map((label) => (
+            <button
+              key={label}
+              onClick={() => window.open('https://www.google.com/maps/@41.7,1.7,9z', '_blank')}
+              style={{
+                width: 32, height: 32, background: 'var(--bg-surface)',
+                border: '.5px solid var(--border)', borderRadius: 4,
+                color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)',
+                fontSize: 18, fontWeight: 400, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<any>({});
   const [temas, setTemas] = useState<any[]>([]);
   const [actividad, setActividad] = useState<any[]>([]);
-  const [municipios, setMunicipios] = useState<any[]>([]);
   const [alertas, setAlertas] = useState<any>({ total: 0, nuevas: 0, altas_nuevas: 0 });
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
 
   useEffect(() => {
     Promise.allSettled([
@@ -28,13 +75,11 @@ export default function DashboardPage() {
       fetch(`${API}/api/dashboard/temas`).then(r => r.json()),
       fetch(`${API}/api/dashboard/actividad-reciente`).then(r => r.json()),
       fetch(`${API}/api/alertas/stats`).then(r => r.json()),
-      fetch(`${API}/api/municipios/?limit=200`).then(r => r.json()),
-    ]).then(([s, t, a, al, m]) => {
+    ]).then(([s, t, a, al]) => {
       if (s.status === 'fulfilled') setStats(s.value);
       if (t.status === 'fulfilled') setTemas(Array.isArray(t.value) ? t.value : []);
       if (a.status === 'fulfilled') setActividad(Array.isArray(a.value) ? a.value : []);
       if (al.status === 'fulfilled') setAlertas(al.value);
-      if (m.status === 'fulfilled') setMunicipios(Array.isArray(m.value) ? m.value : (m.value?.results || []));
       setLoading(false);
     });
   }, []);
@@ -109,22 +154,7 @@ export default function DashboardPage() {
 
         {/* Row 1: Mapa (wide) + Temes trending */}
         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 12 }}>
-          <MapaCatalunyaInteractiu
-            municipios={municipios.map((m: any) => ({
-              id: m.id,
-              nombre: m.nombre,
-              lat: 0, lng: 0,
-              actas: m.actas_procesadas || 0,
-              alertas: m.alertas_pendientes || 0,
-              tiene_ac: m.tiene_ac || false,
-            }))}
-            onSelect={(nombre) => {
-              const m = municipios.find((mm: any) =>
-                mm.nombre === nombre || mm.nombre.replace(/^Ajuntament d[e']?\s*/i, '').replace(/^Ajuntament del?\s*/i, '').trim() === nombre
-              );
-              if (m) router.push(`/municipios/${m.id}`);
-            }}
-          />
+          <GoogleMapCatalunya />
 
           <PanelBox title="Temes en tendència" subtitle={`top ${Math.min(temas.length, 8)}`} tone="amber">
             {temas.length > 0 ? (

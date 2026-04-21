@@ -29,6 +29,7 @@ export function PageHeader({ crumb, title, subtitle, actions, info }: PageHeader
           <h1 style={{
             fontFamily: 'var(--font-sans)', fontSize: 26, lineHeight: 1.2,
             margin: 0, letterSpacing: '-.015em', fontWeight: 500, color: 'var(--text-primary)',
+            fontStyle: 'normal',
             display: 'flex', alignItems: 'center',
           }}>
             {title}

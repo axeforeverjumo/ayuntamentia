@@ -63,9 +63,9 @@ export function HelpModal({ text }: { text: string | HelpInfo }) {
         onClick={() => setOpen(true)}
         style={{
           display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-          width: 18, height: 18, borderRadius: 18,
+          width: 22, height: 22, borderRadius: 22,
           border: '.5px solid var(--border-em)', color: 'var(--text-meta)',
-          fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 500,
+          fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 500,
           cursor: 'pointer', marginLeft: 10, flexShrink: 0, userSelect: 'none',
         }}
       >
@@ -84,7 +84,7 @@ export function HelpModal({ text }: { text: string | HelpInfo }) {
             onClick={e => e.stopPropagation()}
             style={{
               background: 'var(--bg-surface)', border: '.5px solid var(--border)',
-              borderRadius: 'var(--r-lg)', maxWidth: 500, width: '100%', padding: 24,
+              borderRadius: 'var(--r-lg)', maxWidth: 580, width: '100%', padding: 32,
             }}
           >
             {typeof text === 'string' ? (
@@ -94,15 +94,15 @@ export function HelpModal({ text }: { text: string | HelpInfo }) {
             ) : (
               <>
                 {text.title && (
-                  <h2 style={{ fontFamily: 'var(--font-sans)', fontSize: 18, fontWeight: 500, color: 'var(--text-primary)', margin: '0 0 14px', letterSpacing: '-.01em' }}>
+                  <h2 style={{ fontFamily: 'var(--font-sans)', fontSize: 22, fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 14px', letterSpacing: '-.01em' }}>
                     {text.title}
                   </h2>
                 )}
-                <p style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, margin: '0 0 14px' }}>
+                <p style={{ fontFamily: 'var(--font-sans)', fontSize: 15, color: 'var(--text-secondary)', lineHeight: 1.7, margin: '0 0 14px' }}>
                   {text.description}
                 </p>
                 <div style={{
-                  fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--brand-l)',
+                  fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--brand-l)',
                   letterSpacing: '.06em', marginBottom: 14,
                   display: 'flex', alignItems: 'center', gap: 8,
                 }}>
@@ -111,7 +111,7 @@ export function HelpModal({ text }: { text: string | HelpInfo }) {
                 </div>
                 <ul style={{ listStyle: 'none', margin: '0 0 20px', padding: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {text.tips.map((tip, i) => (
-                    <li key={i} style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: 'var(--text-secondary)', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                    <li key={i} style={{ fontFamily: 'var(--font-sans)', fontSize: 14, color: 'var(--text-secondary)', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
                       <span style={{ color: 'var(--brand-l)', flexShrink: 0, marginTop: 1 }}>→</span>
                       {tip}
                     </li>
@@ -123,8 +123,8 @@ export function HelpModal({ text }: { text: string | HelpInfo }) {
               onClick={() => setOpen(false)}
               style={{
                 background: 'transparent', border: '.5px solid var(--border)', color: 'var(--text-meta)',
-                borderRadius: 'var(--r-sm)', fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 500,
-                padding: '6px 14px', cursor: 'pointer',
+                borderRadius: 'var(--r-sm)', fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 500,
+                padding: '8px 18px', cursor: 'pointer',
               }}
             >
               Tancar
