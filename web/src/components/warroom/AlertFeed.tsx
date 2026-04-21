@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { StatusBadge } from './StatusBadge';
 
 interface AlertItem {
   time: string;
@@ -10,6 +9,12 @@ interface AlertItem {
   text: string;
   municipio?: string;
 }
+
+const sevColors = {
+  alta:  { bg: '#3B0A0A', color: '#F8A4A4', dot: '#F8A4A4' },
+  media: { bg: '#2D1A00', color: '#F5C06A', dot: '#F5C06A' },
+  baja:  { bg: '#062315', color: '#6EE0A0', dot: '#6EE0A0' },
+};
 
 export function AlertFeed({ items, maxVisible = 5 }: { items: AlertItem[]; maxVisible?: number }) {
   const [idx, setIdx] = useState(0);
@@ -28,31 +33,44 @@ export function AlertFeed({ items, maxVisible = 5 }: { items: AlertItem[]; maxVi
     return (
       <div style={{
         padding: '24px 14px', textAlign: 'center',
-        fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--wr-phosphor)',
-        letterSpacing: '.1em', textTransform: 'uppercase',
+        fontFamily: 'var(--font-sans)', fontSize: 12, color: 'var(--text-secondary)',
       }}>
-        ✓ Cap alerta crítica · sistema operatiu
+        Cap alerta crítica · sistema operatiu
       </div>
     );
   }
 
   return (
-    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       {visible.map((item, i) => {
-        const sevTone = item.severity === 'alta' ? 'red' as const : item.severity === 'media' ? 'amber' as const : 'phos' as const;
+        const sev = sevColors[item.severity];
         return (
           <div key={idx + '-' + i} className="fade-up" style={{
-            display: 'grid', gridTemplateColumns: '50px 1fr',
-            gap: 10, padding: '8px 0',
-            borderBottom: '1px dashed var(--line-soft)',
+            padding: '10px 12px',
+            borderRadius: 'var(--r-md)',
+            background: 'var(--bg-surface)',
+            border: '.5px solid var(--border)',
           }}>
-            <span style={{ color: 'var(--fog)', fontSize: 9.5 }}>{item.time}</span>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
-                <StatusBadge tone={sevTone}>{item.type}</StatusBadge>
-                {item.municipio && <span style={{ color: 'var(--fog)', fontSize: 9 }}>{item.municipio}</span>}
-              </div>
-              <div style={{ fontSize: 11.5, lineHeight: 1.35, color: 'var(--paper)' }}>{item.text}</div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', gap: 5,
+                fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 500,
+                padding: '2px 7px', borderRadius: 999,
+                background: sev.bg, color: sev.color,
+              }}>
+                <span style={{ width: 5, height: 5, borderRadius: 999, background: sev.dot, display: 'inline-block', flexShrink: 0 }} />
+                {item.type}
+                {item.municipio && <span style={{ opacity: .7 }}>· {item.municipio}</span>}
+              </span>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, color: 'var(--text-timestamp)' }}>
+                {item.time}
+              </span>
+            </div>
+            <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 2 }}>
+              {item.type}
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+              {item.text}
             </div>
           </div>
         );
@@ -65,22 +83,19 @@ export function TrendingBar({ label, value, max, tone = 'phos' }: {
   label: string; value: number; max: number; tone?: 'red' | 'amber' | 'phos';
 }) {
   const pct = max > 0 ? (value / max) * 100 : 0;
-  const color = tone === 'red' ? 'var(--wr-red-2)' : tone === 'amber' ? 'var(--wr-amber)' : 'var(--wr-phosphor)';
+  const color = tone === 'red' ? '#F8A4A4' : tone === 'amber' ? '#F5C06A' : '#6EE0A0';
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 12, alignItems: 'center', padding: '6px 0' }}>
-      <div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-          <span style={{ fontSize: 12, color: 'var(--paper)' }}>{label}</span>
-          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color }}>{value.toLocaleString('es-ES')}</span>
-        </div>
-        <div style={{ height: 4, background: 'var(--line)', position: 'relative' }}>
-          <div style={{
-            height: '100%', width: `${pct}%`,
-            background: `linear-gradient(90deg, transparent, ${color})`,
-            boxShadow: `0 0 6px ${color}40`,
-            transition: 'width 1s ease-out',
-          }} />
-        </div>
+    <div style={{ padding: '6px 0' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+        <span style={{ fontSize: 12, color: 'var(--text-primary)' }}>{label}</span>
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color }}>{value.toLocaleString('es-ES')}</span>
+      </div>
+      <div style={{ height: 3, background: 'var(--border)', borderRadius: 99, position: 'relative' }}>
+        <div style={{
+          height: '100%', width: `${pct}%`, borderRadius: 99,
+          background: color,
+          transition: 'width 1s ease-out',
+        }} />
       </div>
     </div>
   );

@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { CornerBrack } from '@/components/landing/primitives';
 
 interface MapPoint {
   nombre: string;
@@ -132,25 +131,29 @@ export function MapaCatalunyaInteractiu({ municipios, filtroPartido, onSelect }:
   const maxHeat = Math.max(...filtered.map(p => p.heat), 1);
 
   return (
-    <div style={{ background: 'var(--ink-2)', border: '1px solid var(--line)', position: 'relative' }}>
-      <CornerBrack />
+    <div style={{
+      background: 'var(--bg-surface)',
+      border: '.5px solid var(--border)',
+      borderRadius: 'var(--r-lg)',
+      overflow: 'hidden',
+    }}>
       {/* Header */}
       <div style={{
-        padding: '10px 14px', borderBottom: '1px solid var(--line)',
+        padding: '10px 14px', borderBottom: '.5px solid var(--border)',
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase',
+        fontFamily: 'var(--font-sans)', fontSize: 10, letterSpacing: '.08em',
+        textTransform: 'uppercase', fontWeight: 500, color: 'var(--text-meta)',
       }}>
-        <span style={{ color: 'var(--bone)', display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span className="pulse-dot" style={{ width: 6, height: 6, background: 'var(--wr-phosphor)', borderRadius: 1 }} />
-          Mapa territorial · Catalunya
-        </span>
-        <div style={{ display: 'flex', gap: 1 }}>
+        <span>Mapa territorial · Catalunya</span>
+        <div style={{ display: 'flex', border: '.5px solid var(--border)', borderRadius: 'var(--r-sm)', overflow: 'hidden' }}>
           {(['tots', 'ac', 'actius'] as const).map(f => (
             <button key={f} onClick={() => setFilter(f)} style={{
-              padding: '4px 8px', background: filter === f ? 'var(--paper)' : 'transparent',
-              color: filter === f ? 'var(--ink)' : 'var(--fog)', border: 'none',
-              fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '.08em',
-              textTransform: 'uppercase', cursor: 'pointer',
+              padding: '4px 10px',
+              background: filter === f ? 'var(--brand)' : 'transparent',
+              color: filter === f ? '#fff' : 'var(--text-meta)',
+              border: 'none',
+              fontFamily: 'var(--font-sans)', fontSize: 9, letterSpacing: '.06em',
+              textTransform: 'uppercase', fontWeight: 500, cursor: 'pointer',
             }}>
               {f === 'tots' ? 'Tots' : f === 'ac' ? 'AC' : 'Actius'}
             </button>
@@ -159,35 +162,18 @@ export function MapaCatalunyaInteractiu({ municipios, filtroPartido, onSelect }:
       </div>
 
       {/* Map */}
-      <div className="scanline" style={{
-        position: 'relative', padding: 16,
-        background: 'radial-gradient(ellipse at 50% 40%, var(--ink-3) 0%, var(--ink-2) 70%)',
-        minHeight: 400,
-      }}>
-        {/* Grid */}
-        <div style={{
-          position: 'absolute', inset: 0, pointerEvents: 'none', opacity: .3,
-          backgroundImage: 'linear-gradient(to right, rgba(161,255,90,0.06) 1px, transparent 1px), linear-gradient(to bottom, rgba(161,255,90,0.06) 1px, transparent 1px)',
-          backgroundSize: '44px 44px',
-        }} />
-
+      <div style={{ position: 'relative', padding: 16, minHeight: 400 }}>
         <svg viewBox={`0 0 ${W} ${H}`} width="100%" preserveAspectRatio="xMidYMid meet" style={{ display: 'block' }}>
           {/* Catalunya outline */}
           <path d="M 100 60 L 180 40 L 280 35 L 380 50 L 480 55 L 540 80 L 560 140 L 565 200 L 545 250 L 500 290 L 450 330 L 390 360 L 320 380 L 250 390 L 180 385 L 130 360 L 95 310 L 80 260 L 85 200 L 90 140 Z"
-            fill="color-mix(in srgb, var(--wr-phosphor) 5%, var(--ink-2))" stroke="var(--wr-phosphor-dim)" strokeWidth="1" strokeDasharray="4 3" opacity=".8" />
-
-          {/* Range rings from Barcelona */}
-          {[60, 120, 180].map(r => (
-            <circle key={r} cx={toSVG(41.39, 2.17)[0]} cy={toSVG(41.39, 2.17)[1]} r={r}
-              fill="none" stroke="var(--wr-phosphor-dim)" strokeWidth="0.5" strokeDasharray="2 4" opacity=".3" />
-          ))}
+            fill="transparent" stroke="var(--brand-ll)" strokeWidth="1.5" strokeDasharray="4 3" opacity=".3" />
 
           {/* Points */}
           {filtered.map((p, i) => {
             const intensity = p.heat / maxHeat;
             const isHot = intensity > 0.6;
             const isAC = p.tiene_ac;
-            const color = isHot ? 'var(--wr-red-2)' : isAC ? 'var(--wr-phosphor)' : 'var(--wr-amber)';
+            const color = isHot ? 'var(--danger)' : isAC ? 'var(--brand-l)' : 'var(--text-meta)';
             const r = 3 + intensity * 5;
             return (
               <g key={i} style={{ cursor: 'pointer' }}
@@ -197,14 +183,14 @@ export function MapaCatalunyaInteractiu({ municipios, filtroPartido, onSelect }:
                 {isHot && (
                   <circle cx={p.x} cy={p.y} r="2" fill={color} opacity="0.3">
                     <animate attributeName="r" from="2" to={String(r * 3)} dur="2s" repeatCount="indefinite" />
-                    <animate attributeName="opacity" from="0.5" to="0" dur="2s" repeatCount="indefinite" />
+                    <animate attributeName="opacity" from="0.4" to="0" dur="2s" repeatCount="indefinite" />
                   </circle>
                 )}
                 <circle cx={p.x} cy={p.y} r={r} fill={color}
-                  style={{ filter: `drop-shadow(0 0 ${isHot ? 6 : 3}px ${color})`, opacity: hover === p.nombre ? 1 : 0.85 }} />
+                  style={{ opacity: hover === p.nombre ? 1 : 0.8 }} />
                 {(hover === p.nombre || isHot) && (
                   <text x={p.x + r + 3} y={p.y + 3} fill={color}
-                    fontFamily="var(--font-mono)" fontSize="7" opacity="0.9">{p.nombre}</text>
+                    fontFamily="var(--font-sans)" fontSize="7" opacity="0.9">{p.nombre}</text>
                 )}
               </g>
             );
@@ -218,36 +204,43 @@ export function MapaCatalunyaInteractiu({ municipios, filtroPartido, onSelect }:
           return (
             <div style={{
               position: 'absolute', bottom: 16, left: 16, padding: '10px 14px',
-              background: 'var(--ink-3)', border: '1px solid var(--line)',
-              fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--paper)',
+              background: 'var(--bg-elevated)', border: '.5px solid var(--border)',
+              borderRadius: 'var(--r-md)',
+              fontFamily: 'var(--font-sans)', fontSize: 12, color: 'var(--text-primary)',
               zIndex: 10, minWidth: 160,
             }}>
-              <div style={{ fontSize: 13, fontFamily: 'var(--font-serif)', marginBottom: 4 }}>{p.nombre}</div>
-              <div style={{ color: 'var(--fog)' }}>Actes: {p.actas || 0} · Alertes: {p.alertas || 0}</div>
-              {p.tiene_ac && <div style={{ color: 'var(--wr-phosphor)', marginTop: 4 }}>● Presència AC</div>}
+              <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 4 }}>{p.nombre}</div>
+              <div style={{ color: 'var(--text-secondary)' }}>Actes: {p.actas || 0} · Alertes: {p.alertas || 0}</div>
+              {p.tiene_ac && <div style={{ color: 'var(--brand-l)', marginTop: 4 }}>● Presència AC</div>}
             </div>
           );
         })()}
 
         {/* HUD overlays */}
-        <div style={{ position: 'absolute', top: 20, left: 20, fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--wr-phosphor-dim)', letterSpacing: '.14em', textTransform: 'uppercase' }}>
-          CRS · WGS84 · {filtered.length} punts
-        </div>
-        <div style={{ position: 'absolute', top: 20, right: 20, fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--fog)', letterSpacing: '.14em', textTransform: 'uppercase', textAlign: 'right' }}>
-          <span style={{ color: 'var(--wr-phosphor)' }}>● </span>LIVE
+        <div style={{ position: 'absolute', top: 20, left: 20, fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-timestamp)', letterSpacing: '.1em', textTransform: 'uppercase' }}>
+          {filtered.length} punts · WGS84
         </div>
       </div>
 
       {/* Legend */}
       <div style={{
-        padding: '8px 14px', borderTop: '1px solid var(--line)',
-        display: 'flex', gap: 16, fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--fog)',
-        letterSpacing: '.1em', textTransform: 'uppercase',
+        padding: '8px 14px', borderTop: '.5px solid var(--border)',
+        display: 'flex', gap: 16, fontFamily: 'var(--font-sans)', fontSize: 10,
+        color: 'var(--text-meta)',
       }}>
-        <span><span style={{ display: 'inline-block', width: 8, height: 8, background: 'var(--wr-red-2)', marginRight: 6 }} />Alta activitat</span>
-        <span><span style={{ display: 'inline-block', width: 8, height: 8, background: 'var(--wr-phosphor)', marginRight: 6 }} />Presència AC</span>
-        <span><span style={{ display: 'inline-block', width: 8, height: 8, background: 'var(--wr-amber)', marginRight: 6 }} />Altres</span>
-        <span style={{ marginLeft: 'auto' }}>{filtered.length} / {points.length} municipis</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: 7, background: 'var(--danger)' }} />
+          Alta activitat
+        </span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: 7, background: 'var(--brand-l)' }} />
+          Presència AC
+        </span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: 7, background: 'var(--text-meta)' }} />
+          Altres
+        </span>
+        <span style={{ marginLeft: 'auto', color: 'var(--text-timestamp)' }}>{filtered.length} / {points.length} municipis</span>
       </div>
     </div>
   );

@@ -20,29 +20,44 @@ export function SearchInput({
 }: SearchInputProps) {
   return (
     <div className={cn('relative', className)}>
-      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8b949e] pointer-events-none" />
+      <Search
+        className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none"
+        style={{ color: 'var(--text-disabled)' }}
+        strokeWidth={1.5}
+      />
       <input
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className={cn(
-          'w-full pl-10 pr-9 py-2.5 rounded-lg text-sm',
-          'bg-[#161b22] border border-[#30363d] text-[#e6edf3]',
-          'placeholder:text-[#6e7681]',
-          'focus:outline-none focus:ring-2 focus:ring-[#2563eb] focus:border-[#2563eb]',
-          'transition-colors',
-        )}
+        style={{
+          width: '100%',
+          paddingLeft: 36,
+          paddingRight: value ? 36 : 12,
+          paddingTop: 9,
+          paddingBottom: 9,
+          borderRadius: 'var(--r-md)',
+          background: 'var(--bg-elevated)',
+          border: '.5px solid var(--border)',
+          color: 'var(--text-primary)',
+          fontSize: 13,
+          fontFamily: 'var(--font-sans)',
+          outline: 'none',
+          transition: 'border-color .15s',
+        }}
+        onFocus={e => { e.currentTarget.style.borderColor = 'var(--brand-l)'; }}
+        onBlur={e => { e.currentTarget.style.borderColor = 'var(--border)'; }}
       />
       {value && (
         <button
-          onClick={() => {
-            onChange('');
-            onClear?.();
+          onClick={() => { onChange(''); onClear?.(); }}
+          style={{
+            position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
+            background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-disabled)',
+            display: 'flex', alignItems: 'center',
           }}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8b949e] hover:text-[#e6edf3] transition-colors"
         >
-          <X className="w-4 h-4" />
+          <X className="w-4 h-4" strokeWidth={1.5} />
         </button>
       )}
     </div>

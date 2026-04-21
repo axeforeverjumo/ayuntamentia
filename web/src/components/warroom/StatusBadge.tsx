@@ -2,41 +2,52 @@
 
 type BadgeTone = 'red' | 'amber' | 'phos' | 'bone';
 
+const darkColors: Record<BadgeTone, { bg: string; color: string }> = {
+  red:  { bg: '#3B0A0A', color: '#F8A4A4' },
+  amber:{ bg: '#2D1A00', color: '#F5C06A' },
+  phos: { bg: '#062315', color: '#6EE0A0' },
+  bone: { bg: '#1E2023', color: '#9AA3AD' },
+};
+
+const dotColors: Record<BadgeTone, string> = {
+  red: '#F8A4A4',
+  amber: '#F5C06A',
+  phos: '#6EE0A0',
+  bone: '#9AA3AD',
+};
+
 export function StatusBadge({ children, tone = 'bone' }: { children: React.ReactNode; tone?: BadgeTone }) {
-  const colors: Record<BadgeTone, { bg: string; color: string; bd: string }> = {
-    red: { bg: 'color-mix(in srgb, var(--wr-red-2) 12%, transparent)', color: 'var(--wr-red-2)', bd: 'color-mix(in srgb, var(--wr-red-2) 35%, transparent)' },
-    amber: { bg: 'color-mix(in srgb, var(--wr-amber) 12%, transparent)', color: 'var(--wr-amber)', bd: 'color-mix(in srgb, var(--wr-amber) 35%, transparent)' },
-    phos: { bg: 'color-mix(in srgb, var(--wr-phosphor) 12%, transparent)', color: 'var(--wr-phosphor)', bd: 'color-mix(in srgb, var(--wr-phosphor) 35%, transparent)' },
-    bone: { bg: 'transparent', color: 'var(--bone)', bd: 'var(--line)' },
-  };
-  const c = colors[tone];
+  const c = darkColors[tone];
+  const dot = dotColors[tone];
   return (
     <span style={{
-      fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.08em',
-      textTransform: 'uppercase', padding: '3px 8px',
-      border: `1px solid ${c.bd}`, background: c.bg, color: c.color,
+      fontFamily: 'var(--font-sans)', fontSize: 11, letterSpacing: '.02em',
+      fontWeight: 500, padding: '3px 8px',
+      borderRadius: 'var(--r-full)',
+      background: c.bg, color: c.color,
       display: 'inline-flex', alignItems: 'center', gap: 5,
     }}>
+      <span style={{ width: 5, height: 5, borderRadius: 999, background: dot, flexShrink: 0, display: 'inline-block' }} />
       {children}
     </span>
   );
 }
 
-export function LiveDot({ color = 'var(--wr-phosphor)' }: { color?: string }) {
+export function LiveDot({ color = 'var(--brand-l)' }: { color?: string }) {
   return (
     <span className="pulse-dot" style={{
       width: 7, height: 7, borderRadius: 7,
-      background: color, boxShadow: `0 0 8px ${color}`,
+      background: color,
       display: 'inline-block',
     }} />
   );
 }
 
-export function StatusLine({ color = 'var(--wr-phosphor)', children }: { color?: string; children: React.ReactNode }) {
+export function StatusLine({ color = 'var(--brand-l)', children }: { color?: string; children: React.ReactNode }) {
   return (
     <div style={{
       display: 'inline-flex', alignItems: 'center', gap: 8,
-      fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--bone)',
+      fontFamily: 'var(--font-sans)', fontSize: 11, color: 'var(--text-secondary)',
     }}>
       <LiveDot color={color} />
       {children}

@@ -15,27 +15,27 @@ export function PageHeader({ crumb, title, subtitle, actions, info }: PageHeader
   return (
     <div style={{
       padding: '22px 26px 18px',
-      borderBottom: '1px solid var(--line)',
-      background: 'var(--ink)',
+      borderBottom: '.5px solid var(--border)',
+      background: 'var(--bg-base)',
     }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 20 }}>
         <div>
           <div style={{
-            fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--fog)',
-            letterSpacing: '.16em', textTransform: 'uppercase', marginBottom: 8,
+            fontFamily: 'var(--font-sans)', fontSize: 10, color: 'var(--text-meta)',
+            letterSpacing: '.08em', textTransform: 'uppercase', fontWeight: 500, marginBottom: 8,
           }}>
             {crumb}
           </div>
           <h1 style={{
-            fontFamily: 'var(--font-serif)', fontSize: 44, lineHeight: 1,
-            margin: 0, letterSpacing: '-.02em', fontWeight: 400, color: 'var(--paper)',
+            fontFamily: 'var(--font-sans)', fontSize: 26, lineHeight: 1.2,
+            margin: 0, letterSpacing: '-.015em', fontWeight: 500, color: 'var(--text-primary)',
             display: 'flex', alignItems: 'center',
           }}>
             {title}
             {info && <HelpModal text={info} />}
           </h1>
           {subtitle && (
-            <p style={{ fontFamily: 'var(--font-sans)', fontSize: 14, color: 'var(--fog)', marginTop: 8, margin: '8px 0 0' }}>
+            <p style={{ fontFamily: 'var(--font-sans)', fontSize: 13.5, color: 'var(--text-secondary)', marginTop: 8, margin: '8px 0 0' }}>
               {subtitle}
             </p>
           )}

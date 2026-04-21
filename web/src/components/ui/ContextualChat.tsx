@@ -81,43 +81,42 @@ export function ContextualChat({ contextLabel, contextPrompt }: ContextualChatPr
         onClick={() => setOpen(true)}
         style={{
           position: 'fixed', bottom: 28, right: 28, zIndex: 999,
-          width: 52, height: 52, borderRadius: 0,
-          background: 'var(--wr-red)', border: '1px solid var(--wr-red)',
-          color: 'var(--paper)', cursor: 'pointer',
+          width: 48, height: 48, borderRadius: 'var(--r-full)',
+          background: 'var(--brand)', border: 'none',
+          color: '#fff', cursor: 'pointer',
           display: open ? 'none' : 'flex',
           alignItems: 'center', justifyContent: 'center',
-          boxShadow: '0 0 28px -6px rgba(255,90,60,.6)',
+          boxShadow: '0 4px 16px rgba(15,76,129,.35)',
         }}
         title={`Preguntar sobre ${contextLabel}`}
       >
-        <MessageSquare size={22} />
+        <MessageSquare size={20} strokeWidth={1.5} />
       </button>
 
       {/* Slide-in panel */}
       <div style={{
         position: 'fixed', top: 0, right: 0, bottom: 0, zIndex: 1000,
-        width: 380, background: 'var(--ink-2)', borderLeft: '1px solid var(--line)',
+        width: 380, background: 'var(--bg-surface)', borderLeft: '.5px solid var(--border)',
         display: 'flex', flexDirection: 'column',
         transform: open ? 'translateX(0)' : 'translateX(100%)',
         transition: 'transform .28s cubic-bezier(.4,0,.2,1)',
-        boxShadow: open ? '-8px 0 40px rgba(0,0,0,.4)' : 'none',
+        boxShadow: open ? '-8px 0 40px rgba(0,0,0,.2)' : 'none',
       }}>
         {/* Header */}
         <div style={{
-          padding: '14px 16px', borderBottom: '1px solid var(--line)',
-          background: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 10,
+          padding: '14px 16px', borderBottom: '.5px solid var(--border)',
+          background: 'var(--bg-base)', display: 'flex', alignItems: 'center', gap: 10,
         }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{
-              fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--fog)',
-              letterSpacing: '.16em', textTransform: 'uppercase', marginBottom: 2,
+              fontFamily: 'var(--font-sans)', fontSize: 9.5, color: 'var(--text-meta)',
+              letterSpacing: '.08em', textTransform: 'uppercase', fontWeight: 500, marginBottom: 3,
             }}>
-              War Room · Context
+              Context · Chat
             </div>
             <div style={{
-              fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--paper)',
-              fontWeight: 700, letterSpacing: '.04em', overflow: 'hidden',
-              textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              fontFamily: 'var(--font-sans)', fontSize: 13, color: 'var(--text-primary)',
+              fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}>
               {contextLabel}
             </div>
@@ -125,12 +124,12 @@ export function ContextualChat({ contextLabel, contextPrompt }: ContextualChatPr
           <button
             onClick={() => setOpen(false)}
             style={{
-              background: 'none', border: '1px solid var(--line)', color: 'var(--fog)',
-              width: 30, height: 30, display: 'flex', alignItems: 'center',
+              background: 'none', border: '.5px solid var(--border)', color: 'var(--text-meta)',
+              borderRadius: 'var(--r-sm)', width: 28, height: 28, display: 'flex', alignItems: 'center',
               justifyContent: 'center', cursor: 'pointer', flexShrink: 0,
             }}
           >
-            <X size={14} />
+            <X size={13} strokeWidth={1.5} />
           </button>
         </div>
 
@@ -139,8 +138,8 @@ export function ContextualChat({ contextLabel, contextPrompt }: ContextualChatPr
           {messages.length === 0 && (
             <div style={{ textAlign: 'center', paddingTop: 40 }}>
               <div style={{
-                fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--fog)',
-                letterSpacing: '.12em', textTransform: 'uppercase', marginBottom: 16,
+                fontFamily: 'var(--font-sans)', fontSize: 11, color: 'var(--text-meta)',
+                letterSpacing: '.04em', marginBottom: 16,
               }}>
                 Preguntes sobre {contextLabel}
               </div>
@@ -150,49 +149,56 @@ export function ContextualChat({ contextLabel, contextPrompt }: ContextualChatPr
                 'Hi ha regidors amb divergències notables?',
               ].map((s, i) => (
                 <button key={i} onClick={() => sendMessage(s)} style={{
-                  display: 'block', width: '100%', padding: '8px 12px', marginBottom: 6,
-                  background: 'transparent', border: '1px dashed var(--line)',
-                  color: 'var(--bone)', fontFamily: 'var(--font-sans)', fontSize: 12,
+                  display: 'block', width: '100%', padding: '9px 12px', marginBottom: 6,
+                  background: 'var(--bg-elevated)', border: '.5px solid var(--border)',
+                  borderRadius: 'var(--r-md)',
+                  color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', fontSize: 12,
                   cursor: 'pointer', textAlign: 'left',
                 }}>
-                  → {s}
+                  {s}
                 </button>
               ))}
             </div>
           )}
 
           {messages.map((msg, i) => (
-            <div key={i} style={{ marginBottom: 14 }}>
+            <div key={i} style={{ marginBottom: 12 }}>
               {msg.role === 'user' ? (
-                <div style={{
-                  background: 'var(--paper)', color: 'var(--ink)',
-                  padding: '10px 14px', fontSize: 13, lineHeight: 1.5,
-                  fontFamily: 'var(--font-sans)',
-                }}>
-                  {msg.content}
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <div style={{
+                    background: 'var(--brand)',
+                    borderRadius: '14px 4px 14px 14px',
+                    color: '#E8F1F9',
+                    padding: '10px 14px', fontSize: 13, lineHeight: 1.5,
+                    fontFamily: 'var(--font-sans)', maxWidth: '85%',
+                  }}>
+                    {msg.content}
+                  </div>
                 </div>
               ) : (
-                <div style={{
-                  background: 'transparent',
-                  padding: '10px 14px 10px 0',
-                  borderLeft: '2px solid var(--wr-red)',
-                  paddingLeft: 12,
-                }}>
-                  <div
-                    className="markdown-body"
-                    style={{ fontSize: 12 }}
-                    dangerouslySetInnerHTML={{ __html: simpleMarkdown(msg.content) }}
-                  />
+                <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+                  <div style={{
+                    background: 'var(--bg-elevated)',
+                    borderRadius: '4px 14px 14px 14px',
+                    color: 'var(--text-secondary)',
+                    padding: '10px 14px', maxWidth: '85%',
+                  }}>
+                    <div
+                      className="markdown-body"
+                      style={{ fontSize: 12, lineHeight: 1.6 }}
+                      dangerouslySetInnerHTML={{ __html: simpleMarkdown(msg.content) }}
+                    />
+                  </div>
                 </div>
               )}
             </div>
           ))}
 
           {loading && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', color: 'var(--fog)' }}>
-              <Loader2 size={13} className="animate-spin" />
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.1em' }}>
-                PROCESSANT...
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', color: 'var(--text-timestamp)' }}>
+              <Loader2 size={12} className="animate-spin" strokeWidth={1.5} />
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.06em' }}>
+                processant...
               </span>
             </div>
           )}
@@ -200,11 +206,9 @@ export function ContextualChat({ contextLabel, contextPrompt }: ContextualChatPr
         </div>
 
         {/* Composer */}
-        <div style={{ borderTop: '1px solid var(--line)', padding: '10px 14px' }}>
+        <div style={{ borderTop: '.5px solid var(--border)', padding: '10px 14px' }}>
           <form onSubmit={e => { e.preventDefault(); sendMessage(input); }} style={{
-            display: 'grid', gridTemplateColumns: '1fr auto',
-            background: 'var(--ink)', border: '1px solid var(--line)',
-            borderTop: '3px solid var(--wr-red)',
+            display: 'grid', gridTemplateColumns: '1fr auto', gap: 8,
           }}>
             <input
               ref={inputRef}
@@ -213,23 +217,25 @@ export function ContextualChat({ contextLabel, contextPrompt }: ContextualChatPr
               placeholder="Pregunta sobre aquest municipi..."
               disabled={loading}
               style={{
-                background: 'transparent', border: 'none', color: 'var(--paper)',
-                padding: '12px 14px', fontSize: 13, fontFamily: 'var(--font-sans)',
-                outline: 'none',
+                background: 'var(--bg-elevated)', border: '.5px solid var(--border-em)',
+                borderRadius: 'var(--r-md)',
+                color: 'var(--text-primary)', padding: '10px 14px',
+                fontSize: 13, fontFamily: 'var(--font-sans)', outline: 'none',
               }}
             />
             <button
               type="submit"
               disabled={!input.trim() || loading}
               style={{
-                background: loading ? 'var(--ink-4)' : 'var(--wr-red)',
-                color: 'var(--paper)', border: 'none', padding: '0 14px',
-                cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: 10,
-                letterSpacing: '.1em', textTransform: 'uppercase', fontWeight: 700,
+                background: 'var(--brand)', color: '#fff',
+                border: 'none', padding: '0 16px',
+                borderRadius: 'var(--r-md)',
+                cursor: 'pointer', fontFamily: 'var(--font-sans)', fontSize: 12,
+                fontWeight: 500,
                 opacity: !input.trim() || loading ? 0.4 : 1,
               }}
             >
-              {loading ? <Loader2 size={12} className="animate-spin" /> : 'Disparar →'}
+              {loading ? <Loader2 size={12} className="animate-spin" strokeWidth={1.5} /> : 'Enviar'}
             </button>
           </form>
         </div>

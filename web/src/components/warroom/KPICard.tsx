@@ -12,20 +12,13 @@ interface KPICardProps {
 }
 
 export function KPICard({ label, value, tone = 'default', format, suffix, sublabel }: KPICardProps) {
-  const toneColors = {
-    default: 'var(--paper)',
-    red: 'var(--wr-red-2)',
-    amber: 'var(--wr-amber)',
-    phos: 'var(--wr-phosphor)',
-  };
-  const toneBg = {
-    default: 'transparent',
-    red: 'rgba(212,58,31,.04)',
-    amber: 'rgba(232,168,23,.04)',
-    phos: 'rgba(161,255,90,.04)',
+  const toneColors: Record<string, string> = {
+    default: 'var(--text-primary)',
+    red: '#F8A4A4',
+    amber: '#F5C06A',
+    phos: '#6EE0A0',
   };
   const color = toneColors[tone];
-  const bg = toneBg[tone];
 
   const isNumber = typeof value === 'number';
   const [display, setDisplay] = useState(isNumber ? 0 : value);
@@ -49,36 +42,29 @@ export function KPICard({ label, value, tone = 'default', format, suffix, sublab
 
   return (
     <div style={{
-      background: `linear-gradient(135deg, var(--ink-2), ${bg})`,
-      border: '1px solid var(--line)',
+      background: 'var(--bg-surface)',
+      border: '.5px solid var(--border)',
+      borderRadius: 'var(--r-md)',
       padding: '18px 20px 16px',
-      position: 'relative',
-      overflow: 'hidden',
     }}>
       <div style={{
-        position: 'absolute', top: 6, right: 8,
-        width: 6, height: 6, borderRadius: 6,
-        background: color, opacity: 0.6,
-      }} className="pulse-dot" />
-
-      <div style={{
-        fontFamily: 'var(--font-mono)', fontSize: 9.5, color: 'var(--fog)',
-        letterSpacing: '.14em', textTransform: 'uppercase', marginBottom: 10,
+        fontFamily: 'var(--font-sans)', fontSize: 9.5, color: 'var(--text-meta)',
+        letterSpacing: '.08em', textTransform: 'uppercase', fontWeight: 500, marginBottom: 10,
       }}>
         {label}
       </div>
 
       <div style={{
-        fontFamily: 'var(--font-serif)', fontSize: 38, lineHeight: 1,
-        color, fontStyle: tone === 'red' ? 'italic' : 'normal',
+        fontFamily: 'var(--font-sans)', fontSize: 30, lineHeight: 1,
+        color, fontWeight: 300, letterSpacing: '-.025em',
       }}>
-        {display}{suffix && <span style={{ fontSize: 18, color: 'var(--fog)', marginLeft: 4 }}>{suffix}</span>}
+        {display}{suffix && <span style={{ fontSize: 16, color: 'var(--text-meta)', marginLeft: 4 }}>{suffix}</span>}
       </div>
 
       {sublabel && (
         <div style={{
-          fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--fog)',
-          letterSpacing: '.08em', marginTop: 8,
+          fontFamily: 'var(--font-sans)', fontSize: 11, color: 'var(--text-timestamp)',
+          marginTop: 8,
         }}>
           {sublabel}
         </div>
@@ -91,7 +77,7 @@ export function KPIGrid({ children }: { children: React.ReactNode }) {
   return (
     <div style={{
       display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-      gap: 1, background: 'var(--line)', border: '1px solid var(--line)',
+      gap: 12,
     }}>
       {children}
     </div>

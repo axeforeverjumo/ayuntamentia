@@ -31,10 +31,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       )}
       <button
         onClick={() => setOpen(!open)}
-        className="md:hidden fixed top-3 left-3 z-50 p-2 rounded bg-[#161b22] border border-[#30363d]"
+        className="md:hidden fixed top-3 left-3 z-50 p-2"
+        style={{
+          borderRadius: 'var(--r-sm)',
+          background: 'var(--bg-elevated)',
+          border: '.5px solid var(--border)',
+          color: 'var(--text-primary)',
+        }}
         aria-label="Menu"
       >
-        {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+        {open ? <X className="w-5 h-5" strokeWidth={1.5} /> : <Menu className="w-5 h-5" strokeWidth={1.5} />}
       </button>
       <main className="min-h-screen md:ml-60 pt-12 md:pt-0">
         {children}

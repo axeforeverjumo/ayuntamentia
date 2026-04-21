@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, type ReactNode, type CSSProperties } from 'react';
-import { CornerBrack } from '@/components/landing/primitives';
 
 type PanelTone = 'default' | 'red' | 'amber' | 'phos';
 
@@ -21,33 +20,27 @@ export interface HelpInfo {
   tips: string[];
 }
 
-const toneMap: Record<PanelTone, string> = {
-  default: 'var(--bone)',
-  red: 'var(--wr-red-2)',
-  amber: 'var(--wr-amber)',
-  phos: 'var(--wr-phosphor)',
-};
-
-export function PanelBox({ title, subtitle, tone = 'default', children, style, info }: PanelBoxProps) {
-  const color = toneMap[tone];
+export function PanelBox({ title, subtitle, children, style }: PanelBoxProps) {
   return (
     <div style={{
-      background: 'var(--ink-2)', border: '1px solid var(--line)',
-      position: 'relative', ...style,
+      background: 'var(--bg-surface)',
+      border: '.5px solid var(--border)',
+      borderRadius: 'var(--r-lg)',
+      position: 'relative',
+      overflow: 'hidden',
+      ...style,
     }}>
-      <CornerBrack />
       <div style={{
-        padding: '10px 14px', borderBottom: '1px solid var(--line)',
+        padding: '10px 14px',
+        borderBottom: '.5px solid var(--border)',
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase',
+        fontFamily: 'var(--font-sans)', fontSize: 10, letterSpacing: '.08em',
+        textTransform: 'uppercase', fontWeight: 500,
       }}>
-        <span style={{ color: 'var(--bone)', display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span className="pulse-dot" style={{ width: 6, height: 6, background: color, borderRadius: 1 }} />
-          {title}
-        </span>
-        <span style={{ color: 'var(--fog)' }}>{subtitle}</span>
+        <span style={{ color: 'var(--text-meta)' }}>{title}</span>
+        {subtitle && <span style={{ color: 'var(--text-timestamp)', fontWeight: 400 }}>{subtitle}</span>}
       </div>
-      <div style={{ padding: '14px' }}>
+      <div style={{ padding: 14 }}>
         {children}
       </div>
     </div>
@@ -70,10 +63,10 @@ export function HelpModal({ text }: { text: string | HelpInfo }) {
         onClick={() => setOpen(true)}
         style={{
           display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-          width: 20, height: 20, borderRadius: 20,
-          border: '2px solid var(--bone)', color: 'var(--bone)',
-          fontFamily: 'var(--font-mono)', fontSize: 11, cursor: 'pointer',
-          marginLeft: 10, flexShrink: 0, userSelect: 'none',
+          width: 18, height: 18, borderRadius: 18,
+          border: '.5px solid var(--border-em)', color: 'var(--text-meta)',
+          fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 500,
+          cursor: 'pointer', marginLeft: 10, flexShrink: 0, userSelect: 'none',
         }}
       >
         ?
@@ -83,34 +76,34 @@ export function HelpModal({ text }: { text: string | HelpInfo }) {
         <div
           onClick={() => setOpen(false)}
           style={{
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,.65)', zIndex: 9999,
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 9999,
             display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
           }}
         >
           <div
             onClick={e => e.stopPropagation()}
             style={{
-              background: 'var(--ink-2)', border: '1px solid var(--line)',
-              maxWidth: 500, width: '100%', padding: 24,
+              background: 'var(--bg-surface)', border: '.5px solid var(--border)',
+              borderRadius: 'var(--r-lg)', maxWidth: 500, width: '100%', padding: 24,
             }}
           >
             {typeof text === 'string' ? (
-              <p style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: 'var(--bone)', lineHeight: 1.6, margin: '0 0 20px' }}>
+              <p style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, margin: '0 0 20px' }}>
                 {text}
               </p>
             ) : (
               <>
                 {text.title && (
-                  <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: 22, fontWeight: 400, color: 'var(--paper)', margin: '0 0 14px', letterSpacing: '-.01em' }}>
+                  <h2 style={{ fontFamily: 'var(--font-sans)', fontSize: 18, fontWeight: 500, color: 'var(--text-primary)', margin: '0 0 14px', letterSpacing: '-.01em' }}>
                     {text.title}
                   </h2>
                 )}
-                <p style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: 'var(--bone)', lineHeight: 1.6, margin: '0 0 14px' }}>
+                <p style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, margin: '0 0 14px' }}>
                   {text.description}
                 </p>
                 <div style={{
-                  fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--wr-phosphor)',
-                  letterSpacing: '.08em', marginBottom: 14,
+                  fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--brand-l)',
+                  letterSpacing: '.06em', marginBottom: 14,
                   display: 'flex', alignItems: 'center', gap: 8,
                 }}>
                   <span style={{ fontSize: 8 }}>●</span>
@@ -118,8 +111,8 @@ export function HelpModal({ text }: { text: string | HelpInfo }) {
                 </div>
                 <ul style={{ listStyle: 'none', margin: '0 0 20px', padding: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {text.tips.map((tip, i) => (
-                    <li key={i} style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: 'var(--bone)', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                      <span style={{ color: 'var(--wr-phosphor)', flexShrink: 0, marginTop: 1 }}>→</span>
+                    <li key={i} style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: 'var(--text-secondary)', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                      <span style={{ color: 'var(--brand-l)', flexShrink: 0, marginTop: 1 }}>→</span>
                       {tip}
                     </li>
                   ))}
@@ -129,12 +122,12 @@ export function HelpModal({ text }: { text: string | HelpInfo }) {
             <button
               onClick={() => setOpen(false)}
               style={{
-                background: 'transparent', border: '1px solid var(--line)', color: 'var(--fog)',
-                fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.1em',
-                textTransform: 'uppercase', padding: '6px 14px', cursor: 'pointer',
+                background: 'transparent', border: '.5px solid var(--border)', color: 'var(--text-meta)',
+                borderRadius: 'var(--r-sm)', fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 500,
+                padding: '6px 14px', cursor: 'pointer',
               }}
             >
-              ✕ Tancar
+              Tancar
             </button>
           </div>
         </div>
