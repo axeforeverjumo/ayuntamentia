@@ -27,6 +27,7 @@ export default function MunicipiosPage() {
   const [search, setSearch] = useState('');
   const [provincia, setProvincia] = useState('Totes');
   const [tieneAC, setTieneAC] = useState<boolean | null>(null);
+  const [sort, setSort] = useState<'recent' | 'az' | 'za' | 'hab'>('recent');
 
   useEffect(() => {
     const loadMunicipios = async () => {
@@ -50,14 +51,21 @@ export default function MunicipiosPage() {
   }, [provincia, tieneAC]);
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return municipios;
-    const q = search.toLowerCase();
-    return municipios.filter(
-      (m) =>
-        m.nombre.toLowerCase().includes(q) ||
-        m.comarca.toLowerCase().includes(q),
-    );
-  }, [municipios, search]);
+    let result = municipios;
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      result = result.filter(m => m.nombre.toLowerCase().includes(q) || m.comarca.toLowerCase().includes(q));
+    }
+    return [...result].sort((a, b) => {
+      if (sort === 'az') return a.nombre.localeCompare(b.nombre, 'ca');
+      if (sort === 'za') return b.nombre.localeCompare(a.nombre, 'ca');
+      if (sort === 'hab') return (b.poblacion || 0) - (a.poblacion || 0);
+      if (!a.ultima_acta && !b.ultima_acta) return 0;
+      if (!a.ultima_acta) return 1;
+      if (!b.ultima_acta) return -1;
+      return new Date(b.ultima_acta).getTime() - new Date(a.ultima_acta).getTime();
+    });
+  }, [municipios, search, sort]);
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--ink)' }}>
@@ -70,41 +78,20 @@ export default function MunicipiosPage() {
           {municipios.length > 0 ? `${municipios.length} municipis · Catalunya` : 'Catalunya'}
         </p>
       </div>
-      {/* Sub-nav */}
-      <div style={{ display: 'flex', borderBottom: '1px solid var(--line)' }}>
-        {[
-          { id: 'tots', label: 'Tots els municipis' },
-          { id: 'ac', label: 'Amb presència AC' },
-          { id: 'recent', label: 'Per activitat recent' },
-        ].map(t => (
-          <button key={t.id} onClick={() => {
-            if (t.id === 'ac') setSearch('AC');
-            else if (t.id === 'recent') { setSearch(''); setSort('recent'); }
-            else { setSearch(''); }
-          }} style={{
-            padding: '10px 16px', background: 'transparent',
-            border: 'none', borderBottom: '2px solid transparent',
-            borderRight: '1px solid var(--line)',
-            color: 'var(--fog)',
-            fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '.1em',
-            textTransform: 'uppercase', cursor: 'pointer',
-          }}>
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      <div style={{ padding: '20px 26px', display: 'flex', flexDirection: 'column', gap: 20 }}>
-
-      {/* Filters */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+      {/* Search bar */}
+      <div style={{ padding: '12px 26px', borderBottom: '1px solid var(--line)' }}>
         <SearchInput
           value={search}
           onChange={setSearch}
           placeholder="Cercar per nom o comarca..."
-          className="w-72"
+          className="w-full"
         />
+      </div>
 
+      <div style={{ padding: '20px 26px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+      {/* Filters + Sort */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', background: 'var(--bg-surface)', border: '.5px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 4, gap: 2 }}>
           {PROVINCIAS.map((p) => (
             <button
@@ -139,11 +126,27 @@ export default function MunicipiosPage() {
           ))}
         </div>
 
-        {filtered.length !== municipios.length && (
-          <span style={{ fontSize: 11, color: 'var(--text-meta)', marginLeft: 'auto' }}>
-            Mostrant {filtered.length} de {municipios.length}
-          </span>
-        )}
+        <select
+          value={sort}
+          onChange={e => setSort(e.target.value as 'recent' | 'az' | 'za' | 'hab')}
+          style={{
+            marginLeft: 'auto',
+            padding: '8px 14px',
+            background: 'var(--bg-elevated)',
+            border: '.5px solid var(--border)',
+            borderRadius: 'var(--r-md)',
+            color: 'var(--text-secondary)',
+            fontFamily: 'var(--font-mono)',
+            fontSize: 12,
+            cursor: 'pointer',
+            outline: 'none',
+          }}
+        >
+          <option value="recent">Per activitat recent</option>
+          <option value="az">Per A-Z</option>
+          <option value="za">Per Z-A</option>
+          <option value="hab">Per nombre d&apos;habitants</option>
+        </select>
       </div>
 
       {/* Error state */}

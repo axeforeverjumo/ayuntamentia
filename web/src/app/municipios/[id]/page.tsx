@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
-  MapPin, Users, FileText, TrendingUp, ChevronLeft,
+  MapPin, Users, FileText, ChevronLeft,
   AlertCircle, CheckCircle2, Loader2, Calendar,
 } from "lucide-react";
 import { ContextualChat } from "@/components/ui/ContextualChat";
@@ -116,7 +116,7 @@ export default function MunicipioDetailPage() {
                       <div
                         style={{
                           height: 10, borderRadius: 'var(--r-full)',
-                          background: c.partido.includes("ALIAN") ? 'var(--brand)' : 'var(--border)',
+                          background: c.partido.includes("ALIAN") ? 'var(--brand)' : '#5C7A96',
                           width: `${(c.count / maxComp) * 100}%`,
                         }}
                       />
@@ -173,24 +173,6 @@ export default function MunicipioDetailPage() {
             </div>
           </div>
 
-          {/* Temas */}
-          {temas.length > 0 && (
-            <div style={{ background: 'var(--bg-surface)', border: '.5px solid var(--border)', borderRadius: 'var(--r-lg)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px', borderBottom: '.5px solid var(--border)' }}>
-                <TrendingUp style={{ width: 14, height: 14, color: 'var(--text-meta)' }} />
-                <h2 style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>Temes</h2>
-              </div>
-              <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {temas.map((t: any) => (
-                  <div key={t.tema} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{t.tema}</span>
-                    <span style={{ fontSize: 11, color: 'var(--text-meta)' }}>{t.count}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* Alertas */}
           <div style={{ background: 'var(--bg-surface)', border: '.5px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 16 }}>
             <h3 style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-meta)', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '.06em' }}>Alertes</h3>
@@ -202,33 +184,6 @@ export default function MunicipioDetailPage() {
           </div>
         </div>
       </div>
-
-      {/* Alertes del municipi */}
-      <PanelBox title="Alertes del municipi" tone="red" subtitle={data.nombre}>
-        {alertasList.length === 0 ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--wr-phosphor)', fontFamily: 'var(--font-mono)', fontSize: 12 }}>
-            <CheckCircle2 style={{ width: 14, height: 14 }} />
-            Cap alerta activa per aquest municipi
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {alertasList.map((a: any, i: number) => (
-              <div key={i} style={{ borderBottom: '1px dashed var(--line-soft)', paddingBottom: 10 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                  <span style={{ color: 'var(--paper)', fontWeight: 500, fontSize: 13 }}>{a.titulo || a.title}</span>
-                  <StatusBadge tone="red">{a.severitat || a.severidad || a.severity || 'alta'}</StatusBadge>
-                </div>
-                {(a.descripcio || a.descripcion) && (
-                  <p style={{ fontSize: 12, color: 'var(--bone)', margin: 0 }}>{a.descripcio || a.descripcion}</p>
-                )}
-                {(a.fecha || a.data) && (
-                  <p style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--fog)', marginTop: 4 }}>{a.fecha || a.data}</p>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </PanelBox>
 
       {/* Intel·ligència local */}
       <PanelBox title="Intel·ligència local" tone="amber" subtitle={`Temes emergents a ${data.nombre}`}>
@@ -248,11 +203,40 @@ export default function MunicipioDetailPage() {
         )}
       </PanelBox>
 
-      <PanelBox title="Recepció social local" tone="phos" subtitle={`Mencions a premsa sobre ${data.nombre}`}>
-        <p style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--fog)' }}>
-          Properament — el sistema monitorarà la premsa local d&apos;aquest municipi
-        </p>
-      </PanelBox>
+      {/* Alertes + Recepció social */}
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16 }}>
+        <PanelBox title="Alertes del municipi" tone="red" subtitle={data.nombre}>
+          {alertasList.length === 0 ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--wr-phosphor)', fontFamily: 'var(--font-mono)', fontSize: 12 }}>
+              <CheckCircle2 style={{ width: 14, height: 14 }} />
+              Cap alerta activa per aquest municipi
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {alertasList.map((a: any, i: number) => (
+                <div key={i} style={{ borderBottom: '1px dashed var(--line-soft)', paddingBottom: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                    <span style={{ color: 'var(--paper)', fontWeight: 500, fontSize: 13 }}>{a.titulo || a.title}</span>
+                    <StatusBadge tone="red">{a.severitat || a.severidad || a.severity || 'alta'}</StatusBadge>
+                  </div>
+                  {(a.descripcio || a.descripcion) && (
+                    <p style={{ fontSize: 12, color: 'var(--bone)', margin: 0 }}>{a.descripcio || a.descripcion}</p>
+                  )}
+                  {(a.fecha || a.data) && (
+                    <p style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--fog)', marginTop: 4 }}>{a.fecha || a.data}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </PanelBox>
+
+        <PanelBox title="Recepció social local" tone="phos" subtitle={`Mencions a premsa sobre ${data.nombre}`}>
+          <p style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--fog)' }}>
+            Properament — el sistema monitorarà la premsa local d&apos;aquest municipi
+          </p>
+        </PanelBox>
+      </div>
 
       <ContextualChat
         contextType="municipi"

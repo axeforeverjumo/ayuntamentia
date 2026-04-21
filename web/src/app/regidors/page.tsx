@@ -157,7 +157,7 @@ export default function RegidorsPage() {
             {/* Table */}
             <div style={{ border: '1px solid var(--line)', background: 'var(--ink-2)' }}>
               <div style={{
-                display: 'grid', gridTemplateColumns: '1.2fr 80px 140px 70px 80px 120px',
+                display: 'grid', gridTemplateColumns: '1.2fr 120px 140px 70px 80px 120px',
                 padding: '10px 14px', borderBottom: '1px solid var(--line)',
                 fontFamily: 'var(--font-mono)', fontSize: 9.5, color: 'var(--fog)',
                 letterSpacing: '.14em', textTransform: 'uppercase',
@@ -175,7 +175,7 @@ export default function RegidorsPage() {
                 const pctColor = !hasData ? 'var(--text-meta)' : isDanger ? 'var(--danger)' : isWarn ? 'var(--warning)' : 'var(--success)';
                 return (
                   <div key={i} style={{
-                    display: 'grid', gridTemplateColumns: '1.2fr 80px 140px 70px 80px 120px',
+                    display: 'grid', gridTemplateColumns: '1.2fr 120px 140px 70px 80px 120px',
                     padding: '10px 14px',
                     borderBottom: '1px dashed var(--line-soft)',
                     background: rowBg,
