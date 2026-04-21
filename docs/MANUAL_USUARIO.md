@@ -1,8 +1,8 @@
-# Manual d'usuari — AyuntamentIA
+# Manual d'usuari — AjuntamentIA
 
 ## Què és
 
-AyuntamentIA és la plataforma d'intel·ligència política d'Aliança Catalana. Monitoritza
+AjuntamentIA és la plataforma d'intel·ligència política d'Aliança Catalana. Monitoritza
 els 947 ajuntaments de Catalunya + el Parlament + premsa i xarxes socials, i et dóna
 respostes accionables sobre què està passant.
 

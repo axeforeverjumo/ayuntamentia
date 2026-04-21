@@ -1,4 +1,4 @@
-# Resolució de Millores d'Interfície — AyuntamentIA
+# Resolució de Millores d'Interfície — AjuntamentIA
 
 **Data:** 19 d'abril de 2026
 **Plataforma:** https://politica.factoriaia.com

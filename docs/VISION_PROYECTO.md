@@ -1,4 +1,4 @@
-# AyuntamentIA - Visión del Proyecto
+# AjuntamentIA - Visión del Proyecto
 
 ## Cliente
 **Aliança Catalana** — partido político con presencia en múltiples municipios de Catalunya.

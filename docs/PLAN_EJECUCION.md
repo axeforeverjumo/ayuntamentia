@@ -1,4 +1,4 @@
-# Plan de Ejecución AyuntamentIA — Día a día
+# Plan de Ejecución AjuntamentIA — Día a día
 
 Estimación total: **22 días laborables** (~4,5 semanas con 1 dev full-time).
 

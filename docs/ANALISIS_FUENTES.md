@@ -1,4 +1,4 @@
-# AyuntamentIA - Análisis de Fuentes de Datos
+# AjuntamentIA - Análisis de Fuentes de Datos
 
 ## Resumen ejecutivo
 

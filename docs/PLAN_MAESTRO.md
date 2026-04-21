@@ -1,4 +1,4 @@
-# AyuntamentIA — Plan Maestro v2
+# AjuntamentIA — Plan Maestro v2
 
 > Sistema de inteligencia política para Aliança Catalana
 > 947 municipios · 138.000+ actas · Coherencia interna · IA conversacional
@@ -166,7 +166,7 @@ Dashboard interno (Supabase Studio o endpoint dedicado):
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                      AYUNTAMENTIA                                │
+│                      AJUNTAMENTIA                                │
 │  ┌──────┬──────────┬────────┬──────────┬───────────┬──────────┐ │
 │  │ Home │ Buscador │ Chat   │ Alertas  │ Municipios│ Informes │ │
 │  └──────┴──────────┴────────┴──────────┴───────────┴──────────┘ │
@@ -177,7 +177,7 @@ Dashboard interno (Supabase Studio o endpoint dedicado):
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  AYUNTAMENTIA                          [avatar] Juan Manuel  ▼  │
+│  AJUNTAMENTIA                          [avatar] Juan Manuel  ▼  │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                  │
 │  ┌─ Resumen rápido ──────────────────────────────────────────┐  │
@@ -286,7 +286,7 @@ Dashboard interno (Supabase Studio o endpoint dedicado):
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
-│  💬 Chat con AyuntamentIA                                        │
+│  💬 Chat con AjuntamentIA                                        │
 │                                                                   │
 │  ┌─ Conversación ────────────────────────────────────────────┐   │
 │  │                                                            │   │

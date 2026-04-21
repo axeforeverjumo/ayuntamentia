@@ -1,4 +1,4 @@
-# AyuntamentIA
+# AjuntamentIA
 
 Plataforma d'intel·ligència política municipal per a Catalunya. Monitoritza actes de plens, vots, argumentaris i cobertura de premsa dels 947 municipis catalans, i dóna munició política utilitzable a través d'un xat amb modes específics (Monitor / Atacar / Defensar / Comparar / Oportunitat).
 

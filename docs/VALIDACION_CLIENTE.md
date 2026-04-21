@@ -1,4 +1,4 @@
-# AyuntamentIA — Validación funcional vs requerimientos del cliente
+# AjuntamentIA — Validación funcional vs requerimientos del cliente
 
 **Fecha**: 2026-04-14
 **Entorno auditado**: Producción `85.215.105.45` (`/opt/ayuntamentia`)

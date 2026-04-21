@@ -1,4 +1,4 @@
-# Multi-tenant — desplegar AyuntamentIA para cualquier partido
+# Multi-tenant — desplegar AjuntamentIA para cualquier partido
 
 La herramienta es **genérica** y puede servir a cualquier partido político catalán (AC, PP, PSC, ERC, JxCat, CUP, VOX, Cs, Comuns). El "partido cliente" se configura con variables de entorno que controlan:
 

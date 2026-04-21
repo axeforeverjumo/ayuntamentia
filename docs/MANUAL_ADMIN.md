@@ -1,4 +1,4 @@
-# Manual d'administrador — AyuntamentIA
+# Manual d'administrador — AjuntamentIA
 
 ## Stack
 
