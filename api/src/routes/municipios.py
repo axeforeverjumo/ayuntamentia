@@ -36,7 +36,9 @@ def list_municipios(
         cur.execute(f"""
             SELECT m.*,
                 (SELECT COUNT(*) FROM actas a WHERE a.municipio_id = m.id AND a.status = 'structured') as actas_procesadas,
-                (SELECT COUNT(*) FROM cargos_electos c WHERE c.municipio_id = m.id AND c.activo) as num_concejales
+                (SELECT COUNT(*) FROM cargos_electos c WHERE c.municipio_id = m.id AND c.activo) as num_concejales,
+                (SELECT MAX(a.fecha) FROM actas a WHERE a.municipio_id = m.id AND a.status = 'structured') as ultima_acta,
+                (SELECT COUNT(*) FROM alertas al WHERE al.municipio_id = m.id AND al.estado = 'nueva') as alertas_pendientes
             FROM municipios m
             WHERE {where}
             ORDER BY m.tiene_ac DESC, m.poblacion DESC NULLS LAST

@@ -11,6 +11,7 @@ import { TacticalRadar } from '@/components/landing/TacticalRadar';
 import { traduirTema } from '@/lib/temesCatala';
 import { Gauge, DotGrid, CornerBrack } from '@/components/landing/primitives';
 import { MapaCatalunyaInteractiu } from '@/components/warroom/MapaCatalunya';
+import { useRouter } from 'next/navigation';
 
 const API = process.env.NEXT_PUBLIC_API_URL || '';
 
@@ -21,6 +22,7 @@ export default function DashboardPage() {
   const [municipios, setMunicipios] = useState<any[]>([]);
   const [alertas, setAlertas] = useState<any>({ total: 0, nuevas: 0, altas_nuevas: 0 });
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
     Promise.allSettled([
@@ -28,13 +30,13 @@ export default function DashboardPage() {
       fetch(`${API}/api/dashboard/temas`).then(r => r.json()),
       fetch(`${API}/api/dashboard/actividad-reciente`).then(r => r.json()),
       fetch(`${API}/api/alertas/stats`).then(r => r.json()),
-      fetch(`${API}/api/municipios/`).then(r => r.json()),
+      fetch(`${API}/api/municipios/?limit=200`).then(r => r.json()),
     ]).then(([s, t, a, al, m]) => {
       if (s.status === 'fulfilled') setStats(s.value);
       if (t.status === 'fulfilled') setTemas(Array.isArray(t.value) ? t.value : []);
       if (a.status === 'fulfilled') setActividad(Array.isArray(a.value) ? a.value : []);
       if (al.status === 'fulfilled') setAlertas(al.value);
-      if (m.status === 'fulfilled') setMunicipios(Array.isArray(m.value) ? m.value : []);
+      if (m.status === 'fulfilled') setMunicipios(Array.isArray(m.value) ? m.value : (m.value?.results || []));
       setLoading(false);
     });
   }, []);
@@ -113,12 +115,19 @@ export default function DashboardPage() {
           {/* Mapa Catalunya interactiu */}
           <MapaCatalunyaInteractiu
             municipios={municipios.map((m: any) => ({
+              id: m.id,
               nombre: m.nombre,
               lat: 0, lng: 0,
               actas: m.actas_procesadas || 0,
-              alertas: 0,
+              alertas: m.alertas_pendientes || 0,
               tiene_ac: m.tiene_ac || false,
             }))}
+            onSelect={(nombre) => {
+              const m = municipios.find((mm: any) =>
+                mm.nombre === nombre || mm.nombre.replace(/^Ajuntament d[e']?\s*/i, '').replace(/^Ajuntament del?\s*/i, '').trim() === nombre
+              );
+              if (m) router.push(`/municipios/${m.id}`);
+            }}
           />
 
           {/* Feed alertes / activitat */}

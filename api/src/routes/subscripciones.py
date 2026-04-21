@@ -78,6 +78,26 @@ def update(sub_id: int, body: SubscripcionIn, user: CurrentUser = Depends(get_cu
     return row
 
 
+@router.patch("/{sub_id}")
+def toggle(sub_id: int, body: dict, user: CurrentUser = Depends(get_current_user)):
+    allowed = {"activo", "canal", "cron_expr"}
+    updates = {k: v for k, v in body.items() if k in allowed}
+    if not updates:
+        raise HTTPException(400, "res a actualitzar")
+    sets = ", ".join(f"{k}=%s" for k in updates)
+    vals = list(updates.values()) + [sub_id, user.user_id]
+    with get_db() as conn:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute(
+            f"UPDATE subscripciones SET {sets}, updated_at=NOW() WHERE id=%s AND user_id=%s RETURNING *",
+            vals,
+        )
+        row = cur.fetchone()
+        if not row:
+            raise HTTPException(404, "no existe")
+    return row
+
+
 @router.delete("/{sub_id}")
 def delete(sub_id: int, user: CurrentUser = Depends(get_current_user)):
     with get_db() as conn:

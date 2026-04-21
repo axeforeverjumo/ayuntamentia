@@ -34,9 +34,10 @@ def ranking(
         cur.execute(sql, params)
         rows = cur.fetchall()
 
-        # Fallback: if partido filter returned 0 from ranking view,
-        # return cargos_electos directly (for parties without individual vote tracking)
-        if not rows and partido:
+        # Merge: always add cargos_electos not already in ranking results
+        # (for party members without individual vote tracking)
+        if partido:
+            existing_names = {r["nombre"] for r in rows}
             cur.execute("""
                 SELECT DISTINCT ON (c.nombre) c.nombre, c.cargo,
                        c.partido, m.nombre AS municipio, m.comarca,
@@ -49,7 +50,10 @@ def ranking(
                 ORDER BY c.nombre, c.id DESC
                 LIMIT %s
             """, (f"%{partido}%", f"{partido}-%", limit))
-            rows = cur.fetchall()
+            for r in cur.fetchall():
+                if r["nombre"] not in existing_names:
+                    rows.append(r)
+                    existing_names.add(r["nombre"])
 
         return rows
 
