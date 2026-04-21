@@ -104,7 +104,7 @@ export function Sidebar() {
           </div>
           <div>
             <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 500, color: 'var(--text-primary)', lineHeight: 1.2 }}>
-              AyuntamentIA
+              AjuntamentIA
             </div>
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9.5, color: 'var(--text-timestamp)', letterSpacing: '.06em', marginTop: 1 }}>
               WAR ROOM · v2.0

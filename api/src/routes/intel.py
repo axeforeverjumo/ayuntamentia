@@ -9,6 +9,26 @@ from ..db import get_db
 router = APIRouter()
 
 
+def _partido_filter(partido: str):
+    """Build SQL WHERE clause for partido matching.
+
+    For short codes like 'AC', uses word-boundary regex to avoid
+    matching ACSENT, ACTIVEMUIB, CACTUA, etc.
+    Also matches ALIANÇA.CAT and known coalition patterns.
+    """
+    if partido.upper() == "AC":
+        # Word-boundary match for AC + known Aliança variants
+        return (
+            "(partido ~* %s OR partido ILIKE %s OR partido ILIKE %s)",
+            [r"\mAC\M", "%ALIANÇA%", "%ALIAN%"],
+        )
+    # General case: word-boundary regex
+    return (
+        "partido ~* %s",
+        [rf"\m{partido}\M"],
+    )
+
+
 @router.get("/ranking-concejales")
 def ranking(
     partido: Optional[str] = None,
@@ -18,8 +38,9 @@ def ranking(
 ):
     where, params = ["votos_total >= 1"], []
     if partido:
-        where.append("(partido ILIKE %s OR partido ILIKE %s)")
-        params.extend([f"%{partido}%", f"{partido}-%"])
+        clause, pvals = _partido_filter(partido)
+        where.append(clause)
+        params.extend(pvals)
     if municipio:
         where.append("LOWER(municipio) ILIKE LOWER(%s)")
         params.append(f"%{municipio}%")
@@ -38,7 +59,8 @@ def ranking(
         # (for party members without individual vote tracking)
         if partido:
             existing_names = {r["nombre"] for r in rows}
-            cur.execute("""
+            clause, pvals = _partido_filter(partido)
+            cur.execute(f"""
                 SELECT DISTINCT ON (c.nombre) c.nombre, c.cargo,
                        c.partido, m.nombre AS municipio, m.comarca,
                        0 AS votos_total, 0 AS coincidentes, 0 AS divergencias,
@@ -46,10 +68,10 @@ def ranking(
                 FROM cargos_electos c
                 JOIN municipios m ON m.id = c.municipio_id
                 WHERE c.activo = true
-                  AND (c.partido ILIKE %s OR c.partido ILIKE %s)
+                  AND {clause}
                 ORDER BY c.nombre, c.id DESC
                 LIMIT %s
-            """, (f"%{partido}%", f"{partido}-%", limit))
+            """, pvals + [limit])
             for r in cur.fetchall():
                 if r["nombre"] not in existing_names:
                     rows.append(r)

@@ -71,7 +71,7 @@ function LoginInner() {
             </svg>
           </div>
           <div>
-            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 20, fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1 }}>AyuntamentIA</div>
+            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 20, fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1 }}>AjuntamentIA</div>
             <div style={{ fontSize: 11, color: 'var(--text-meta)', marginTop: 3 }}>Intel·ligència política per Aliança Catalana</div>
           </div>
         </div>

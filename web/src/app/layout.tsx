@@ -4,8 +4,8 @@ import { AppShell } from '@/components/features/AppShell';
 
 export const metadata: Metadata = {
   title: {
-    default: 'AyuntamentIA — War Room',
-    template: '%s · AyuntamentIA',
+    default: 'AjuntamentIA — War Room',
+    template: '%s · AjuntamentIA',
   },
   description:
     "Intel·ligència política en temps real — 947 municipis de Catalunya",

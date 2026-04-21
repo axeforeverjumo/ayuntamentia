@@ -107,10 +107,8 @@ export default function DashboardPage() {
           />
         </KPIGrid>
 
-        {/* Main grid: Radar + Alertes + Temes */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr 1fr', gap: 12 }}>
-
-          {/* Mapa Catalunya interactiu */}
+        {/* Row 1: Mapa (wide) + Temes trending */}
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 12 }}>
           <MapaCatalunyaInteractiu
             municipios={municipios.map((m: any) => ({
               id: m.id,
@@ -128,29 +126,6 @@ export default function DashboardPage() {
             }}
           />
 
-          {/* Feed alertes / activitat */}
-          <PanelBox title="Intel stream" subtitle="últimes 24h" tone="red">
-            {actividad.length > 0 ? (
-              <AlertFeed items={actividad.slice(0, 8).map((a: any) => ({
-                time: a.fecha?.slice(5, 10) || '',
-                severity: 'media' as const,
-                type: a.tipo || 'ACTA',
-                text: `${a.municipio} — ${a.tipo || 'Ordinària'} · ${a.num_puntos || 0} punts`,
-                municipio: a.municipio,
-              }))} maxVisible={6} />
-            ) : (
-              <div style={{ padding: '30px 0', textAlign: 'center' }}>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--fog)', letterSpacing: '.1em', textTransform: 'uppercase' }}>
-                  Esperant noves actes...
-                </div>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--fog)', marginTop: 8 }}>
-                  El pipeline processa actes cada 15 minuts
-                </div>
-              </div>
-            )}
-          </PanelBox>
-
-          {/* Temes trending */}
           <PanelBox title="Temes en tendència" subtitle={`top ${Math.min(temas.length, 8)}`} tone="amber">
             {temas.length > 0 ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -172,57 +147,29 @@ export default function DashboardPage() {
           </PanelBox>
         </div>
 
-        {/* Bottom: War Room access + últims plens */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: 12 }}>
-
-          {/* War Room quick access */}
-          <div style={{
-            background: 'var(--ink-2)', border: '1px solid var(--line)',
-            padding: '28px 24px', position: 'relative', overflow: 'hidden',
-            borderRadius: 'var(--r-lg)',
-          }}>
-            <div style={{ position: 'relative' }}>
-              <StatusBadge tone="red">◼ WAR ROOM · 5 MODES</StatusBadge>
-              <h2 style={{
-                fontFamily: 'var(--font-sans)', fontSize: 26, margin: '16px 0 12px',
-                lineHeight: 1.1, letterSpacing: '-.01em', color: 'var(--paper)', fontWeight: 500,
-              }}>
-                Pregunta. <span style={{ color: 'var(--brand-l)' }}>Dispara.</span>
-              </h2>
-              <p style={{ fontSize: 13, color: 'var(--bone)', lineHeight: 1.5, margin: '0 0 20px', maxWidth: 400 }}>
-                Monitor · Atacar · Defensar · Comparar · Oportunitat. Cada mode preparat per donar-te munició política amb cita literal.
-              </p>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 20 }}>
-                {[
-                  'Què han dit sobre habitatge el darrer mes?',
-                  'Dossier contradiccions Partit A · civisme',
-                  'Prepara speech pel proper ple de Vic',
-                ].map((q, i) => (
-                  <Link key={i} href={`/chat?q=${encodeURIComponent(q)}`} style={{
-                    display: 'block', padding: '8px 12px', textDecoration: 'none',
-                    background: 'transparent', border: '1px dashed var(--line)',
-                    color: 'var(--bone)', fontFamily: 'var(--font-sans)', fontSize: 12,
-                  }}>
-                    → {q}
-                  </Link>
-                ))}
+        {/* Row 2: Intel stream + Últims plens */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <PanelBox title="Intel stream" subtitle="últimes 24h" tone="red">
+            {actividad.length > 0 ? (
+              <AlertFeed items={actividad.slice(0, 8).map((a: any) => ({
+                time: a.fecha?.slice(5, 10) || '',
+                severity: 'media' as const,
+                type: a.tipo || 'ACTA',
+                text: `${a.municipio} — ${a.tipo || 'Ordinària'} · ${a.num_puntos || 0} punts`,
+                municipio: a.municipio,
+              }))} maxVisible={6} />
+            ) : (
+              <div style={{ padding: '30px 0', textAlign: 'center' }}>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--fog)', letterSpacing: '.1em', textTransform: 'uppercase' }}>
+                  Esperant noves actes...
+                </div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--fog)', marginTop: 8 }}>
+                  El pipeline processa actes cada 15 minuts
+                </div>
               </div>
+            )}
+          </PanelBox>
 
-              <Link href="/chat" style={{
-                display: 'inline-flex', alignItems: 'center', gap: 8,
-                background: 'var(--brand)', color: '#E8F1F9', border: '1px solid var(--brand)',
-                padding: '12px 18px', fontFamily: 'var(--font-mono)', fontSize: 12,
-                letterSpacing: '.1em', textTransform: 'uppercase', fontWeight: 700,
-                textDecoration: 'none', borderRadius: 'var(--r-md)',
-                boxShadow: '0 0 24px -6px rgba(15,76,129,.3)',
-              }}>
-                ◼ OBRIR WAR ROOM →
-              </Link>
-            </div>
-          </div>
-
-          {/* Últims plens */}
           <PanelBox title="Últims plens processats" subtitle={`${actividad.length} recents`} tone="phos">
             {actividad.length > 0 ? (
               <div>
@@ -256,6 +203,54 @@ export default function DashboardPage() {
               </div>
             )}
           </PanelBox>
+        </div>
+
+        {/* Row 3: War Room CTA — full width */}
+        <div style={{
+          background: 'var(--bg-surface)', border: '.5px solid var(--border)',
+          borderRadius: 'var(--r-lg)', padding: '24px 28px',
+          display: 'grid', gridTemplateColumns: '1fr auto', gap: 24, alignItems: 'center',
+        }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+              <StatusBadge tone="red">WAR ROOM</StatusBadge>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-meta)', letterSpacing: '.08em', textTransform: 'uppercase' }}>5 modes d&apos;anàlisi</span>
+            </div>
+            <h2 style={{
+              fontFamily: 'var(--font-sans)', fontSize: 22, fontWeight: 500,
+              color: 'var(--text-primary)', margin: '0 0 6px', letterSpacing: '-.01em',
+            }}>
+              Pregunta. <span style={{ color: 'var(--brand-l)' }}>Dispara.</span>
+            </h2>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0, maxWidth: 520 }}>
+              Monitor · Atacar · Defensar · Comparar · Oportunitat. IA amb cita literal de les actes processades.
+            </p>
+            <div style={{ display: 'flex', gap: 8, marginTop: 14, flexWrap: 'wrap' }}>
+              {[
+                'Què han dit sobre habitatge?',
+                'Dossier contradiccions PP',
+                'Speech pel ple de Vic',
+              ].map((q, i) => (
+                <Link key={i} href={`/chat?q=${encodeURIComponent(q)}`} style={{
+                  padding: '6px 12px', textDecoration: 'none', borderRadius: 'var(--r-full)',
+                  background: 'var(--bg-elevated)', border: '.5px solid var(--border)',
+                  color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', fontSize: 12,
+                }}>
+                  {q}
+                </Link>
+              ))}
+            </div>
+          </div>
+          <Link href="/chat" style={{
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+            background: 'var(--brand)', color: '#E8F1F9', border: '1px solid var(--brand)',
+            padding: '14px 24px', fontFamily: 'var(--font-mono)', fontSize: 13,
+            letterSpacing: '.08em', textTransform: 'uppercase', fontWeight: 500,
+            textDecoration: 'none', borderRadius: 'var(--r-md)',
+            whiteSpace: 'nowrap',
+          }}>
+            Obrir War Room →
+          </Link>
         </div>
       </div>
     </div>

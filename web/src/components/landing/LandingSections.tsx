@@ -31,7 +31,7 @@ export function LandingNav({ onEnter }: { onEnter: () => void }) {
           </svg>
         </div>
         <div>
-          <div style={{ fontFamily: 'var(--font-serif)', fontSize: 22, lineHeight: 1, letterSpacing: '-.01em' }}>AyuntamentIA</div>
+          <div style={{ fontFamily: 'var(--font-serif)', fontSize: 22, lineHeight: 1, letterSpacing: '-.01em' }}>AjuntamentIA</div>
           <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9.5, color: 'var(--fog)', letterSpacing: '.18em', textTransform: 'uppercase' }}>
             War room · intel·ligència municipal
           </div>
@@ -98,7 +98,7 @@ export function LandingHero({ onEnter }: { onEnter: () => void }) {
             fontFamily: 'var(--font-sans)', fontSize: 17, lineHeight: 1.5,
             color: 'var(--bone)', maxWidth: 560, margin: '0 0 28px',
           }}>
-            AyuntamentIA llegeix els 947 plens municipals de Catalunya, el Parlament, la premsa
+            AjuntamentIA llegeix els 947 plens municipals de Catalunya, el Parlament, la premsa
             i les xarxes — i els transforma en <strong style={{ color: 'var(--paper)' }}>munició política</strong>: contradiccions,
             promeses trencades, dades per citar, speeches preparats abans que el rival entri a la sala.
           </p>
@@ -225,13 +225,13 @@ export function LandingTerminal() {
             <span style={{ width: 9, height: 9, borderRadius: 9, background: '#d4a017' }} />
             <span style={{ width: 9, height: 9, borderRadius: 9, background: '#8bd35b' }} />
           </span>
-          <span style={{ marginLeft: 8 }}>ayuntamentia@warroom : ~/query</span>
+          <span style={{ marginLeft: 8 }}>ajuntamentia@warroom : ~/query</span>
           <span style={{ marginLeft: 'auto', color: 'var(--wr-phosphor)' }}>● encrypted</span>
         </div>
         <div style={{ padding: '22px 20px', minHeight: 300, fontFamily: 'var(--font-mono)', fontSize: 13, lineHeight: 1.6 }}>
           <div style={{ color: 'var(--paper)', marginBottom: 10 }}>
             <span style={{ color: 'var(--wr-phosphor)' }}>$ </span>
-            ayuntamentia query --{presets[sel].q}
+            ajuntamentia query --{presets[sel].q}
           </div>
           {rendered.map((l, i) => (
             <div key={i} style={{ color: l.c, whiteSpace: 'pre-wrap' }}>{l.t}</div>
@@ -435,7 +435,7 @@ export function TacticalFooter() {
         <div><div style={{ color: 'var(--bone)', marginBottom: 4 }}>◼ ESTAT</div><span style={{ color: 'var(--wr-phosphor)' }}>● OPERATIU · SECURE CHANNEL</span></div>
       </div>
       <div style={{ padding: '18px 28px', display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--fog)', letterSpacing: '.14em', textTransform: 'uppercase' }}>
-        <span>AyuntamentIA v2.0 · 2026 · Factoria IA</span>
+        <span>AjuntamentIA v2.0 · 2026 · Factoria IA</span>
         <span>Legal · Seguretat · Contacte · Demo privada</span>
       </div>
       <div style={{ padding: '10px 28px', borderTop: '1px solid var(--line)', background: '#3a1208', fontFamily: 'var(--font-mono)', fontSize: 9.5, color: 'var(--paper)', letterSpacing: '.2em', textTransform: 'uppercase', textAlign: 'center' }}>

@@ -46,7 +46,7 @@ export default function RegidorsPage() {
     });
   }, [regidors, filterMuni, rangoAlin]);
 
-  const danger = filtered.filter(r => r.pct_alineacion < 60);
+  const danger = filtered.filter(r => r.votos_total > 0 && r.pct_alineacion != null && r.pct_alineacion < 60);
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--ink)' }}>
@@ -168,10 +168,11 @@ export default function RegidorsPage() {
                 <span style={{ textAlign: 'right' }}>% Alineació</span>
               </div>
               {filtered.map((r, i) => {
-                const isDanger = r.pct_alineacion < 60;
-                const isWarn = r.pct_alineacion >= 60 && r.pct_alineacion < 70;
-                const rowBg = isDanger ? 'rgba(212,58,31,.04)' : isWarn ? 'rgba(212,148,31,.04)' : 'transparent';
-                const pctColor = isDanger ? 'var(--wr-red-2)' : isWarn ? 'var(--wr-amber)' : 'var(--wr-phosphor)';
+                const hasData = r.votos_total > 0 && r.pct_alineacion != null;
+                const isDanger = hasData && r.pct_alineacion < 60;
+                const isWarn = hasData && r.pct_alineacion >= 60 && r.pct_alineacion < 70;
+                const rowBg = isDanger ? 'rgba(192,57,43,.06)' : isWarn ? 'rgba(180,83,9,.06)' : 'transparent';
+                const pctColor = !hasData ? 'var(--text-meta)' : isDanger ? 'var(--danger)' : isWarn ? 'var(--warning)' : 'var(--success)';
                 return (
                   <div key={i} style={{
                     display: 'grid', gridTemplateColumns: '1.2fr 80px 140px 70px 80px 120px',
@@ -183,19 +184,27 @@ export default function RegidorsPage() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <span style={{ color: 'var(--paper)', fontWeight: 500 }}>{r.nombre}</span>
                       {r.cargo && <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--fog)' }}>{r.cargo}</span>}
-                      {isDanger && <StatusBadge tone="red">⚠ Preocupació</StatusBadge>}
+                      {isDanger && <StatusBadge tone="red">Preocupació</StatusBadge>}
                     </div>
-                    <StatusBadge tone={r.partido === 'AC' ? 'phos' : 'bone'}>{r.partido}</StatusBadge>
+                    <StatusBadge tone={r.partido === 'AC' || r.partido === 'ALIANÇA.CAT' ? 'phos' : 'bone'}>{r.partido}</StatusBadge>
                     <span style={{ color: 'var(--fog)', fontSize: 12 }}>{r.municipio}</span>
                     <span style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--bone)' }}>{r.votos_total}</span>
-                    <span style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--wr-amber)', fontWeight: 700 }}>{r.divergencias}</span>
+                    <span style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--warning)', fontWeight: 700 }}>{r.divergencias}</span>
                     <div style={{ textAlign: 'right' }}>
-                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 700, color: pctColor }}>
-                        {r.pct_alineacion}%
-                      </span>
-                      <div style={{ height: 3, background: 'var(--line)', marginTop: 4, marginLeft: 'auto', width: 70 }}>
-                        <div style={{ height: '100%', width: `${r.pct_alineacion}%`, background: pctColor }} />
-                      </div>
+                      {hasData ? (
+                        <>
+                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 700, color: pctColor }}>
+                            {r.pct_alineacion}%
+                          </span>
+                          <div style={{ height: 3, background: 'var(--line)', marginTop: 4, marginLeft: 'auto', width: 70 }}>
+                            <div style={{ height: '100%', width: `${r.pct_alineacion}%`, background: pctColor }} />
+                          </div>
+                        </>
+                      ) : (
+                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-disabled)' }}>
+                          sense dades
+                        </span>
+                      )}
                     </div>
                   </div>
                 );
