@@ -44,9 +44,13 @@ interface Conversation {
 function generateId() { return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`; }
 function loadConversations(): Conversation[] {
   if (typeof window === 'undefined') return [];
-  try { return JSON.parse(localStorage.getItem('ayuntamentia_chats') || '[]'); } catch { return []; }
+  if (!localStorage.getItem('ajuntamentia_chats') && localStorage.getItem('ayuntamentia_chats')) {
+    localStorage.setItem('ajuntamentia_chats', localStorage.getItem('ayuntamentia_chats')!);
+    localStorage.removeItem('ayuntamentia_chats');
+  }
+  try { return JSON.parse(localStorage.getItem('ajuntamentia_chats') || '[]'); } catch { return []; }
 }
-function saveConversations(convs: Conversation[]) { localStorage.setItem('ayuntamentia_chats', JSON.stringify(convs)); }
+function saveConversations(convs: Conversation[]) { localStorage.setItem('ajuntamentia_chats', JSON.stringify(convs)); }
 
 export default function ChatPage() {
   return (

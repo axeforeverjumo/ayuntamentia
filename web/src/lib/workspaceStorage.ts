@@ -15,10 +15,20 @@ export interface WorkspaceItem {
   status: WorkspaceStatus;
 }
 
-const KEY = 'ayuntamentia_workspaces';
+const KEY = 'ajuntamentia_workspaces';
+const OLD_KEY = 'ayuntamentia_workspaces';
+
+function migrateWorkspaceKey() {
+  if (typeof window === 'undefined') return;
+  if (!localStorage.getItem(KEY) && localStorage.getItem(OLD_KEY)) {
+    localStorage.setItem(KEY, localStorage.getItem(OLD_KEY)!);
+    localStorage.removeItem(OLD_KEY);
+  }
+}
 
 export function loadWorkspace(): WorkspaceItem[] {
   if (typeof window === 'undefined') return [];
+  migrateWorkspaceKey();
   try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch { return []; }
 }
 
