@@ -408,8 +408,9 @@ function ChatPageInner() {
         </div>
       )}
 
-      {/* Right panel: sources + confidence */}
+      {/* Right panel: sources + confidence — oculto, recuperable amb display:'flex' */}
       <aside className="thin-scroll" style={{
+        display: 'none',
         width: 300, borderLeft: '1px solid var(--line)', background: 'var(--ink-2)',
         padding: '18px 16px', overflow: 'auto',
       }}>

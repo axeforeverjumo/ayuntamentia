@@ -274,7 +274,7 @@ export default function AlertasPage() {
 
         {tab === 'alertas' && (<>
         {/* Filters row 1: severity + estado */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginTop: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginTop: 16 }}>
           <Filter style={{ width: 16, height: 16, color: 'var(--text-meta)', flexShrink: 0 }} />
           <div style={{ display: 'flex', background: 'var(--bg-surface)', border: '.5px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 4, gap: 2 }}>
             {(['totes', 'alta', 'media', 'baja'] as const).map((f) => {
@@ -316,7 +316,7 @@ export default function AlertasPage() {
         </div>
 
         {/* Filters row 2: tipus */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 16 }}>
           <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--fog)', letterSpacing: '.14em', textTransform: 'uppercase' }}>Tipus</span>
           {([
             { value: 'tots', label: 'Tots', color: 'var(--bone)' },
@@ -365,7 +365,7 @@ export default function AlertasPage() {
 
         {/* Alerts list */}
         {!loading && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 4 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 16 }}>
             {filteredAlertas.length === 0 ? (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '64px 0', background: 'var(--bg-surface)', border: '.5px solid var(--border)', borderRadius: 'var(--r-lg)' }}>
                 <div style={{ width: 56, height: 56, borderRadius: 'var(--r-lg)', background: 'rgba(22,163,74,.1)', border: '.5px solid rgba(22,163,74,.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
@@ -666,7 +666,7 @@ function AlertaCard({
         </div>
 
         {!isResolved && (
-          <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'row', gap: 4, alignItems: 'flex-start' }}>
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -676,7 +676,7 @@ function AlertaCard({
                 setTimeout(() => setCopied(false), 2000);
               }}
               title="Compartir alerta"
-              style={{ width: 32, height: 32, borderRadius: 'var(--r-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-elevated)', border: '.5px solid var(--border)', color: 'var(--text-meta)', cursor: 'pointer' }}
+              style={{ width: 28, height: 28, borderRadius: 'var(--r-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-elevated)', border: '.5px solid var(--border)', color: 'var(--text-meta)', cursor: 'pointer' }}
             >
               {copied ? <span style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--wr-phosphor)' }}>✓</span> : <Share2 style={{ width: 14, height: 14 }} />}
             </button>
@@ -685,7 +685,7 @@ function AlertaCard({
                 onClick={(e) => { e.stopPropagation(); onMarkViewed(alerta.id); }}
                 disabled={isPending}
                 title="Marcar com a vista"
-                style={{ width: 32, height: 32, borderRadius: 'var(--r-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-elevated)', border: '.5px solid var(--border)', color: 'var(--text-meta)', cursor: 'pointer', opacity: isPending ? 0.5 : 1 }}
+                style={{ width: 28, height: 28, borderRadius: 'var(--r-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-elevated)', border: '.5px solid var(--border)', color: 'var(--text-meta)', cursor: 'pointer', opacity: isPending ? 0.5 : 1 }}
               >
                 <Eye style={{ width: 14, height: 14 }} />
               </button>
@@ -694,7 +694,7 @@ function AlertaCard({
               onClick={(e) => { e.stopPropagation(); onResolve(alerta.id); }}
               disabled={isPending}
               title="Marcar com a resolta"
-              style={{ width: 32, height: 32, borderRadius: 'var(--r-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-elevated)', border: '.5px solid var(--border)', color: 'var(--text-meta)', cursor: 'pointer', opacity: isPending ? 0.5 : 1 }}
+              style={{ width: 28, height: 28, borderRadius: 'var(--r-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-elevated)', border: '.5px solid var(--border)', color: 'var(--text-meta)', cursor: 'pointer', opacity: isPending ? 0.5 : 1 }}
             >
               <CheckCircle2 style={{ width: 14, height: 14 }} />
             </button>
@@ -702,7 +702,7 @@ function AlertaCard({
               onClick={(e) => { e.stopPropagation(); onDismiss(alerta.id); }}
               disabled={isPending}
               title="Descartar"
-              style={{ width: 32, height: 32, borderRadius: 'var(--r-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-elevated)', border: '.5px solid var(--border)', color: 'var(--text-meta)', cursor: 'pointer', opacity: isPending ? 0.5 : 1 }}
+              style={{ width: 28, height: 28, borderRadius: 'var(--r-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-elevated)', border: '.5px solid var(--border)', color: 'var(--text-meta)', cursor: 'pointer', opacity: isPending ? 0.5 : 1 }}
             >
               <X style={{ width: 14, height: 14 }} />
             </button>

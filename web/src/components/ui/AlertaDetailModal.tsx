@@ -95,16 +95,16 @@ export function AlertaDetailModal({ alertaId, onClose, onUpdated }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+      style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, background: 'rgba(5,8,14,.72)', backdropFilter: 'blur(4px)' }}
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-3xl max-h-[90vh] overflow-hidden rounded-2xl border border-[#30363d] bg-gradient-to-br from-[#0f141b] to-[#161b22] shadow-[0_0_60px_-10px_rgba(124,58,237,0.3)]"
+        style={{ position: 'relative', width: '100%', maxWidth: 768, maxHeight: '90vh', overflow: 'hidden', borderRadius: 'var(--r-lg)', border: '.5px solid var(--border-em)', background: 'var(--bg-surface)' }}
         onClick={(e) => e.stopPropagation()}
       >
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 z-10 w-8 h-8 rounded-lg bg-[#0d1117] border border-[#30363d] flex items-center justify-center text-[#8b949e] hover:text-[#e6edf3] hover:border-[#484f58] transition-colors"
+          style={{ position: 'absolute', top: 16, right: 16, zIndex: 10, width: 32, height: 32, borderRadius: 'var(--r-md)', background: 'var(--bg-elevated)', border: '.5px solid var(--border-em)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-meta)', cursor: 'pointer' }}
         >
           <X className="w-4 h-4" />
         </button>
@@ -152,7 +152,7 @@ export function AlertaDetailModal({ alertaId, onClose, onUpdated }: Props) {
                         </span>
                       )}
                     </div>
-                    <h2 className="text-[15px] font-bold text-[#f3f6fa] leading-snug pr-8">
+                    <h2 style={{ fontSize: 20, fontWeight: 500, color: 'var(--text-primary)', lineHeight: 1.2, paddingRight: 32, margin: 0 }}>
                       {alerta.titulo}
                     </h2>
                     <p className="text-[12px] text-[#c9d1d9] leading-relaxed mt-2">
@@ -299,19 +299,19 @@ export function AlertaDetailModal({ alertaId, onClose, onUpdated }: Props) {
               </div>
 
               {/* Footer actions */}
-              <div className="p-4 border-t border-[#21262d] bg-[#0a0d12]/80 flex items-center justify-between gap-2">
+              <div style={{ padding: '12px 20px', borderTop: '.5px solid var(--border-em)', background: 'var(--bg-surface)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                 <a
                   href={`/buscar?q=${encodeURIComponent(alerta.municipio || alerta.punto_titulo || '')}`}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] rounded-lg border border-[#30363d] text-[#8b949e] hover:text-[#e6edf3] hover:border-[#484f58] transition-colors"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', fontSize: 11, borderRadius: 'var(--r-md)', border: '.5px solid var(--border-em)', color: 'var(--text-meta)', textDecoration: 'none' }}
                 >
                   <ExternalLink className="w-3 h-3" />
                   Obrir al cercador
                 </a>
-                <div className="flex items-center gap-2">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <button
                     onClick={() => changeEstado('descartada')}
                     disabled={acting}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] rounded-lg border border-[#30363d] text-[#8b949e] hover:border-[#dc2626]/50 hover:text-[#f87171] transition-colors disabled:opacity-50"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 14px', fontSize: 11, borderRadius: 'var(--r-md)', background: 'transparent', border: '.5px solid var(--border-em)', color: 'var(--text-meta)', cursor: 'pointer', opacity: acting ? 0.5 : 1 }}
                   >
                     <X className="w-3 h-3" />
                     Descartar
@@ -319,7 +319,7 @@ export function AlertaDetailModal({ alertaId, onClose, onUpdated }: Props) {
                   <button
                     onClick={() => changeEstado('resuelta')}
                     disabled={acting}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] rounded-lg bg-gradient-to-r from-[#16a34a] to-[#15803d] text-white hover:from-[#22c55e] hover:to-[#16a34a] transition-colors disabled:opacity-50"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 14px', fontSize: 11, borderRadius: 'var(--r-md)', background: 'var(--brand)', color: '#E8F1F9', border: 'none', cursor: 'pointer', opacity: acting ? 0.5 : 1 }}
                   >
                     <CheckCircle2 className="w-3 h-3" />
                     Marcar resolta
