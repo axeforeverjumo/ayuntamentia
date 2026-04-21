@@ -55,12 +55,13 @@ export default function IntelPage() {
   const top5Divergents = [...ranking].sort((a, b) => a.pct_alineacion - b.pct_alineacion).slice(0, 5);
 
   // Derived stats for competencia tab (exclude AC)
-  const partitStats = ranking.reduce((acc: Record<string, { total: number; divergents: number; sumAlin: number }>, r) => {
+  const partitStats = ranking.reduce((acc: Record<string, { total: number; divergents: number; sumAlin: number; sumVotos: number }>, r) => {
     if (r.partido === 'AC' || r.partido.includes('ALIAN')) return acc;
-    if (!acc[r.partido]) acc[r.partido] = { total: 0, divergents: 0, sumAlin: 0 };
+    if (!acc[r.partido]) acc[r.partido] = { total: 0, divergents: 0, sumAlin: 0, sumVotos: 0 };
     acc[r.partido].total++;
     if (r.pct_alineacion < 70) acc[r.partido].divergents++;
     acc[r.partido].sumAlin += r.pct_alineacion;
+    acc[r.partido].sumVotos += r.votos_total;
     return acc;
   }, {});
 
@@ -71,6 +72,7 @@ export default function IntelPage() {
       divergents: s.divergents,
       avgAlin: Math.round(s.sumAlin / s.total),
       vulnerabilitat: Math.round((s.divergents / s.total) * 100),
+      senseDades: s.divergents === 0 && s.sumVotos === 0,
     }))
     .sort((a, b) => b.vulnerabilitat - a.vulnerabilitat)
     .slice(0, 8);
@@ -153,7 +155,9 @@ export default function IntelPage() {
                             <StatusBadge tone={r.partido === 'AC' ? 'phos' : 'bone'}>{r.partido}</StatusBadge>
                             <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--fog)' }}>{r.municipio}</span>
                           </div>
-                          <Gauge label="" value={r.pct_alineacion} tone={r.pct_alineacion < 60 ? 'red' : r.pct_alineacion < 70 ? 'amber' : 'phos'} />
+                          <div style={{ height: 3, background: 'var(--line)', marginTop: 2 }}>
+                            <div style={{ height: '100%', width: `${r.pct_alineacion}%`, background: borderColor, transition: 'width .6s' }} />
+                          </div>
                         </div>
                       );
                     })}
@@ -307,11 +311,11 @@ export default function IntelPage() {
                               <span style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', lineHeight: 1 }}>
                                 {traduirTema(t.tema)}
                               </span>
-                              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--wr-red-2)', fontWeight: 700 }}>
+                              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: '#C0392B', fontWeight: 700 }}>
                                 {t.delta}
                               </span>
                             </div>
-                            <TrendingBar label="" value={Math.abs(t.delta)} max={maxTend} tone="phos" />
+                            <TrendingBar label="" value={t.actual} max={maxTend} tone="red" />
                           </div>
                         ))}
                       </div>
@@ -342,53 +346,31 @@ export default function IntelPage() {
                       <span style={{ textAlign: 'center' }}>Previ</span>
                       <span style={{ textAlign: 'center' }}>Variació</span>
                     </div>
-                    {[...tend].sort((a, b) => b.actual - a.actual).map((t, i) => {
-                      const maxVal = maxTend;
-                      const intensityActual = t.actual / maxVal;
-                      const intensityPrev = t.previo / maxVal;
-                      const heatColor = (v: number) =>
-                        v > 0.7 ? 'var(--wr-red-2)' :
-                        v > 0.4 ? 'var(--wr-amber)' :
-                        v > 0.1 ? 'var(--wr-phosphor-dim)' :
-                        'var(--line)';
-                      return (
-                        <div key={i} style={{
-                          display: 'grid', gridTemplateColumns: '1fr 90px 90px 70px',
-                          padding: '8px 12px', borderBottom: '1px dashed var(--line-soft)',
-                          alignItems: 'center',
-                        }}>
-                          <span style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: 'var(--text-primary)' }}>
-                            {traduirTema(t.tema)}
-                          </span>
-                          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 6 }}>
-                            <div style={{
-                              width: 36, height: 20,
-                              background: heatColor(intensityActual),
-                              opacity: 0.15 + intensityActual * 0.85,
-                              transition: 'all .4s',
-                            }} />
-                            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--bone)', minWidth: 24, textAlign: 'right' }}>{t.actual}</span>
-                          </div>
-                          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 6 }}>
-                            <div style={{
-                              width: 36, height: 20,
-                              background: heatColor(intensityPrev),
-                              opacity: 0.15 + intensityPrev * 0.85,
-                              transition: 'all .4s',
-                            }} />
-                            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--fog)', minWidth: 24, textAlign: 'right' }}>{t.previo}</span>
-                          </div>
-                          <div style={{ textAlign: 'center' }}>
-                            <span style={{
-                              fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700,
-                              color: t.delta > 0 ? 'var(--wr-phosphor)' : t.delta < 0 ? 'var(--wr-red-2)' : 'var(--fog)',
-                            }}>
-                              {t.delta > 0 ? '+' : ''}{t.delta}
-                            </span>
-                          </div>
+                    {[...tend].sort((a, b) => b.actual - a.actual).map((t, i) => (
+                      <div key={i} style={{
+                        display: 'grid', gridTemplateColumns: '1fr 90px 90px 70px',
+                        padding: '8px 12px', borderBottom: '1px dashed var(--line-soft)',
+                        alignItems: 'center',
+                      }}>
+                        <span style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: 'var(--text-primary)' }}>
+                          {traduirTema(t.tema)}
+                        </span>
+                        <div style={{ textAlign: 'center' }}>
+                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--bone)' }}>{t.actual}</span>
                         </div>
-                      );
-                    })}
+                        <div style={{ textAlign: 'center' }}>
+                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--fog)' }}>{t.previo}</span>
+                        </div>
+                        <div style={{ textAlign: 'center' }}>
+                          <span style={{
+                            fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700,
+                            color: t.delta > 0 ? '#1A7A4A' : t.delta < 0 ? '#C0392B' : 'var(--fog)',
+                          }}>
+                            {t.delta > 0 ? '+' : ''}{t.delta}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </PanelBox>
@@ -449,34 +431,41 @@ export default function IntelPage() {
                           )}
                         </div>
 
-                        <Gauge
-                          label={`Alineació mitjana · ${p.total} regidors`}
-                          value={p.avgAlin}
-                          tone={p.avgAlin < 60 ? 'red' : p.avgAlin < 75 ? 'amber' : 'phos'}
-                        />
-
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, background: 'var(--line)', marginTop: 12 }}>
-                          <div style={{ background: 'var(--ink)', padding: '10px 12px' }}>
-                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--fog)', letterSpacing: '.1em', textTransform: 'uppercase', marginBottom: 4 }}>
-                              Divergents
-                            </div>
-                            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 22, fontWeight: 600, color: 'var(--wr-amber)', lineHeight: 1 }}>
-                              {p.divergents}
-                            </div>
+                        {p.senseDades ? (
+                          <div style={{ padding: '14px 0', fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--fog)', letterSpacing: '.1em', textTransform: 'uppercase', textAlign: 'center' }}>
+                            Sense dades
                           </div>
-                          <div style={{ background: 'var(--ink)', padding: '10px 12px' }}>
-                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--fog)', letterSpacing: '.1em', textTransform: 'uppercase', marginBottom: 4 }}>
-                              Vulnerabilitat
+                        ) : (
+                          <>
+                            <Gauge
+                              label={`Alineació mitjana · ${p.total} regidors`}
+                              value={p.avgAlin}
+                              tone={p.avgAlin < 60 ? 'red' : p.avgAlin < 75 ? 'amber' : 'phos'}
+                            />
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, background: 'var(--line)', marginTop: 12 }}>
+                              <div style={{ background: 'var(--ink)', padding: '10px 12px' }}>
+                                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--fog)', letterSpacing: '.1em', textTransform: 'uppercase', marginBottom: 4 }}>
+                                  Divergents
+                                </div>
+                                <div style={{ fontFamily: 'var(--font-sans)', fontSize: 22, fontWeight: 600, color: 'var(--wr-amber)', lineHeight: 1 }}>
+                                  {p.divergents}
+                                </div>
+                              </div>
+                              <div style={{ background: 'var(--ink)', padding: '10px 12px' }}>
+                                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--fog)', letterSpacing: '.1em', textTransform: 'uppercase', marginBottom: 4 }}>
+                                  Vulnerabilitat
+                                </div>
+                                <div style={{
+                                  fontFamily: 'var(--font-sans)', fontSize: 22, fontWeight: 600, lineHeight: 1,
+                                  color: p.vulnerabilitat > 50 ? 'var(--wr-red-2)' : p.vulnerabilitat > 25 ? 'var(--wr-amber)' : 'var(--wr-phosphor)',
+                                  fontStyle: 'italic',
+                                }}>
+                                  {p.vulnerabilitat}%
+                                </div>
+                              </div>
                             </div>
-                            <div style={{
-                              fontFamily: 'var(--font-sans)', fontSize: 22, fontWeight: 600, lineHeight: 1,
-                              color: p.vulnerabilitat > 50 ? 'var(--wr-red-2)' : p.vulnerabilitat > 25 ? 'var(--wr-amber)' : 'var(--wr-phosphor)',
-                              fontStyle: 'italic',
-                            }}>
-                              {p.vulnerabilitat}%
-                            </div>
-                          </div>
-                        </div>
+                          </>
+                        )}
 
                         <Link href={`/chat?mode=atacar&q=${encodeURIComponent(`Analitza les debilitats i contradiccions internes del ${p.name}. Quins regidors no segueixen la línia del partit? On hi ha divergències municipals?`)}`}
                           style={{
@@ -514,7 +503,7 @@ export default function IntelPage() {
                   <div key={i} style={{ background: 'var(--ink-2)', border: '1px solid var(--line)', padding: '18px 20px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
                       <span style={{ fontFamily: 'var(--font-sans)', fontSize: 16, fontWeight: 500, color: 'var(--text-primary)' }}>{traduirTema(p.tema)}</span>
-                      <StatusBadge tone="red">{p.rechazadas} rebutjades</StatusBadge>
+                      <StatusBadge tone="amber">{p.rechazadas} rebutjades</StatusBadge>
                     </div>
                     <p style={{ fontSize: 13, color: 'var(--bone)', lineHeight: 1.5 }}>
                       <strong style={{ color: 'var(--paper)' }}>{p.partido_parlament}</strong> ho proposa al Parlament

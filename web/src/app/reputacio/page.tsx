@@ -14,7 +14,7 @@ const API = process.env.NEXT_PUBLIC_API_URL || '';
 const PARTITS = ['AC', 'JxCat', 'ERC', 'PSC', 'PP', 'CUP', 'VOX', 'Comuns'];
 
 const PARTIT_COLORS: Record<string, string> = {
-  AC: '#0a8f64', JxCat: '#00b2a9', ERC: '#f8b400', PSC: '#e30613',
+  AC: '#0F4C81', JxCat: '#00b2a9', ERC: '#f8b400', PSC: '#e30613',
   PP: '#1d71b8', CUP: '#ffd700', VOX: '#63be21', Comuns: '#6a2c70', Cs: '#eb6109',
 };
 
@@ -146,6 +146,7 @@ export default function ReputacioPage() {
   const [detall, setDetall] = useState<any>(null);
   const [negatius, setNegatius] = useState<any[]>([]);
   const [tab, setTab] = useState<'overview' | 'detall' | 'neteja'>('overview');
+  const [sentimentFilter, setSentimentFilter] = useState<'tots' | 'positiu' | 'neutre' | 'negatiu'>('tots');
 
   useEffect(() => {
     fetch(`${API}/api/reputacio/stats?dies=30`).then(r => r.ok ? r.json() : null).then(setStats).catch(() => {});
@@ -335,9 +336,29 @@ export default function ReputacioPage() {
                 <PanelBox title={`Últims articles · ${partit}`} subtitle={`${detall.articles?.length || 0} recents`} tone="amber">
                   {detall.articles?.length > 0 ? (
                     <div>
-                      {detall.articles.map((a: any, i: number) => (
-                        <ArticleCard key={i} article={a} partit={partit} />
-                      ))}
+                      <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
+                        {(['tots', 'positiu', 'neutre', 'negatiu'] as const).map(s => {
+                          const active = sentimentFilter === s;
+                          const color = s === 'positiu' ? '#1A7A4A' : s === 'negatiu' ? '#C0392B' : s === 'neutre' ? 'var(--fog)' : 'var(--bone)';
+                          return (
+                            <button key={s} onClick={() => setSentimentFilter(s)} style={{
+                              padding: '4px 12px', borderRadius: 'var(--r-full)',
+                              background: active ? color : 'transparent',
+                              border: `1px solid ${active ? color : 'var(--line)'}`,
+                              color: active ? '#fff' : color,
+                              fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 500,
+                              cursor: 'pointer', textTransform: 'capitalize',
+                            }}>
+                              {s.charAt(0).toUpperCase() + s.slice(1)}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {detall.articles
+                        .filter((a: any) => sentimentFilter === 'tots' || a.sentiment === sentimentFilter)
+                        .map((a: any, i: number) => (
+                          <ArticleCard key={i} article={a} partit={partit} />
+                        ))}
                     </div>
                   ) : (
                     <EmptyState text={`Cap article trobat per ${partit} en 30 dies`} />
