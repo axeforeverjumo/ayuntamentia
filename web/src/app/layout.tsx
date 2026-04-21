@@ -22,11 +22,11 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;700&family=Inter+Tight:wght@400;500;600;700;800&display=swap"
+          href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&family=DM+Mono:wght@300;400;500&display=swap"
           rel="stylesheet"
         />
       </head>
-      <body className="min-h-full bg-[#0d1117] text-[#e6edf3]" style={{ fontFamily: "'Inter Tight', system-ui, sans-serif" }}>
+      <body className="min-h-full bg-[#0E1117] text-[#C8D6E5]" style={{ fontFamily: "'DM Sans', system-ui, sans-serif" }}>
         <AppShell>{children}</AppShell>
       </body>
     </html>
