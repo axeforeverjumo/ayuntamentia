@@ -80,7 +80,7 @@ def send_brief(sub_id: int) -> bool:
 def _send_email(to: str, subject: str, body_md: str) -> bool:
     import os, httpx
     api_key = os.getenv("RESEND_API_KEY")
-    sender = os.getenv("EMAIL_FROM", "AyuntamentIA <noreply@ayuntamentia.cat>")
+    sender = os.getenv("EMAIL_FROM", "AjuntamentIA <noreply@ajuntamentia.cat>")
     if not api_key:
         logger.warning(f"RESEND_API_KEY no configurada — skipping email a {to}")
         return False

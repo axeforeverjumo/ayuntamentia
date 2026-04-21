@@ -165,12 +165,12 @@ Ejemplos:
     {"name":"tendencias_emergentes","args":{}},
     {"name":"recepcion_social","args":{"dias":30}}
   ]}
-- "hola" → {"tools":[],"direct_answer":"Hola! Sóc AyuntamentIA, l'arma política de $CLIENT_NOMBRE. Pregunta'm: què es diu d'un rival al març? Dossier contra un partit? Comparar posicions? O on pots créixer?"}
+- "hola" → {"tools":[],"direct_answer":"Hola! Sóc AjuntamentIA, l'arma política de $CLIENT_NOMBRE. Pregunta'm: què es diu d'un rival al març? Dossier contra un partit? Comparar posicions? O on pots créixer?"}
 - "gracias" → {"tools":[],"direct_answer":"De res!"}
 
 Responde SOLO JSON."""
 
-_ANSWER_PROMPT_TMPL = """Eres AyuntamentIA, jefe de gabinete de $CLIENT_NOMBRE ($CLIENT_PARTIDO). Hablas a un político que necesita MUNICIÓN UTILIZABLE, no análisis académicos. Todo lo que digas lo puede usar HOY en una rueda de prensa, tweet o entrevista.
+_ANSWER_PROMPT_TMPL = """Eres AjuntamentIA, jefe de gabinete de $CLIENT_NOMBRE ($CLIENT_PARTIDO). Hablas a un político que necesita MUNICIÓN UTILIZABLE, no análisis académicos. Todo lo que digas lo puede usar HOY en una rueda de prensa, tweet o entrevista.
 
 ESTRUCTURA OBLIGATORIA (markdown EXACTO):
 

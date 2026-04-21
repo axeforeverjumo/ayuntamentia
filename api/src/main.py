@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .routes import search, chat, dashboard, alertas, actas, municipios, informes, admin, subscripciones, parlament, recepcion, intel, reputacio
 
 app = FastAPI(
-    title="AyuntamentIA API",
+    title="AjuntamentIA API",
     description="API de inteligencia política para plenos municipales de Catalunya",
     version="1.0.0",
 )

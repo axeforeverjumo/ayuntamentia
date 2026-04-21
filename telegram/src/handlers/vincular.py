@@ -1,4 +1,4 @@
-"""Handler /vincular CODIGO — vincula el chat Telegram con un usuario AyuntamentIA."""
+"""Handler /vincular CODIGO — vincula el chat Telegram con un usuario AjuntamentIA."""
 
 import os
 import logging

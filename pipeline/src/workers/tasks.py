@@ -1,4 +1,4 @@
-"""Celery tasks para el pipeline de AyuntamentIA."""
+"""Celery tasks para el pipeline de AjuntamentIA."""
 
 import logging
 from .celery_app import app

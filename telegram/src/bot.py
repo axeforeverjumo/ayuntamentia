@@ -1,4 +1,4 @@
-"""Bot de Telegram para AyuntamentIA."""
+"""Bot de Telegram para AjuntamentIA."""
 
 import os
 import logging
@@ -24,7 +24,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await vincular.handle_vincular(update, context)
         return
     await update.message.reply_text(
-        "👋 *AyuntamentIA* — Inteligencia política de Catalunya\n\n"
+        "👋 *AjuntamentIA* — Inteligencia política de Catalunya\n\n"
         "Comandos disponibles:\n"
         "/buscar <query> — Buscar en actas de plenos\n"
         "/municipio <nombre> — Info de un municipio\n"
