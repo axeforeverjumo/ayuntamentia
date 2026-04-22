@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { PageHeader } from '@/components/warroom/PageHeader';
 import { KPICard, KPIGrid } from '@/components/warroom/KPICard';
 import { PanelBox } from '@/components/warroom/PanelBox';
@@ -10,57 +11,20 @@ import { AlertFeed, TrendingBar } from '@/components/warroom/AlertFeed';
 import { traduirTema } from '@/lib/temesCatala';
 const API = process.env.NEXT_PUBLIC_API_URL || '';
 
-function GoogleMapCatalunya() {
-  const isDark = typeof window !== 'undefined' && document.documentElement.getAttribute('data-theme') !== 'light';
-  return (
+const MapaCatalunyaLeaflet = dynamic(
+  () => import('@/components/features/MapaCatalunyaLeaflet').then(m => m.MapaCatalunyaLeaflet),
+  { ssr: false, loading: () => (
     <div style={{
       background: 'var(--bg-surface)', border: '.5px solid var(--border)',
-      borderRadius: 'var(--r-lg)', overflow: 'hidden', display: 'flex', flexDirection: 'column',
+      borderRadius: 'var(--r-lg)', minHeight: 460, display: 'flex',
+      alignItems: 'center', justifyContent: 'center',
+      fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-meta)',
+      letterSpacing: '.1em', textTransform: 'uppercase',
     }}>
-      <div style={{
-        padding: '10px 14px', borderBottom: '.5px solid var(--border)',
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        fontFamily: 'var(--font-sans)', fontSize: 10, letterSpacing: '.08em',
-        textTransform: 'uppercase', fontWeight: 500,
-      }}>
-        <span style={{ color: 'var(--text-meta)' }}>Mapa territorial · Catalunya</span>
-      </div>
-      <div style={{ position: 'relative', flex: 1, minHeight: 400 }}>
-        <iframe
-          src="https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d800000!2d1.7!3d41.7!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4v1"
-          style={{
-            width: '100%', height: '100%', minHeight: 400,
-            border: 'none', display: 'block',
-            filter: isDark ? 'invert(1) hue-rotate(180deg) brightness(0.95) contrast(0.9) saturate(0.3)' : 'none',
-          }}
-          allowFullScreen
-          loading="lazy"
-          referrerPolicy="no-referrer-when-downgrade"
-        />
-        <div style={{
-          position: 'absolute', bottom: 12, right: 12,
-          display: 'flex', flexDirection: 'column', gap: 4,
-        }}>
-          {['+', '−'].map((label) => (
-            <button
-              key={label}
-              onClick={() => window.open('https://www.google.com/maps/@41.7,1.7,9z', '_blank')}
-              style={{
-                width: 32, height: 32, background: 'var(--bg-surface)',
-                border: '.5px solid var(--border)', borderRadius: 4,
-                color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)',
-                fontSize: 18, fontWeight: 400, cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
+      Carregant mapa…
     </div>
-  );
-}
+  )}
+);
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<any>({});
@@ -154,7 +118,7 @@ export default function DashboardPage() {
 
         {/* Row 1: Mapa (wide) + Temes trending */}
         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 12 }}>
-          <GoogleMapCatalunya />
+          <MapaCatalunyaLeaflet />
 
           <PanelBox title="Temes en tendència" subtitle={`top ${Math.min(temas.length, 8)}`} tone="amber">
             {temas.length > 0 ? (

@@ -35,6 +35,8 @@ def list_municipios(
 
         cur.execute(f"""
             SELECT m.*,
+                NULLIF(m.external_data->>'latitud','')::double precision as lat,
+                NULLIF(m.external_data->>'longitud','')::double precision as lng,
                 (SELECT COUNT(*) FROM actas a WHERE a.municipio_id = m.id AND a.status = 'structured') as actas_procesadas,
                 (SELECT COUNT(*) FROM cargos_electos c WHERE c.municipio_id = m.id AND c.activo) as num_concejales,
                 (SELECT MAX(a.fecha) FROM actas a WHERE a.municipio_id = m.id AND a.status = 'structured') as ultima_acta,
@@ -44,7 +46,26 @@ def list_municipios(
             ORDER BY m.tiene_ac DESC, m.poblacion DESC NULLS LAST
             LIMIT %s OFFSET %s
         """, params + [limit, offset])
-        return {"total": total, "page": page, "results": cur.fetchall()}
+        rows = cur.fetchall()
+        for r in rows:
+            r.pop("external_data", None)
+        return {"total": total, "page": page, "results": rows}
+
+
+@router.get("/geo/points")
+def geo_points():
+    """Punts lleugers per al mapa: id, nom, lat, lng, tiene_ac, actas_procesadas."""
+    with get_cursor() as cur:
+        cur.execute("""
+            SELECT m.id, m.nombre, m.tiene_ac,
+                NULLIF(m.external_data->>'latitud','')::double precision as lat,
+                NULLIF(m.external_data->>'longitud','')::double precision as lng,
+                (SELECT COUNT(*) FROM actas a WHERE a.municipio_id = m.id AND a.status = 'structured') as actas_procesadas
+            FROM municipios m
+            WHERE m.external_data->>'latitud' IS NOT NULL
+              AND m.external_data->>'longitud' IS NOT NULL
+        """)
+        return cur.fetchall()
 
 
 @router.get("/{municipio_id}")
