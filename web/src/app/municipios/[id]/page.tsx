@@ -112,12 +112,13 @@ export default function MunicipioDetailPage() {
                 {composicion.map((c: any) => (
                   <div key={c.partido} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <span style={{ fontSize: 11, color: 'var(--text-primary)', width: 128, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500 }}>{c.partido}</span>
-                    <div style={{ flex: 1, background: 'var(--bg-elevated)', borderRadius: 'var(--r-full)', height: 10 }}>
+                    <div style={{ flex: 1, background: 'var(--bg-elevated)', borderRadius: 'var(--r-full)', height: 10, border: '.5px solid var(--border)' }}>
                       <div
                         style={{
                           height: 10, borderRadius: 'var(--r-full)',
-                          background: c.partido.includes("ALIAN") ? 'var(--brand)' : '#5C7A96',
+                          background: c.partido.includes("ALIAN") ? 'var(--brand)' : '#8FA6BF',
                           width: `${(c.count / maxComp) * 100}%`,
+                          boxShadow: c.partido.includes("ALIAN") ? 'none' : '0 0 0 .5px rgba(143,166,191,.4)',
                         }}
                       />
                     </div>

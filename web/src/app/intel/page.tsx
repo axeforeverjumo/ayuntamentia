@@ -399,6 +399,12 @@ export default function IntelPage() {
                     <div style={{ fontFamily: 'var(--font-sans)', fontSize: 22, fontWeight: 500, color: 'var(--text-primary)' }}>
                       Partits <span style={{ color: 'var(--brand-l)', fontStyle: 'italic' }}>vulnerables.</span>
                     </div>
+                    <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '10px 0 0', maxWidth: 680, lineHeight: 1.55 }}>
+                      <strong style={{ color: 'var(--text-primary)' }}>Com llegir les dades:</strong>{' '}
+                      <span style={{ color: 'var(--brand-l)' }}>Alineació mitjana</span> = mitjana del % de vots coincidents amb la línia oficial del partit entre tots els seus regidors.{' '}
+                      <span style={{ color: 'var(--wr-amber)' }}>Divergents</span> = nombre de regidors amb alineació &lt; 70% (targets potencials).{' '}
+                      <span style={{ color: 'var(--wr-red-2)' }}>Vulnerabilitat</span> = % de divergents sobre el total de regidors del partit. Un partit pot tenir alineació mitjana alta i 0 divergents alhora: vol dir que tots els regidors es mantenen &ge; 70% de fidelitat.
+                    </p>
                   </div>
                   <Link href="/chat?mode=atacar" style={{
                     display: 'inline-flex', alignItems: 'center', gap: 8,
@@ -528,7 +534,7 @@ export default function IntelPage() {
                       border: '1px solid var(--line)', display: 'grid', placeItems: 'center',
                       background: 'var(--ink)',
                     }}>
-                      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--wr-amber)" strokeWidth="1.2">
+                      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--brand-l)" strokeWidth="1.2">
                         <path d="M3 21V5l9-3 9 3v16M3 21h18M8 9h2M14 9h2M8 13h2M14 13h2M8 17h2M14 17h2"/>
                       </svg>
                     </div>
@@ -548,7 +554,8 @@ export default function IntelPage() {
 
                     <button style={{
                       display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 18px',
-                      background: 'transparent', border: '1px solid var(--wr-amber)', color: 'var(--wr-amber)',
+                      background: 'transparent', border: '.5px solid var(--brand)', color: 'var(--brand-l)',
+                      borderRadius: 'var(--r-md)',
                       fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '.1em',
                       textTransform: 'uppercase', cursor: 'pointer',
                     }}>
