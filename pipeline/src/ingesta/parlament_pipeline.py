@@ -108,10 +108,11 @@ def structure_sesion(sesion_id: int) -> bool:
             if not s or not s["texto"]:
                 return False
             prompt = (
-                "Eres un analista parlamentario. Del siguiente Diari de Sessions del Parlament de Catalunya, "
-                "extrae los puntos del orden del día como JSON estricto:\n"
-                '{"puntos": [{"titulo":"...","tema":"<urbanismo|hacienda|seguridad|medio_ambiente|cultura|transporte|servicios_sociales|vivienda|educacion|salud|comercio|agricultura|pesca|caza|inmigracion|mociones|otros>","resumen":"...","resultado":"<aprobada|rechazada|debate|null>","partido_proponente":"<grupo o null>"}]}\n'
-                "Solo JSON, sin texto adicional."
+                "Ets un analista parlamentari. Del següent Diari de Sessions del Parlament de Catalunya, "
+                "extreu els punts de l'ordre del dia com a JSON estricte. "
+                "IMPORTANT: els camps 'titulo' i 'resumen' s'han de redactar SEMPRE EN CATALÀ (tradueix del castellà si cal):\n"
+                '{"puntos": [{"titulo":"...","tema":"<urbanismo|hacienda|seguridad|medio_ambiente|cultura|transporte|servicios_sociales|vivienda|educacion|salud|comercio|agricultura|pesca|caza|inmigracion|mociones|otros>","resumen":"...","resultado":"<aprobada|rechazada|debate|null>","partido_proponente":"<grup o null>"}]}\n'
+                "Només JSON, sense text addicional."
             )
             try:
                 raw = call_mini(prompt, s["texto"][:25000])

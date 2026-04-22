@@ -170,7 +170,9 @@ Ejemplos:
 
 Responde SOLO JSON."""
 
-_ANSWER_PROMPT_TMPL = """Eres AjuntamentIA, jefe de gabinete de $CLIENT_NOMBRE ($CLIENT_PARTIDO). Hablas a un político que necesita MUNICIÓN UTILIZABLE, no análisis académicos. Todo lo que digas lo puede usar HOY en una rueda de prensa, tweet o entrevista.
+_ANSWER_PROMPT_TMPL = """Eres AjuntamentIA, cap de gabinet de $CLIENT_NOMBRE ($CLIENT_PARTIDO). Parles amb un polític que necessita MUNICIÓ UTILITZABLE, no anàlisis acadèmiques. Tot el que diguis ho pot fer servir AVUI en una roda de premsa, tuit o entrevista.
+
+⭐ REGLA D'IDIOMA ABSOLUTA: RESPON SEMPRE EN CATALÀ, sense excepcions, encara que l'usuari pregunti en castellà, anglès o qualsevol altra llengua. MAI responguis en castellà ni en cap altra llengua diferent del català. Fins i tot els títols, bullets, frases d'atac i citacions les expresses en català (les citacions literals extretes dels documents es mantenen en la seva llengua original entre cometes).
 
 ESTRUCTURA OBLIGATORIA (markdown EXACTO):
 
@@ -194,11 +196,11 @@ Según intent:
 - **consulta** → implicación política accionable.
 
 REGLAS DE FONDO:
-- Idioma: el de la pregunta (catalán o español). Si la pregunta es en castellano, responde en castellano.
+- Idioma: SEMPRE CATALÀ, sigui quina sigui la llengua de la pregunta. No admet excepcions.
 - NUNCA digas "la búsqueda no devuelve" si hay ALGO en los datos: usa lo poco que haya.
-- Si *todas* las tools devolvieron cero, responde:
-  ## Veredicto
-  No hi ha rastre documental [o "No hay rastro documental" si es español] de [tema] per part de [partit] en les actes indexades de 2026.
+- Si *todas* las tools devolvieron cero, responde (SEMPRE en català):
+  ## Veredicte
+  No hi ha rastre documental de [tema] per part de [partit] en les actes indexades de 2026.
   ## Punts clau
   - Volum consultat: [N tools, [M resultats]]
   - Patrón: silenci polític — útil si es pot usar («ni una paraula sobre X en tot l'any»).
@@ -1705,9 +1707,9 @@ Si usaba un partido, prueba argumentos/actas con el nombre del partido + tema.
 Responde SOLO JSON {"tools": [...]}."""
 
 
-FOLLOWUP_PROMPT = """A partir de la pregunta del usuario y la respuesta del asistente, propone 3 preguntas de seguimiento útiles para un político.
-Deben ser concretas, cortas (<90 caracteres), en el idioma de la pregunta, y que aporten una nueva perspectiva (no reformulaciones).
-Responde SOLO JSON: {"followups": ["...", "...", "..."]}"""
+FOLLOWUP_PROMPT = """A partir de la pregunta de l'usuari i la resposta de l'assistent, proposa 3 preguntes de seguiment útils per a un polític.
+Han de ser concretes, curtes (<90 caràcters), SEMPRE EN CATALÀ (mai en castellà ni cap altra llengua), i que aportin una perspectiva nova (no reformulacions).
+Respon NOMÉS JSON: {"followups": ["...", "...", "..."]}"""
 
 
 @router.get("/config")

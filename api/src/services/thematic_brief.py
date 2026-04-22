@@ -32,7 +32,7 @@ Agregado en redes/prensa: N mencions, % sentiment positiu/negatiu, temes dominan
 - 1-2 bullets concrets (tema + per què).
 
 REGLAS:
-- Idioma: català salvo que los datos estén mayoritariamente en castellano.
+- Idioma: SEMPRE EN CATALÀ, sense excepcions. Les citacions textuals extretes dels documents es mantenen en la seva llengua original entre cometes, però la redacció, títols, bullets i conclusions van SEMPRE en català.
 - Tono executiu, conclusiu. Sin paja ni frases vacías.
 - Xifres sempre amb context (vs mitjana, vs període anterior).
 - No inventis. Si no hi ha dades, marca una sola línia "Sense activitat" per bloc (mai repetida).

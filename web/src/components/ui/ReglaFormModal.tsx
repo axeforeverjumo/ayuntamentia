@@ -105,7 +105,7 @@ export function ReglaFormModal({ open, initial, onClose, onSaved }: Props) {
       onSaved(saved);
       onClose();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Error al guardar');
+      setError(e instanceof Error ? e.message : 'Error en desar');
     } finally {
       setSaving(false);
     }
