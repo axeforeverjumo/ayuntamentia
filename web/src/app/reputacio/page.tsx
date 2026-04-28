@@ -170,11 +170,11 @@ export default function ReputacioPage() {
         title={<>Reputació i <span style={{ color: 'var(--brand-l)', fontWeight: 400, fontStyle: 'italic' }}>premsa.</span></>}
         info={{
           title: 'Reputació i premsa',
-          description: "Monitoratge de 9 diaris catalans en temps real. Veu què diu la premsa de cada partit, detecta articles negatius i proposa estratègies de millora amb el War Room. La funció 'Neteja' és l'arma secreta: selecciona un article negatiu i la IA et proposa 3 accions concretes.",
+          description: "Monitoratge de 9 diaris catalans en temps real. Veu què diu la premsa de cada partit, detecta articles negatius i proposa estratègies de millora amb la Sala d'Intel·ligència. La funció 'Neteja' és l'arma secreta: selecciona un article negatiu i la IA et proposa 3 accions concretes.",
           dataSource: 'Vilaweb, ARA, NacióDigital, El Punt Avui, ACN, Betevé, La Vanguardia, El Periódico, Catalunya Press · actualització cada 30 min',
           tips: [
             "Clica un partit a les barres de mencions per veure'n el detall",
-            "Al tab 'Neteja', el botó 'Netejar' obre el War Room amb una estratègia de millora automàtica",
+            "Al tab 'Neteja', el botó 'Netejar' obre la Sala d'Intel·ligència amb una estratègia de millora automàtica",
             "Fes sync manual amb el botó 'Sync ara' per obtenir els últims articles",
           ],
         }}
@@ -389,7 +389,7 @@ export default function ReputacioPage() {
                     On tenen <span style={{ color: 'var(--brand-l)', fontStyle: 'italic' }}>mala premsa?</span>
                   </h2>
                   <p style={{ fontSize: 13, color: 'var(--bone)', lineHeight: 1.5, maxWidth: 500, margin: 0 }}>
-                    Articles amb sentiment negatiu sobre <strong style={{ color: 'var(--paper)' }}>{partit}</strong>. Clica &quot;Netejar&quot; per obrir el War Room amb una estratègia de millora automàtica — accions concretes, narratives alternatives i seguiment.
+                    Articles amb sentiment negatiu sobre <strong style={{ color: 'var(--paper)' }}>{partit}</strong>. Clica &quot;Netejar&quot; per obrir la Sala d'Intel·ligència amb una estratègia de millora automàtica — accions concretes, narratives alternatives i seguiment.
                   </p>
                 </div>
                 <div style={{

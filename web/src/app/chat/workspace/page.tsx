@@ -64,7 +64,7 @@ export default function WorkspacePage() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--ink)' }}>
       <PageHeader
-        crumb="War Room / Workspace"
+        crumb="Sala d'Intel·ligència / Workspace"
         title={<>Workspace. <em style={{ color: tab.color, fontWeight: 400 }}>{tab.label.toLowerCase()}</em></>}
         subtitle={`${total} element${total !== 1 ? 's' : ''} guardats · ${tab.hint}`}
         actions={
@@ -74,7 +74,7 @@ export default function WorkspacePage() {
             fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '.1em',
             textTransform: 'uppercase', textDecoration: 'none',
           }}>
-            ← War Room
+            ← Sala d'Intel·ligència
           </Link>
         }
       />
@@ -145,7 +145,7 @@ export default function WorkspacePage() {
                 Encara no tens <em style={{ color: tab.color }}>{tab.emptyLabel}.</em>
               </p>
               <p style={{ fontFamily: 'var(--font-sans)', fontSize: 14, color: 'var(--fog)', margin: '0 0 28px' }}>
-                Ves al War Room, fes una recerca en mode {tab.label} i guarda-la aquí.
+                Ves a la Sala d'Intel·ligència, fes una recerca en mode {tab.label} i guarda-la aquí.
               </p>
               <Link
                 href={`/chat?mode=${activeTab}`}
@@ -158,7 +158,7 @@ export default function WorkspacePage() {
                 }}
               >
                 <Plus style={{ width: 13, height: 13 }} />
-                Anar al War Room · {tab.label}
+                Anar a la Sala d'Intel·ligència · {tab.label}
               </Link>
             </div>
           </div>

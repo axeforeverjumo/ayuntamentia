@@ -32,7 +32,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, hint: 'Visió executiva' },
-  { href: '/chat', label: 'War Room', icon: Crosshair, hint: 'Chat multi-mode' },
+  { href: '/chat', label: "Sala d'Intel·ligència", icon: Crosshair, hint: 'Chat multi-mode' },
   { href: '/buscar', label: 'Cercar', icon: Search, hint: 'Cerca universal' },
   { href: '/alertas', label: 'Alertes', icon: Bell, hint: 'Regles actives' },
   { href: '/municipios', label: 'Municipis', icon: MapPin, hint: '947 municipis' },
@@ -107,7 +107,7 @@ export function Sidebar() {
               AjuntamentIA
             </div>
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9.5, color: 'var(--text-timestamp)', letterSpacing: '.06em', marginTop: 1 }}>
-              WAR ROOM · v2.0
+              SALA D&apos;INTEL·LIGÈNCIA · v2.0
             </div>
           </div>
         </Link>

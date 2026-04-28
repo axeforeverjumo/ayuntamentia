@@ -413,7 +413,7 @@ export default function IntelPage() {
                     letterSpacing: '.1em', textTransform: 'uppercase', fontWeight: 700,
                     textDecoration: 'none', boxShadow: '0 0 20px -6px rgba(15,76,129,.4)',
                   }}>
-                    ◼ Analitzar rival al War Room →
+                    ◼ Analitzar rival a la Sala d'Intel·ligència →
                   </Link>
                 </div>
 
@@ -481,7 +481,7 @@ export default function IntelPage() {
                             letterSpacing: '.08em', textTransform: 'uppercase', textDecoration: 'none',
                             textAlign: 'center',
                           }}>
-                          → Explotar al War Room
+                          → Explotar a la Sala d'Intel·ligència
                         </Link>
                       </div>
                     </div>

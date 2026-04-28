@@ -171,7 +171,7 @@ export default function AlertasPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--ink)' }}>
-      {/* War Room Header */}
+      {/* Sala d'Intel·ligència Header */}
       <div style={{ padding: '22px 26px 18px', borderBottom: '1px solid var(--line)' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
           <div>

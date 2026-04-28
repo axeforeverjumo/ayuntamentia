@@ -54,7 +54,7 @@ function saveConversations(convs: Conversation[]) { localStorage.setItem('ajunta
 
 export default function ChatPage() {
   return (
-    <Suspense fallback={<div style={{ color: 'var(--fog)', padding: 24 }}>Carregant War Room…</div>}>
+    <Suspense fallback={<div style={{ color: 'var(--fog)', padding: 24 }}>Carregant Sala d'Intel·ligència…</div>}>
       <ChatPageInner />
     </Suspense>
   );
@@ -213,10 +213,10 @@ function ChatPageInner() {
       {/* Main war room area */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         <PageHeader
-          crumb="Operacions / War Room"
-          title={<>Sala de guerra. <em style={{ color: 'var(--fog)', fontWeight: 400 }}>{modeDef.label.toLowerCase()}</em></>}
+          crumb="Operacions / Sala d'Intel·ligència"
+          title={<>Sala d'Intel·ligència. <em style={{ color: 'var(--fog)', fontWeight: 400 }}>{modeDef.label.toLowerCase()}</em></>}
           info={{
-            title: 'War Room — Sala de guerra',
+            title: "Sala d'Intel·ligència",
             description: "El cor de la plataforma. Pregunta com un polític i rep respostes amb cites literals, fonts verificables i accions concretes. Tria un dels 5 modes segons el que necessitis: vigilar, atacar, defensar, comparar o detectar oportunitats.",
             dataSource: 'Cerca en 54.410 actes, 228.124 votacions, DSPC del Parlament i premsa catalana',
             tips: [

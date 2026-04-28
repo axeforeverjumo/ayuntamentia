@@ -4,7 +4,7 @@ import { AppShell } from '@/components/features/AppShell';
 
 export const metadata: Metadata = {
   title: {
-    default: 'AjuntamentIA — War Room',
+    default: "AjuntamentIA — Sala d'Intel·ligència",
     template: '%s · AjuntamentIA',
   },
   description:

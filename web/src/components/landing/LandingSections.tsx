@@ -33,7 +33,7 @@ export function LandingNav({ onEnter }: { onEnter: () => void }) {
         <div>
           <div style={{ fontFamily: 'var(--font-serif)', fontSize: 22, lineHeight: 1, letterSpacing: '-.01em' }}>AjuntamentIA</div>
           <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9.5, color: 'var(--fog)', letterSpacing: '.18em', textTransform: 'uppercase' }}>
-            War room · intel·ligència municipal
+            Sala d&apos;Intel·ligència · municipal
           </div>
         </div>
       </div>
@@ -45,7 +45,7 @@ export function LandingNav({ onEnter }: { onEnter: () => void }) {
           background: 'var(--paper)', color: 'var(--ink)', border: '1px solid var(--paper)',
           padding: '8px 14px', cursor: 'pointer', fontFamily: 'var(--font-mono)',
           fontSize: 11, letterSpacing: '.08em', textTransform: 'uppercase', fontWeight: 700,
-        }}>Entrar al War Room →</button>
+        }}>Entrar a la Sala d&apos;Intel·ligència →</button>
       </div>
     </div>
   );
@@ -104,7 +104,7 @@ export function LandingHero({ onEnter }: { onEnter: () => void }) {
           </p>
           <div style={{ display: 'flex', gap: 10, marginBottom: 26 }}>
             <button onClick={onEnter} style={ctaPrimary}>
-              Obrir War Room →
+              Obrir Sala d&apos;Intel·ligència →
             </button>
             <button style={{
               background: 'transparent', color: 'var(--paper)', border: '1px solid var(--line)',
@@ -225,7 +225,7 @@ export function LandingTerminal() {
             <span style={{ width: 9, height: 9, borderRadius: 9, background: '#d4a017' }} />
             <span style={{ width: 9, height: 9, borderRadius: 9, background: '#8bd35b' }} />
           </span>
-          <span style={{ marginLeft: 8 }}>ajuntamentia@warroom : ~/query</span>
+          <span style={{ marginLeft: 8 }}>ajuntamentia@intel : ~/query</span>
           <span style={{ marginLeft: 'auto', color: 'var(--wr-phosphor)' }}>● encrypted</span>
         </div>
         <div style={{ padding: '22px 20px', minHeight: 300, fontFamily: 'var(--font-mono)', fontSize: 13, lineHeight: 1.6 }}>
@@ -411,9 +411,9 @@ export function LandingCTA({ onEnter }: { onEnter: () => void }) {
           Entreu a la sala.
         </h2>
         <p style={{ fontSize: 18, color: 'var(--bone)', maxWidth: 640, margin: '0 auto 32px', lineHeight: 1.5 }}>
-          El War Room està operatiu 24/7. El pipeline ha processat 82.352 actes. Només queda una cosa: que entreu vosaltres.
+          La Sala d&apos;Intel·ligència està operativa 24/7. El pipeline ha processat 82.352 actes. Només queda una cosa: que entreu vosaltres.
         </p>
-        <button onClick={onEnter} style={{ ...ctaPrimary, padding: '16px 22px', fontSize: 13 }}>Obrir War Room →</button>
+        <button onClick={onEnter} style={{ ...ctaPrimary, padding: '16px 22px', fontSize: 13 }}>Obrir Sala d&apos;Intel·ligència →</button>
         <div style={{ marginTop: 36, display: 'flex', gap: 26, justifyContent: 'center', fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--fog)', letterSpacing: '.14em', textTransform: 'uppercase' }}>
           <span>RGPD · anonimització per rol</span>
           <span>Audit log complet</span>

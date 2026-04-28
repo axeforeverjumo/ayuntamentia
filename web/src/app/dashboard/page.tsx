@@ -82,7 +82,7 @@ export default function DashboardPage() {
           tips: [
             'Els KPIs es comparen amb el període anterior — vermell = ha baixat, verd = ha pujat',
             "Clica un municipi al mapa per veure'n el detall",
-            "Usa 'Obrir War Room' per fer preguntes directes sobre les dades",
+            "Usa 'Obrir Sala d'Intel·ligència' per fer preguntes directes sobre les dades",
           ],
         }}
         actions={
@@ -199,7 +199,7 @@ export default function DashboardPage() {
           </PanelBox>
         </div>
 
-        {/* Row 3: War Room CTA — full width */}
+        {/* Row 3: Sala d'Intel·ligència CTA — full width */}
         <div style={{
           background: 'var(--bg-surface)', border: '.5px solid var(--border)',
           borderRadius: 'var(--r-lg)', padding: '24px 28px',
@@ -207,7 +207,7 @@ export default function DashboardPage() {
         }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-              <StatusBadge tone="red">WAR ROOM</StatusBadge>
+              <StatusBadge tone="red">SALA D&apos;INTEL·LIGÈNCIA</StatusBadge>
               <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-meta)', letterSpacing: '.08em', textTransform: 'uppercase' }}>5 modes d&apos;anàlisi</span>
             </div>
             <h2 style={{
@@ -243,7 +243,7 @@ export default function DashboardPage() {
             textDecoration: 'none', borderRadius: 'var(--r-md)',
             whiteSpace: 'nowrap',
           }}>
-            Obrir War Room →
+            Obrir Sala d&apos;Intel·ligència →
           </Link>
         </div>
       </div>
