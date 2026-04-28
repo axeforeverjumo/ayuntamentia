@@ -4,6 +4,7 @@ Ingesta RSS, classificació IA (partit, tema, sentiment), evolució temporal.
 """
 
 import os
+import json
 import hashlib
 import logging
 from datetime import datetime, timedelta
@@ -43,10 +44,112 @@ PARTITS_KEYWORDS = {
     "Cs": ["ciutadans", "ciudadanos"],
 }
 
+# Fallback heurístic (només quan el LLM no està disponible).
 SENTIMENT_KEYWORDS = {
-    "positiu": ["èxit", "acord", "millora", "creixement", "suport", "aprovació", "victòria", "guanya", "recolzament", "excel·lent", "logro", "avança"],
-    "negatiu": ["escàndol", "crisi", "dimissió", "rebuig", "fracàs", "corrupció", "polèmica", "crítica", "condemna", "problema", "retirada", "derrota", "caiguda"],
+    "positiu": ["èxit", "acord", "millora", "creixement", "aprovació", "victòria", "guanya", "recolzament", "excel·lent", "logro", "avança"],
+    "negatiu": ["escàndol", "crisi", "dimissió", "rebuig", "fracàs", "corrupció", "polèmica", "crítica", "condemna", "problema", "retirada", "derrota", "caiguda", "racisme", "racista", "xenofòbia", "xenòfob", "insult", "denúncia", "denuncia", "atac", "agressió"],
 }
+
+# Senyals que indiquen que la notícia és NEGATIVA per AC encara que en superfície sembli positiva
+# (suport a víctimes/institucions = atac contra AC).
+AC_NEGATIVE_SIGNALS = [
+    "racisme", "racista", "xenofòbia", "xenòfob", "xenofobo",
+    "insult", "insults", "denúncia", "denuncia", "denunciar",
+    "rebuig", "rebutgen", "rebutja", "condemna", "condemnen",
+    "atac", "agressió", "agressions", "amenaça", "amenaces",
+    "polèmica", "escàndol", "expulsió", "expulsen", "investigació",
+    "querella", "judici", "imputat", "imputació", "discriminació",
+    "feixisme", "feixista", "ultradret", "extrema dreta",
+    "manifestació contra", "concentració contra", "protesta contra",
+    "donar suport a", "dona suport a", "dóna suport a", "donen suport a",  # suport a víctimes d'AC
+]
+
+
+def _detect_sentiment_keywords(text: str) -> tuple[str, float]:
+    """Heurístic de fallback per quan el LLM falla."""
+    text_lower = text.lower()
+    pos = sum(1 for kw in SENTIMENT_KEYWORDS["positiu"] if kw in text_lower)
+    neg = sum(1 for kw in SENTIMENT_KEYWORDS["negatiu"] if kw in text_lower)
+    # Si menciona AC i hi ha senyals negatius típics → forçar negatiu
+    if "aliança catalana" in text_lower or "orriols" in text_lower:
+        ac_neg = sum(1 for kw in AC_NEGATIVE_SIGNALS if kw in text_lower)
+        if ac_neg >= 1:
+            return "negatiu", -0.7
+    score = (pos - neg) / max(pos + neg, 1)
+    if score > 0.2:
+        return "positiu", score
+    elif score < -0.2:
+        return "negatiu", score
+    return "neutre", score
+
+
+def _detect_sentiment_llm(title: str, summary: str, partits: list[str]) -> tuple[str, float]:
+    """Classifica sentiment des de la perspectiva d'Aliança Catalana (AC).
+
+    Si AC apareix a l'article: positiu = bo per AC, negatiu = dolent per AC.
+    Si no apareix AC però sí altres partits: positiu/negatiu segons el to general
+    (un atac a un rival pot ser neutre/positiu indirecte; ho deixem al LLM).
+    Retorna (etiqueta, score [-1,1]).
+    """
+    try:
+        from openai import OpenAI
+        proxy_url = os.environ.get("OPENCLAW_PROXY_URL", "http://127.0.0.1:10531/v1")
+        model = os.environ.get("OPENCLAW_MODEL_FAST", os.environ.get("OPENCLAW_MODEL_FULL", "gpt-5.4"))
+        client = OpenAI(base_url=proxy_url, api_key="subscription")
+
+        text = f"TÍTOL: {title}\nRESUM: {(summary or '')[:600]}"
+        partits_str = ", ".join(partits) if partits else "cap detectat"
+        ac_present = "AC" in partits
+
+        focus = (
+            "L'article menciona Aliança Catalana (AC). Avalua si la notícia és FAVORABLE o DESFAVORABLE PER A AC. "
+            "Una notícia on AC és acusada, denunciada, criticada, condemnada per racisme/xenofòbia, atacada, "
+            "investigada, o on institucions/persones donen suport a víctimes d'AC, és NEGATIVA per AC. "
+            "Una notícia on AC creix, aconsegueix vots, fa proposta acceptada, etc. és POSITIVA per AC."
+            if ac_present else
+            f"L'article no menciona AC directament. Partits detectats: {partits_str}. "
+            "Avalua el to general de la notícia (positiu/negatiu/neutre) sense biaix de partit."
+        )
+
+        prompt = (
+            "Ets un analista polític. Classifica el sentiment d'aquesta notícia.\n\n"
+            f"{focus}\n\n"
+            f"{text}\n\n"
+            "Respon NOMÉS amb JSON vàlid: {\"sentiment\": \"positiu|negatiu|neutre\", \"score\": -1.0 a 1.0, \"motiu\": \"breu\"}"
+        )
+
+        resp = client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0,
+            max_tokens=150,
+        )
+        content = resp.choices[0].message.content.strip()
+        # Extreu JSON
+        if "```" in content:
+            content = content.split("```")[1].lstrip("json").strip()
+        start = content.find("{")
+        end = content.rfind("}")
+        if start >= 0 and end > start:
+            data = json.loads(content[start:end + 1])
+            sent = data.get("sentiment", "neutre").lower()
+            if sent not in ("positiu", "negatiu", "neutre"):
+                sent = "neutre"
+            score = float(data.get("score", 0))
+            score = max(-1.0, min(1.0, score))
+            return sent, score
+    except Exception as e:
+        logger.warning(f"LLM sentiment fail, fallback keywords: {e}")
+
+    return _detect_sentiment_keywords(f"{title} {summary or ''}")
+
+
+def _detect_sentiment(title: str, summary: str = "", partits: Optional[list[str]] = None) -> tuple[str, float]:
+    """Wrapper: usa LLM si està disponible, fallback a keywords."""
+    use_llm = os.environ.get("REPUTACIO_LLM_SENTIMENT", "1") != "0"
+    if use_llm:
+        return _detect_sentiment_llm(title, summary or "", partits or [])
+    return _detect_sentiment_keywords(f"{title} {summary or ''}")
 
 
 def _get_conn():
@@ -94,16 +197,6 @@ def _detect_partits(text: str) -> list[str]:
     return found
 
 
-def _detect_sentiment(text: str) -> tuple[str, float]:
-    text_lower = text.lower()
-    pos = sum(1 for kw in SENTIMENT_KEYWORDS["positiu"] if kw in text_lower)
-    neg = sum(1 for kw in SENTIMENT_KEYWORDS["negatiu"] if kw in text_lower)
-    score = (pos - neg) / max(pos + neg, 1)
-    if score > 0.2:
-        return "positiu", score
-    elif score < -0.2:
-        return "negatiu", score
-    return "neutre", score
 
 
 def ingest_rss_feeds():
@@ -136,7 +229,7 @@ def ingest_rss_feeds():
                 h = hashlib.md5(f"{feed_cfg['nom']}:{link or title}".encode()).hexdigest()
 
                 partits = _detect_partits(text)
-                sentiment, score = _detect_sentiment(text)
+                sentiment, score = _detect_sentiment(title, summary, partits)
 
                 try:
                     cur.execute("""
@@ -279,3 +372,51 @@ def trigger_ingest():
     """Manual trigger for RSS ingestion."""
     n = ingest_rss_feeds()
     return {"ok": True, "nous_articles": n}
+
+
+@router.post("/reclassify")
+def reclassify_articles(
+    dies: int = Query(60, description="Reclassifica articles dels últims N dies"),
+    nomes_ac: bool = Query(True, description="Només articles que mencionen AC"),
+    limit: int = Query(500),
+):
+    """Reclassifica el sentiment d'articles existents amb el LLM (perspectiva AC)."""
+    _ensure_table()
+    conn = _get_conn()
+    cur = conn.cursor()
+    since = datetime.now() - timedelta(days=dies)
+
+    where = "data_publicacio >= %s"
+    params = [since]
+    if nomes_ac:
+        where += " AND 'AC' = ANY(partits)"
+
+    cur.execute(f"""
+        SELECT id, titol, COALESCE(resum, ''), partits
+        FROM premsa_articles
+        WHERE {where}
+        ORDER BY data_publicacio DESC
+        LIMIT %s
+    """, params + [limit])
+    rows = cur.fetchall()
+
+    updated = 0
+    changes = []
+    for row in rows:
+        aid, titol, resum, partits = row
+        try:
+            new_sent, new_score = _detect_sentiment(titol, resum, list(partits or []))
+            cur.execute("""
+                UPDATE premsa_articles SET sentiment=%s, sentiment_score=%s
+                WHERE id=%s AND (sentiment IS DISTINCT FROM %s OR sentiment_score IS DISTINCT FROM %s)
+            """, (new_sent, new_score, aid, new_sent, new_score))
+            if cur.rowcount > 0:
+                updated += 1
+                changes.append({"id": aid, "titol": titol[:120], "sentiment": new_sent, "score": round(new_score, 2)})
+            conn.commit()
+        except Exception as e:
+            conn.rollback()
+            logger.warning(f"reclassify fail id={aid}: {e}")
+
+    conn.close()
+    return {"ok": True, "revisats": len(rows), "actualitzats": updated, "canvis": changes[:50]}
