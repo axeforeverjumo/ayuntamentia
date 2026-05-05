@@ -74,12 +74,49 @@ def post_structure(acta_id: int):
 
 @app.task(name="src.workers.tasks.process_backfill_batch")
 def process_backfill_batch():
-    """Procesa un batch del backfill: toma actas pendientes y las encola."""
+    """Procesa un batch del backfill: toma actas pendientes i les encola.
+
+    Cobreix tres etapes per evitar que reintents quedin orfes:
+      - discovered  → download_acta
+      - downloaded  → extract_acta_text
+      - extracted   → structure_acta
+    """
     from ..descarga.downloader import get_next_batch
+    from ..db import get_db, get_cursor
+
+    n_total = 0
+
     batch = get_next_batch(batch_size=5)
     for acta_id in batch:
         download_acta.delay(acta_id)
-    return len(batch)
+    n_total += len(batch)
+
+    with get_db() as conn:
+        with get_cursor(conn) as cur:
+            cur.execute("""
+                SELECT id FROM actas
+                WHERE status = 'downloaded' AND retry_count < %s
+                ORDER BY priority DESC, fecha DESC LIMIT 10
+                FOR UPDATE SKIP LOCKED
+            """, (config.MAX_RETRIES,))
+            ids = [r["id"] for r in cur.fetchall()]
+        for acta_id in ids:
+            extract_acta_text.delay(acta_id)
+        n_total += len(ids)
+
+        with get_cursor(conn) as cur:
+            cur.execute("""
+                SELECT id FROM actas
+                WHERE status = 'extracted' AND retry_count < %s
+                ORDER BY priority DESC, fecha DESC LIMIT 10
+                FOR UPDATE SKIP LOCKED
+            """, (config.MAX_RETRIES,))
+            ids = [r["id"] for r in cur.fetchall()]
+        for acta_id in ids:
+            structure_acta.delay(acta_id)
+        n_total += len(ids)
+
+    return n_total
 
 
 @app.task(name="src.workers.tasks.dispatch_subscripciones")
