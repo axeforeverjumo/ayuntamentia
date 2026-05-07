@@ -66,3 +66,34 @@ Corregir el error crítico de ejecución detectado en review al construir la res
 ### Archivos modificados
 - `api/src/routes/reputacio.py`
 - `specs/reputacio/SPEC.md`
+
+## 2026-05-07 — Corrección de ventana temporal y purga de futuras en /reputacio
+
+### Objetivo
+Corregir el motivo por el que seguían apareciendo noticias como la de `2026-04-28`: además de filtrar antiguas, había que impedir que fechas futuras o mal normalizadas siguieran siendo visibles o persistieran en base de datos.
+
+### Cambios realizados
+**Archivo:** `web/src/app/reputacio/page.tsx`
+- Se endureció `withinWindow(dateText, days=30)`:
+  - normaliza la fecha a `YYYY-MM-DD` antes de parsearla.
+  - rechaza formatos inválidos.
+  - compara contra día UTC actual.
+  - excluye explícitamente fechas futuras (`parsed <= todayUtc`).
+
+**Archivo:** `api/src/routes/reputacio.py`
+- Se endureció `_article_within_window(article_date, days)` para que solo acepte fechas dentro de la ventana y nunca posteriores a hoy.
+- Se actualizó `cleanup_old_articles(days_to_keep=30)` para borrar tanto:
+  - noticias antiguas fuera de ventana.
+  - noticias con `data_publicacio` futura respecto a `now()` UTC.
+- Con esto la limpieza al hacer ingest deja la tabla alineada con el comportamiento esperado de renderizado.
+
+### Decisiones técnicas
+- La corrección se aplica en **doble capa**:
+  - **frontend** para evitar renderizar fechas fuera de rango por TZ o serialización.
+  - **backend** para purgar registros inconsistentes y evitar que reaparezcan tras refrescos.
+- Se conserva el criterio de ventana de 30 días ya usado por la UI y los endpoints.
+
+### Archivos modificados
+- `web/src/app/reputacio/page.tsx`
+- `api/src/routes/reputacio.py`
+- `specs/reputacio/SPEC.md`

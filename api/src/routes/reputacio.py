@@ -175,7 +175,8 @@ def _article_within_window(article_date: Optional[str], days: int) -> bool:
     if not parsed:
         return False
     today = datetime.now(timezone.utc).date()
-    return parsed >= (today - timedelta(days=days))
+    cutoff = today - timedelta(days=days)
+    return cutoff <= parsed <= today
 
 
 def _parse_entry_datetime(entry) -> Optional[datetime]:
@@ -213,16 +214,24 @@ def _parse_entry_datetime(entry) -> Optional[datetime]:
 
 
 def cleanup_old_articles(days_to_keep: int = 30) -> int:
-    """Elimina noticias antiguas fuera de la ventana operativa."""
+    """Elimina noticias antiguas y fechas futuras fuera de la ventana operativa."""
     _ensure_table()
     conn = _get_conn()
     cur = conn.cursor()
-    threshold = datetime.now() - timedelta(days=days_to_keep)
-    cur.execute("DELETE FROM premsa_articles WHERE data_publicacio IS NOT NULL AND data_publicacio < %s", (threshold,))
+    now_utc = datetime.now(timezone.utc)
+    threshold = now_utc - timedelta(days=days_to_keep)
+    cur.execute(
+        """
+        DELETE FROM premsa_articles
+        WHERE data_publicacio IS NOT NULL
+          AND (data_publicacio < %s OR data_publicacio > %s)
+        """,
+        (threshold, now_utc),
+    )
     deleted = cur.rowcount
     conn.commit()
     conn.close()
-    logger.info(f"Premsa cleanup: {deleted} articles eliminats (>{days_to_keep} dies)")
+    logger.info(f"Premsa cleanup: {deleted} articles eliminats fora de finestra ({days_to_keep} dies)")
     return deleted
 
 

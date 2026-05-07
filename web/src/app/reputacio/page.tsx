@@ -239,12 +239,17 @@ export default function ReputacioPage() {
 
   const withinWindow = (dateText?: string | null, days: number = 30) => {
     if (!dateText) return false;
-    const parsed = new Date(`${dateText}T00:00:00Z`);
+    const normalizedDate = String(dateText).trim().slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(normalizedDate)) return false;
+    const parsed = new Date(`${normalizedDate}T00:00:00Z`);
     if (Number.isNaN(parsed.getTime())) return false;
+
     const now = new Date();
-    const cutoff = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    const todayUtc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    const cutoff = new Date(todayUtc);
     cutoff.setUTCDate(cutoff.getUTCDate() - days);
-    return parsed >= cutoff;
+
+    return parsed >= cutoff && parsed <= todayUtc;
   };
 
   const filteredArticles = useMemo(() => {
