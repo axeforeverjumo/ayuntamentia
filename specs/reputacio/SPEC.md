@@ -44,3 +44,25 @@ Evitar que en `/reputacio` se sigan mostrando noticias viejas fuera de la ventan
 - `web/src/app/reputacio/page.tsx`
 - `api/src/routes/reputacio.py`
 - `specs/reputacio/SPEC.md`
+
+## 2026-05-07 — Corrección runtime en diagnóstico de /reputacio
+
+### Objetivo
+Corregir el error crítico de ejecución detectado en review al construir la respuesta de estadísticas/diagnóstico tras la iteración anterior.
+
+### Cambios realizados
+**Archivo:** `api/src/routes/reputacio.py`
+
+- Se definió explícitamente `latest_visible_date` dentro de `reputacio_diagnostic` antes de componer la respuesta JSON.
+- Se añadió `latest_visible_date` al bloque `db` del diagnóstico usando la fecha máxima de publicación solo si sigue dentro de la ventana solicitada.
+- Con esto se elimina la referencia a variable inexistente que rompía el endpoint en runtime.
+
+### Decisiones técnicas
+- Se conserva la distinción entre:
+  - `max_data_publicacio`: última fecha existente en base de datos.
+  - `latest_visible_date`: última fecha que sigue siendo visible dentro de la ventana activa.
+- Así el frontend puede diagnosticar correctamente si hay datos históricos almacenados pero ya no visibles.
+
+### Archivos modificados
+- `api/src/routes/reputacio.py`
+- `specs/reputacio/SPEC.md`

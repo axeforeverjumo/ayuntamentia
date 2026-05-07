@@ -492,6 +492,8 @@ def reputacio_diagnostic(partit: str = Query("AC"), dies: int = Query(30)):
     old_articles = cur.fetchone()[0]
     conn.close()
 
+    latest_visible_date = str(max_date) if max_date and max_date >= since.date() else None
+
     feed_status = []
     for feed_cfg in RSS_FEEDS:
         try:
@@ -525,6 +527,7 @@ def reputacio_diagnostic(partit: str = Query("AC"), dies: int = Query(30)):
             "total_articles": total_articles,
             "min_data_publicacio": str(min_date) if min_date else None,
             "max_data_publicacio": str(max_date) if max_date else None,
+            "latest_visible_date": latest_visible_date,
             "old_articles_outside_window": old_articles,
             "latest_articles_for_partit": latest_articles,
         },
