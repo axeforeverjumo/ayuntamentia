@@ -3,6 +3,7 @@
 import { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getSupabaseBrowser } from '@/lib/supabaseBrowser';
+import { visibleRoutes } from '@/lib/navigation';
 
 export default function LoginPage() {
   return (
