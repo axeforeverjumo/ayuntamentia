@@ -7,7 +7,9 @@ import os
 import json
 import hashlib
 import logging
-from datetime import datetime, timedelta
+import time
+from datetime import datetime, timedelta, timezone
+from email.utils import parsedate_to_datetime
 from typing import Optional
 
 import feedparser
@@ -156,6 +158,40 @@ def _get_conn():
     return psycopg2.connect(DATABASE_URL)
 
 
+def _parse_entry_datetime(entry) -> Optional[datetime]:
+    """Normalitza dates RSS a UTC aware evitant timestamps locals/futurs incorrectes."""
+    candidates = [
+        entry.get("published_parsed"),
+        entry.get("updated_parsed"),
+    ]
+    for parsed in candidates:
+        if parsed:
+            try:
+                return datetime.fromtimestamp(time.mktime(parsed), tz=timezone.utc)
+            except Exception:
+                continue
+
+    text_candidates = [
+        entry.get("published"),
+        entry.get("updated"),
+        entry.get("pubDate"),
+    ]
+    for value in text_candidates:
+        if not value:
+            continue
+        try:
+            dt = parsedate_to_datetime(value)
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            else:
+                dt = dt.astimezone(timezone.utc)
+            return dt
+        except Exception:
+            continue
+
+    return None
+
+
 def cleanup_old_articles(days_to_keep: int = 30) -> int:
     """Elimina noticias antiguas fuera de la ventana operativa."""
     _ensure_table()
@@ -228,21 +264,18 @@ def ingest_rss_feeds():
                 title = entry.get("title", "")
                 summary = entry.get("summary", entry.get("description", ""))
                 link = entry.get("link", "")
-                published = entry.get("published_parsed") or entry.get("updated_parsed")
-
                 if not title:
                     continue
 
-                pub_date = None
-                if published:
-                    try:
-                        pub_date = datetime(*published[:6])
-                        # Normalitzar a datetime naive UTC per evitar errors/offsets inconsistents
-                        # entre feeds i comparacions de finestra temporal.
-                        if getattr(pub_date, 'tzinfo', None):
-                            pub_date = pub_date.replace(tzinfo=None)
-                    except Exception:
-                        pub_date = datetime.now()
+                pub_date = _parse_entry_datetime(entry)
+                if pub_date and pub_date > datetime.now(timezone.utc) + timedelta(days=1):
+                    logger.warning(
+                        "Skipping future-dated RSS entry from %s: %s (%s)",
+                        feed_cfg["nom"],
+                        title[:120],
+                        pub_date.isoformat(),
+                    )
+                    continue
 
                 text = f"{title} {summary}"
                 h = hashlib.md5(f"{feed_cfg['nom']}:{link or title}".encode()).hexdigest()
@@ -260,6 +293,7 @@ def ingest_rss_feeds():
                         font = EXCLUDED.font,
                         titol = EXCLUDED.titol,
                         resum = EXCLUDED.resum,
+                        url = COALESCE(EXCLUDED.url, premsa_articles.url),
                         data_publicacio = COALESCE(EXCLUDED.data_publicacio, premsa_articles.data_publicacio),
                         partits = EXCLUDED.partits,
                         sentiment = EXCLUDED.sentiment,

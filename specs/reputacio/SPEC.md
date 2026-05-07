@@ -105,3 +105,43 @@ La causa más probable es **una combinación de falta de contenido nuevo en la t
 - Parseo global de Python con `ast`: OK.
 - Verificación de manifests Odoo: sin módulos Odoo presentes, sin incidencias.
 - Verificación de imports `__init__.py` Odoo: sin módulos Odoo presentes, sin incidencias.
+
+## 2026-04-28 — Corrección de la fuente de datos de noticias en `/reputacio`
+
+### Cambios realizados
+- Se localizó el origen exacto de datos de `/reputacio` en `api/src/routes/reputacio.py`.
+- Se corrigió la normalización de fechas RSS para evitar fechas mal interpretadas y noticias “futuras” que bloqueaban la ventana temporal visible.
+- Se añadió descarte explícito de entradas con `data_publicacio` más de 1 día en el futuro.
+- Se mantuvo la actualización por `UPSERT`, mejorando además la persistencia de `url` en conflictos.
+
+### Archivos modificados
+- `api/src/routes/reputacio.py`
+- `specs/reputacio/SPEC.md`
+
+### Decisiones técnicas
+1. **Fuente real de noticias**
+   - La página `web/src/app/reputacio/page.tsx` consume exclusivamente estos endpoints:
+     - `GET /api/reputacio/stats`
+     - `GET /api/reputacio/sentiment-partit`
+     - `GET /api/reputacio/temes-negatius`
+     - `GET /api/reputacio/diagnostic`
+     - `POST /api/reputacio/ingest`
+   - Todos dependen de la tabla `premsa_articles`, rellenada por `ingest_rss_feeds()` desde `RSS_FEEDS`.
+
+2. **Bug corregido en la integración RSS**
+   - Antes se construía `data_publicacio` con `datetime(*published[:6])`, perdiendo contexto horario/UTC del feed.
+   - Eso podía dejar fechas incoherentes entre fuentes, incluyendo artículos “futuros”, afectando el orden y la ventana de 30 días.
+   - Ahora se usa `_parse_entry_datetime(entry)` con:
+     - `published_parsed` / `updated_parsed` normalizados a `timezone.utc`
+     - fallback con `parsedate_to_datetime()` sobre `published`, `updated` o `pubDate`
+
+3. **Protección frente a datos erróneos del origen**
+   - Si una entrada RSS llega con fecha superior a `now + 1 día`, se descarta y se registra `warning`.
+   - Esto evita que una fecha corrupta congele la “última noticia visible” de la UI.
+
+4. **Persistencia más robusta en conflicto**
+   - En el `ON CONFLICT (hash) DO UPDATE`, ahora también se conserva `url` con `COALESCE(EXCLUDED.url, premsa_articles.url)`.
+
+### Validación funcional esperada
+- Tras una nueva ingesta, si existen noticias recientes en los feeds de origen, deberán entrar con fecha UTC normalizada.
+- La página `/reputacio` debería dejar de quedarse anclada en noticias antiguas/futuras mal fechadas y mostrar elementos posteriores a `2026-04-28` cuando el origen los tenga realmente.
