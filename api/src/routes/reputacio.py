@@ -237,6 +237,10 @@ def ingest_rss_feeds():
                 if published:
                     try:
                         pub_date = datetime(*published[:6])
+                        # Normalitzar a datetime naive UTC per evitar errors/offsets inconsistents
+                        # entre feeds i comparacions de finestra temporal.
+                        if getattr(pub_date, 'tzinfo', None):
+                            pub_date = pub_date.replace(tzinfo=None)
                     except Exception:
                         pub_date = datetime.now()
 
@@ -247,10 +251,20 @@ def ingest_rss_feeds():
                 sentiment, score = _detect_sentiment(title, summary, partits)
 
                 try:
+                    # Si l'article ja existeix, actualitzem data_publicacio/resum/títol/font/sentiment
+                    # per evitar que es quedi una versió antiga (bug de dades "congelades").
                     cur.execute("""
                     INSERT INTO premsa_articles (hash, font, titol, resum, url, data_publicacio, partits, sentiment, sentiment_score)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    ON CONFLICT (hash) DO NOTHING
+                    ON CONFLICT (hash) DO UPDATE SET
+                        font = EXCLUDED.font,
+                        titol = EXCLUDED.titol,
+                        resum = EXCLUDED.resum,
+                        data_publicacio = COALESCE(EXCLUDED.data_publicacio, premsa_articles.data_publicacio),
+                        partits = EXCLUDED.partits,
+                        sentiment = EXCLUDED.sentiment,
+                        sentiment_score = EXCLUDED.sentiment_score,
+                        data_ingesta = NOW()
                     """, (h, feed_cfg["nom"], title, summary[:500] if summary else None,
                           link, pub_date, partits, sentiment, score))
                     if cur.rowcount > 0:
