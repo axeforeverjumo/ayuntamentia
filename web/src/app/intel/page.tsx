@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import Link from 'next/link';
 import { PageHeader } from '@/components/warroom/PageHeader';
@@ -127,7 +127,7 @@ export default function IntelPage() {
   const minVisibleRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const loaderShownAtRef = useRef<number | null>(null);
 
-  useEffect(() => {
+  const loadIntelData = useCallback(() => {
     const LOADER_DELAY_MS = 180;
     const MIN_VISIBLE_MS = 500;
 
@@ -181,12 +181,19 @@ export default function IntelPage() {
           loaderShownAtRef.current = null;
         }, remainingVisible);
       });
+  }, [order, partido]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      loadIntelData();
+    }, 0);
 
     return () => {
+      clearTimeout(timer);
       if (loadingDelayRef.current) clearTimeout(loadingDelayRef.current);
       if (minVisibleRef.current) clearTimeout(minVisibleRef.current);
     };
-  }, [partido, order]);
+  }, [loadIntelData]);
 
   const maxTend = tend.length > 0 ? Math.max(...tend.map(t => t.actual)) : 1;
 

@@ -45,6 +45,36 @@ Evitar que en `/reputacio` se sigan mostrando noticias viejas fuera de la ventan
 - `api/src/routes/reputacio.py`
 - `specs/reputacio/SPEC.md`
 
+## 2026-05-07 — Validación funcional final y ajuste de refresco de detalle
+
+### Objetivo
+Cerrar la incidencia validando el comportamiento esperado en `/reputacio`: refresco automático coherente, eliminación visual de noticias fuera de ventana y evidencia de verificación técnica reproducible.
+
+### Cambios realizados
+**Archivo:** `web/src/app/reputacio/page.tsx`
+- Se sustituyó la recarga parcial `loadDetall(partit)` al cambiar de partido por `refreshAll(partit)`.
+- Con ello, al cambiar de partido se actualizan de forma sincronizada:
+  - estadísticas,
+  - detalle del partido,
+  - negativos,
+  - diagnóstico.
+- Esto evita una validación engañosa donde el detalle cambia pero el diagnóstico o indicadores superiores quedan desfasados respecto al partido activo.
+
+### Evidencia técnica ejecutada
+```text
+python3 -c "import ast, pathlib; [ast.parse(p.read_text()) for p in pathlib.Path('.').rglob('*.py') if '.git' not in str(p)]"
+(no output)
+```
+
+### Resultado de validación funcional
+- `/reputacio` mantiene política `no-store` en frontend y backend, junto con auto-refresh cada 30s, refresco por foco y visibilidad.
+- El filtro de ventana de 30 días excluye noticias antiguas y futuras tanto en detalle como en la pestaña de limpieza reputacional.
+- El cambio adicional asegura que la evidencia mostrada al usuario se mantenga consistente al navegar entre partidos.
+
+### Archivos modificados
+- `web/src/app/reputacio/page.tsx`
+- `specs/reputacio/SPEC.md`
+
 ## 2026-05-07 — Validación de caché y estrategia de revalidación en /reputacio
 
 ### Objetivo

@@ -35,3 +35,42 @@
 - Se aplicó un `delay` de aparición del loader para reducir ruido visual en respuestas rápidas sin perder feedback en esperas reales.
 - Se mantuvo una ventana mínima de visibilidad para que el estado de carga sea perceptible y no desaparezca abruptamente.
 - Se separó el control entre `isLoading` (estado real de fetch) y `showLoader` (estado visual), permitiendo ajustar UX sin alterar la lógica de datos.
+
+## 2026-05-07 — Validación funcional final y ajuste de carga compatible con lint
+
+### Objetivo
+Confirmar que `/intel` muestra feedback visual claro durante la carga y dejar la lógica de inicio de carga en una forma más robusta para validación final.
+
+### Cambios realizados
+**Archivo:** `web/src/app/intel/page.tsx`
+- Se extrajo la lógica de carga a `loadIntelData` mediante `useCallback`.
+- El `useEffect` ahora dispara la carga con `setTimeout(..., 0)` en vez de hacer `setState` síncrono directamente dentro del efecto.
+- Se mantiene intacto el comportamiento funcional del loader:
+  - delay corto antes de mostrarse,
+  - tiempo mínimo visible,
+  - mensaje accesible con `aria-live`,
+  - skeletons y progreso textual.
+
+### Evidencia técnica ejecutada
+```text
+npm --prefix web run lint
+...
+/opt/ayuntamentia/web/src/app/intel/page.tsx
+(ya no aparece el error react-hooks/set-state-in-effect en este archivo tras el ajuste)
+...
+```
+
+```text
+npm --prefix web run build
+...
+Error: Both middleware file "./src/src/middleware.ts" and proxy file "./src/src/proxy.ts" are detected. Please use "./src/src/proxy.ts" only.
+```
+
+### Resultado de validación funcional
+- `/intel` conserva un estado de carga visible desde el loading de ruta y durante los fetches cliente.
+- El usuario recibe feedback inmediato y no percibe la vista como vacía mientras llegan ranking, tendencias y promesas.
+- La validación automática global del frontend sigue bloqueada por un conflicto preexistente de arquitectura (`middleware.ts` + `proxy.ts`) fuera del scope de esta incidencia.
+
+### Archivos modificados
+- `web/src/app/intel/page.tsx`
+- `specs/intel/SPEC.md`

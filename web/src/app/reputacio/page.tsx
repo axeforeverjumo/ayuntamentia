@@ -211,7 +211,7 @@ export default function ReputacioPage() {
   }, []);
 
   useEffect(() => {
-    loadDetall(partit);
+    refreshAll(partit);
   }, [partit]);
 
   useEffect(() => {
