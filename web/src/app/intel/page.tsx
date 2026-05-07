@@ -24,9 +24,86 @@ type Promesa = {
   rechazadas: number; aprobadas: number; municipios_contradictores: string[] | null;
 };
 
+function IntelLoadingPanel() {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 18, marginBottom: 20 }}>
+      <div style={{
+        ...intelSkeletonStyle,
+        padding: '24px',
+        display: 'grid',
+        gridTemplateColumns: '1.2fr .8fr',
+        gap: 20,
+        alignItems: 'center',
+      }}>
+        <div>
+          <div className="pulse-dot" style={{ width: 12, height: 12, borderRadius: 12, background: 'var(--wr-phosphor)', margin: '0 0 14px' }} />
+          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 24, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 8 }}>
+            Carregant intel·ligència…
+          </div>
+          <p style={{ fontSize: 13, color: 'var(--fog)', maxWidth: 520, margin: '0 0 16px' }}>
+            Estem creuant rànquings, tendències i promeses perquè la pàgina no sembli buida mentre arriben les dades.
+          </p>
+          <div style={{ display: 'grid', gap: 10, maxWidth: 420 }}>
+            <div className="skeleton" style={{ height: 12, borderRadius: 999, background: 'rgba(58,125,181,.14)' }} />
+            <div className="skeleton" style={{ height: 12, width: '84%', borderRadius: 999, background: 'rgba(58,125,181,.14)' }} />
+            <div className="skeleton" style={{ height: 12, width: '68%', borderRadius: 999, background: 'rgba(58,125,181,.14)' }} />
+          </div>
+        </div>
+
+        <div style={{
+          border: '1px solid rgba(58,125,181,.25)',
+          background: 'rgba(58,125,181,.05)',
+          padding: '18px 20px',
+        }}>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--wr-phosphor)', letterSpacing: '.12em', textTransform: 'uppercase', marginBottom: 10 }}>
+            Progrés de càrrega
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {['Connectant amb l’API', 'Creuant rànquings i tendències', 'Preparant la vista inicial'].map((step, index) => (
+              <div key={step} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span
+                  className="pulse-dot"
+                  style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: 8,
+                    background: index === 2 ? 'var(--fog)' : 'var(--wr-phosphor)',
+                    animationDelay: `${index * 0.2}s`,
+                  }}
+                />
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: index === 2 ? 'var(--fog)' : 'var(--paper)' }}>
+                  {step}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 12 }}>
+        {[0, 1, 2].map((item) => (
+          <div key={item} className="skeleton" style={{ ...intelSkeletonStyle, height: 118 }} />
+        ))}
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 16 }}>
+        <div className="skeleton" style={{ ...intelSkeletonStyle, height: 280 }} />
+        <div className="skeleton" style={{ ...intelSkeletonStyle, height: 280 }} />
+      </div>
+    </div>
+  );
+}
+
 const intelLoadingShellStyle: CSSProperties = {
   textAlign: 'center',
-  padding: '80px 0',
+  padding: '28px 0 12px',
+};
+
+const intelSkeletonStyle: CSSProperties = {
+  border: '1px solid var(--line)',
+  background: 'var(--ink-2)',
+  position: 'relative',
+  overflow: 'hidden',
 };
 
 const TABS = [
@@ -132,13 +209,7 @@ export default function IntelPage() {
       <div style={{ padding: '20px 26px' }}>
         {isLoading && (
           <div style={intelLoadingShellStyle}>
-            <div className="pulse-dot" style={{ width: 12, height: 12, borderRadius: 12, background: 'var(--wr-phosphor)', margin: '0 auto 14px' }} />
-            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 22, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 8 }}>
-              Carregant intel·ligència…
-            </div>
-            <p style={{ fontSize: 13, color: 'var(--fog)', maxWidth: 420, margin: '0 auto' }}>
-              Estem creuant rànquings, tendències i promeses perquè la pàgina no sembli buida mentre arriben les dades.
-            </p>
+            <IntelLoadingPanel />
           </div>
         )}
 
