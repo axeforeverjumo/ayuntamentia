@@ -13,11 +13,11 @@ export function withQuery(path: string, params: Record<string, string | number |
 }
 
 export function municipiDetailPath(id: string | number): string {
-  return `${visibleRoutes.municipis}/${id}`;
+  return visiblePath(`${visibleRoutes.municipis}/${id}`);
 }
 
 export function regidorDetailPath(id: string | number): string {
-  return `${visibleRoutes.regidors}/${id}`;
+  return visiblePath(`${visibleRoutes.regidors}/${id}`);
 }
 
 export function actaDetailPath(id: string | number): string {
@@ -30,4 +30,8 @@ export function cercaPath(query?: string): string {
 
 export function conversaPath(params?: Record<string, string | number | boolean | undefined | null>): string {
   return withQuery(visibleRoutes.conversa, params || {});
+}
+
+export function espaiDeTreballPath(params?: Record<string, string | number | boolean | undefined | null>): string {
+  return withQuery(visibleRoutes.espaiDeTreball, params || {});
 }

@@ -74,7 +74,7 @@ export default function DashboardPage() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--ink)' }}>
       <PageHeader
-        crumb="Operacions / Dashboard"
+        crumb="Operacions / Tauler"
         title={<>Visió <em style={{ color: 'var(--fog)', fontWeight: 400 }}>executiva.</em></>}
         info={{
           title: 'Dashboard executiu',

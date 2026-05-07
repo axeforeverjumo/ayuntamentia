@@ -1,18 +1,28 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
+import { visibleRoutes } from '@/lib/navigation';
+import { normalitzaRutaVisible } from '@/lib/routeUtils';
 
-const PUBLIC_PATHS = ['/', '/login', '/legal', '/landing'];
+const PUBLIC_PATHS = [visibleRoutes.inici, visibleRoutes.autenticacio, visibleRoutes.legal, visibleRoutes.aterratge];
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
 
   const { pathname } = request.nextUrl;
+  const normalizedPathname = normalitzaRutaVisible(pathname);
+
+  if (normalizedPathname !== pathname) {
+    const redirectUrl = request.nextUrl.clone();
+    redirectUrl.pathname = normalizedPathname;
+    return NextResponse.redirect(redirectUrl);
+  }
+
   const isPublic = PUBLIC_PATHS.some((p) =>
-    p === '/' ? pathname === '/' : pathname.startsWith(p),
+    p === '/' ? normalizedPathname === '/' : normalizedPathname.startsWith(p),
   );
 
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-    return isPublic ? response : NextResponse.redirect(new URL('/', request.url));
+    return isPublic ? response : NextResponse.redirect(new URL(visibleRoutes.inici, request.url));
   }
 
   const supabase = createServerClient(
@@ -35,15 +45,15 @@ export async function proxy(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
 
   // Logged in user on login page → go to dashboard
-  if (user && pathname === '/login') {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
+  if (user && normalizedPathname === visibleRoutes.autenticacio) {
+    return NextResponse.redirect(new URL(visibleRoutes.tauler, request.url));
   }
 
   // Not logged in on private route → login
   if (!user && !isPublic) {
     const url = request.nextUrl.clone();
-    url.pathname = '/login';
-    url.searchParams.set('next', pathname);
+    url.pathname = visibleRoutes.autenticacio;
+    url.searchParams.set('next', normalizedPathname);
     return NextResponse.redirect(url);
   }
 

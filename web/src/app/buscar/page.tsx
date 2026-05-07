@@ -296,7 +296,7 @@ export default function BuscarPage() {
 }
 
 function SearchResultCard({ result }: { result: SearchResult }) {
-  const href = result.tipo === 'municipio' ? `/municipios/${result.id}` : `/actas/${result.id}`;
+  const href = result.tipo === 'municipio' ? municipiDetailPath(result.id) : actaDetailPath(result.id);
   return (
     <Link href={href} style={{
       display: 'block', background: 'var(--bg-surface)', border: '.5px solid var(--border)',

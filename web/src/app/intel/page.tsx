@@ -9,6 +9,7 @@ import { PanelBox } from '@/components/warroom/PanelBox';
 import { StatusLine, StatusBadge } from '@/components/warroom/StatusBadge';
 import { TrendingBar } from '@/components/warroom/AlertFeed';
 import { Gauge } from '@/components/landing/primitives';
+import { conversaPath } from '@/lib/navigation';
 import { traduirTema } from '@/lib/temesCatala';
 
 const API = process.env.NEXT_PUBLIC_API_URL || '';
@@ -434,7 +435,7 @@ export default function IntelPage() {
                       <span style={{ color: 'var(--wr-red-2)' }}>Vulnerabilitat</span> = % de divergents sobre el total de regidors del partit. Un partit pot tenir alineació mitjana alta i 0 divergents alhora: vol dir que tots els regidors es mantenen &ge; 70% de fidelitat.
                     </p>
                   </div>
-                  <Link href="/chat?mode=atacar" style={{
+                  <Link href={conversaPath({ mode: 'atacar' })} style={{
                     display: 'inline-flex', alignItems: 'center', gap: 8,
                     background: 'var(--brand)', color: '#E8F1F9', border: '1px solid var(--brand)',
                     borderRadius: 'var(--r-md)', padding: '10px 16px', fontFamily: 'var(--font-mono)', fontSize: 11,
@@ -501,7 +502,7 @@ export default function IntelPage() {
                           </>
                         )}
 
-                        <Link href={`/chat?mode=atacar&q=${encodeURIComponent(`Analitza les debilitats i contradiccions internes del ${p.name}. Quins regidors no segueixen la línia del partit? On hi ha divergències municipals?`)}`}
+                        <Link href={conversaPath({ mode: 'atacar', q: `Analitza les debilitats i contradiccions internes del ${p.name}. Quins regidors no segueixen la línia del partit? On hi ha divergències municipals?` })}
                           style={{
                             display: 'block', marginTop: 12, padding: '8px 12px',
                             background: 'transparent', border: '1px dashed var(--line)',
