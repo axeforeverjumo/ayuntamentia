@@ -154,7 +154,7 @@ export default function ReputacioPage() {
   const refreshInFlightRef = useRef(false);
 
   const loadStats = () =>
-    fetch(`${API}/api/reputacio/stats?dies=30`)
+    fetch(`${API}/api/reputacio/stats?dies=30`, { cache: 'no-store' })
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         setStats(data);
@@ -164,8 +164,8 @@ export default function ReputacioPage() {
 
   const loadDetall = (selectedPartit: string) =>
     Promise.all([
-      fetch(`${API}/api/reputacio/sentiment-partit?partit=${selectedPartit}&dies=30`).then(r => r.ok ? r.json() : null).catch(() => null),
-      fetch(`${API}/api/reputacio/temes-negatius?partit=${selectedPartit}&dies=30`).then(r => r.ok ? r.json() : null).catch(() => null),
+      fetch(`${API}/api/reputacio/sentiment-partit?partit=${selectedPartit}&dies=30`, { cache: 'no-store' }).then(r => r.ok ? r.json() : null).catch(() => null),
+      fetch(`${API}/api/reputacio/temes-negatius?partit=${selectedPartit}&dies=30`, { cache: 'no-store' }).then(r => r.ok ? r.json() : null).catch(() => null),
     ]).then(([detallData, negatiusData]) => {
       setDetall(detallData);
       setNegatius(negatiusData?.articles || []);
@@ -173,7 +173,7 @@ export default function ReputacioPage() {
     });
 
   const loadDiagnostic = (selectedPartit: string) =>
-    fetch(`${API}/api/reputacio/diagnostic?partit=${selectedPartit}&dies=30`)
+    fetch(`${API}/api/reputacio/diagnostic?partit=${selectedPartit}&dies=30`, { cache: 'no-store' })
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         setDiagnostic(data);
@@ -212,10 +212,28 @@ export default function ReputacioPage() {
   }, [partit]);
 
   useEffect(() => {
+    const handleFocus = () => {
+      refreshAll(partit);
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        refreshAll(partit);
+      }
+    };
+
     const interval = window.setInterval(() => {
       refreshAll(partit);
     }, 30000);
-    return () => window.clearInterval(interval);
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [partit]);
 
   const latestVisibleArticleDate = useMemo(() => {
