@@ -8,7 +8,7 @@ import json
 import hashlib
 import logging
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, date
 from email.utils import parsedate_to_datetime
 from typing import Optional
 
@@ -156,6 +156,26 @@ def _detect_sentiment(title: str, summary: str = "", partits: Optional[list[str]
 
 def _get_conn():
     return psycopg2.connect(DATABASE_URL)
+
+
+def _parse_iso_date(value: Optional[str]) -> Optional[date]:
+    if not value:
+        return None
+    text = str(value).strip()
+    if not text:
+        return None
+    try:
+        return date.fromisoformat(text[:10])
+    except Exception:
+        return None
+
+
+def _article_within_window(article_date: Optional[str], days: int) -> bool:
+    parsed = _parse_iso_date(article_date)
+    if not parsed:
+        return False
+    today = datetime.now(timezone.utc).date()
+    return parsed >= (today - timedelta(days=days))
 
 
 def _parse_entry_datetime(entry) -> Optional[datetime]:

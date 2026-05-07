@@ -236,14 +236,33 @@ export default function ReputacioPage() {
     };
   }, [partit]);
 
+  const withinWindow = (dateText?: string | null, days: number = 30) => {
+    if (!dateText) return false;
+    const parsed = new Date(`${dateText}T00:00:00Z`);
+    if (Number.isNaN(parsed.getTime())) return false;
+    const now = new Date();
+    const cutoff = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    cutoff.setUTCDate(cutoff.getUTCDate() - days);
+    return parsed >= cutoff;
+  };
+
+  const filteredArticles = useMemo(() => {
+    const articles = (detall?.articles || []).filter((article: any) => withinWindow(article?.data, 30));
+    return articles;
+  }, [detall]);
+
+  const filteredNegatius = useMemo(() => {
+    return (negatius || []).filter((article: any) => withinWindow(article?.data, 30));
+  }, [negatius]);
+
   const latestVisibleArticleDate = useMemo(() => {
     const candidates = [
-      ...(detall?.articles || []).map((article: any) => article?.data).filter(Boolean),
-      ...(negatius || []).map((article: any) => article?.data).filter(Boolean),
+      ...filteredArticles.map((article: any) => article?.data).filter(Boolean),
+      ...filteredNegatius.map((article: any) => article?.data).filter(Boolean),
     ] as string[];
     if (!candidates.length) return null;
     return candidates.sort().at(-1) || null;
-  }, [detall, negatius]);
+  }, [filteredArticles, filteredNegatius]);
 
   const articleAgeLabel = useMemo(() => {
     if (!latestVisibleArticleDate) return null;
@@ -509,7 +528,7 @@ export default function ReputacioPage() {
                 </div>
 
                 {/* Articles */}
-                <PanelBox title={`Últims articles · ${partit}`} subtitle={`${detall.articles?.length || 0} recents`} tone="amber">
+                <PanelBox title={`Últims articles · ${partit}`} subtitle={`${filteredArticles.length || 0} recents`} tone="amber">
                   {detall.articles?.length > 0 ? (
                     <div>
                       <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
@@ -530,7 +549,7 @@ export default function ReputacioPage() {
                           );
                         })}
                       </div>
-                      {detall.articles
+                      {filteredArticles
                         .filter((a: any) => sentimentFilter === 'tots' || a.sentiment === sentimentFilter)
                         .map((a: any, i: number) => (
                           <ArticleCard key={i} article={a} partit={partit} />
@@ -575,7 +594,7 @@ export default function ReputacioPage() {
                 }}>
                   <div style={{ textAlign: 'center' }}>
                     <div style={{ fontFamily: 'var(--font-sans)', fontSize: 36, fontWeight: 700, color: '#C0392B', lineHeight: 1 }}>
-                      {negatius.length}
+                      {filteredNegatius.length}
                     </div>
                     <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--fog)', letterSpacing: '.1em', textTransform: 'uppercase', marginTop: 4 }}>negatius</div>
                   </div>
@@ -584,9 +603,9 @@ export default function ReputacioPage() {
             </div>
 
             {/* Articles negatius */}
-            {negatius.length > 0 ? (
+            {filteredNegatius.length > 0 ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {negatius.map((a, i) => (
+                {filteredNegatius.map((a, i) => (
                   <div key={i} style={{
                     background: 'rgba(212,58,31,.03)', border: '1px solid rgba(212,58,31,.2)',
                     borderLeft: '3px solid var(--wr-red-2)', padding: '16px 20px',

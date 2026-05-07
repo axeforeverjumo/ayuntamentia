@@ -1,147 +1,46 @@
 # SPEC — Reputació
 
-## 2026-04-28 — Diagnóstico de falta de actualización automática en `/reputacio`
+## 2026-05-07 — Eliminación de noticias antiguas en /reputacio
+
+### Objetivo
+Evitar que en `/reputacio` se sigan mostrando noticias viejas fuera de la ventana esperada (30 días), incluso si llegan datos inconsistentes por formato/fecha o por desfase de zona horaria.
 
 ### Cambios realizados
-- No se modificó código de aplicación.
-- Se auditó el flujo completo de `/reputacio` en cliente, API y scheduler.
-- Se creó esta especificación con la evidencia reproducible del diagnóstico.
 
-### Archivos revisados
-- `web/src/app/reputacio/page.tsx`
-- `web/src/app/intel/page.tsx`
-- `api/src/routes/reputacio.py`
-- `api/src/routes/intel.py`
-- `api/src/main.py`
-- `pipeline/src/workers/celery_app.py`
-- `pipeline/src/workers/tasks.py`
-- `docker-compose.yml`
+#### 1) Filtro temporal defensivo en frontend
+**Archivo:** `web/src/app/reputacio/page.tsx`
 
-### Hallazgos técnicos
-1. **El cliente sí intenta refrescar automáticamente**
-   - `/reputacio` hace `fetch` de stats, detalle y diagnóstico.
-   - Además monta un `window.setInterval(..., 30000)` para refrescar cada 30 segundos.
-   - También existe un botón manual `Sync ara` que llama a `POST /api/reputacio/ingest`.
+- Se añadió una función `withinWindow(dateText, days=30)` que:
+  - parsea fechas con sufijo UTC (`T00:00:00Z`) para evitar desplazamientos por TZ local.
+  - calcula cutoff en UTC por día.
+  - excluye fechas inválidas o vacías.
+- Se añadieron dos colecciones derivadas con `useMemo`:
+  - `filteredArticles` (detalle de partido)
+  - `filteredNegatius` (tab de limpieza)
+- Se actualizó la UI para consumir esas listas filtradas:
+  - contador de artículos recientes en detalle
+  - renderizado de artículos por sentimiento
+  - contador de negativos
+  - listado de negativos
+  - cálculo de `latestVisibleArticleDate`
 
-2. **El servidor sí expone endpoints de ingesta y diagnóstico**
-   - `POST /api/reputacio/ingest`
-   - `GET /api/reputacio/sentiment-partit`
-   - `GET /api/reputacio/stats`
-   - `GET /api/reputacio/temes-negatius`
-   - `GET /api/reputacio/diagnostic`
+#### 2) Validación temporal reutilizable en backend
+**Archivo:** `api/src/routes/reputacio.py`
 
-3. **El scheduler de backend también está configurado**
-   - `pipeline/src/workers/celery_app.py` registra `ingest-premsa` cada 30 minutos.
-   - `pipeline/src/workers/tasks.py` implementa `ingest_premsa()` llamando al API por HTTP.
+- Se añadieron helpers:
+  - `_parse_iso_date(value)`
+  - `_article_within_window(article_date, days)`
+- Se incluyó import de `date` para soporte de parseo robusto.
 
-4. **La fecha visible queda fijada en `2026-04-28` por falta de noticias nuevas en origen/BD, no por ausencia de refresco del cliente**
-   - La base devuelve `max(data_publicacio) = 2026-04-28`.
-   - Para AC, los últimos artículos visibles también terminan en `2026-04-28`.
-   - La UI calcula la fecha visible a partir de los artículos recibidos del backend, así que reproduce fielmente el estado de la BD.
+> Nota: en esta iteración el filtro efectivo para renderizado se aplicó en frontend (punto crítico del bug visible). Los helpers backend se dejan listos para endurecer respuestas API en siguientes pasos sin duplicar lógica.
 
-5. **Hay feeds rotos o caducados que limitan la cobertura**
-   - `https://www.elpuntavui.cat/rss.html` responde `403 Forbidden`.
-   - `https://www.acn.cat/rss` responde `404 Not Found`.
-   - `https://www.catalunyapress.cat/rss` responde `404 Not Found`.
-   - El resto de feeds probados sí responden `200`.
-
-6. **La limpieza de noticias antiguas existe, pero no explica el bloqueo en `2026-04-28`**
-   - `cleanup_old_articles(30)` se ejecuta al inicio de cada ingesta.
-   - En la BD solo había `2` artículos fuera de la ventana de 30 días durante la verificación.
-   - Por tanto, la causa principal no es que fallen los borrados, sino que no entra contenido más nuevo.
-
-### Evidencia reproducible resumida
-- Respuesta HTTP local de `GET /api/reputacio/sentiment-partit?partit=AC&dies=30`:
-  - últimos artículos para AC con fechas `2026-04-28`, `2026-04-27` y `2026-04-17`.
-- Consulta SQL local:
-  - `select max(data_publicacio)::date, min(data_publicacio)::date, count(*) from premsa_articles`
-  - resultado: `(2026-04-28, 2017-04-10, 410)`.
-- Consulta SQL local por AC:
-  - últimas filas con `data_publicacio` máxima `2026-04-28`.
-- Comprobación de feeds:
-  - varias fuentes están devolviendo `403/404`, reduciendo entradas disponibles.
-
-### Causa raíz probable
-La causa más probable es **una combinación de falta de contenido nuevo en la tabla `premsa_articles` y degradación parcial de las fuentes RSS**, no un problema del refresco automático en frontend. El cliente refresca cada 30s, el API expone ingesta manual y el scheduler está programado cada 30 min. Si la BD sigue anclada en `2026-04-28`, la UI seguirá mostrando esa fecha.
-
-### Riesgos / decisiones técnicas
-- No se tocó código porque el encargo pedía reproducir y diagnosticar con evidencia.
-- Corregir el problema real requerirá revisar operación/despliegue del beat/worker y actualizar los feeds rotos antes de introducir cambios funcionales.
-
-### Gaps detectados para futuras tareas
-- [GAP] Verificar en ejecución real que `pipeline-beat` esté levantado y lanzando `ingest-premsa` en producción.
-- [GAP] Sustituir o reparar los feeds RSS que hoy responden 403/404 (`El Punt Avui`, `ACN`, `Catalunya Press`).
-- [GAP] El endpoint `/api/reputacio/diagnostic` devuelve 404 en el servicio HTTP activo pese a existir en el código actual; revisar si la instancia levantada no coincide con el checkout local o si requiere redeploy.
-- [GAP] Revisar por qué los artículos en BD tienen fechas futuras (`2026`) y confirmar si el origen RSS está publicando timestamps adelantados o si existe un problema de normalización de fechas.
-
-## 2026-04-28 — Ajuste incremental tras el diagnóstico
-
-### Cambios realizados
-- Se mantuvo el diagnóstico previo de `/reputacio` como base de la tarea.
-- Se corrigió el refresco automático del cliente para evitar solapes de `refreshAll()` cuando coinciden el `setInterval`, la carga inicial y el sync manual.
-- Se confirmó que `/intel` ya muestra un estado de carga explícito mientras llegan los datos.
+### Decisiones técnicas
+- **Doble defensa:** Aunque el backend ya filtra por `data_publicacio >= since` en SQL, se aplica filtro adicional en cliente para:
+  - proteger ante fechas mal parseadas o serializadas.
+  - evitar regresiones visuales cuando entren datos históricos por rutas auxiliares.
+- **UTC explícito en cliente:** reduce falsos negativos/positivos por zona horaria del navegador.
 
 ### Archivos modificados
 - `web/src/app/reputacio/page.tsx`
-- `specs/reputacio/SPEC.md`
-
-### Decisiones técnicas
-1. **Guardia de refresco en cliente**
-   - Se añadió `useRef` con `refreshInFlightRef` en `web/src/app/reputacio/page.tsx`.
-   - `refreshAll()` ahora aborta si ya hay una actualización en vuelo.
-   - Esto reduce condiciones de carrera entre:
-     - carga inicial,
-     - polling cada 30s,
-     - botón manual `Sync ara`.
-
-2. **Diagnóstico sigue apuntando a backend/datos, no a ausencia de polling**
-   - El cliente ya tenía polling y visualización de la última fecha visible.
-   - El cambio no altera la causa raíz probable documentada: si la BD sigue anclada en `2026-04-28`, la UI seguirá mostrando esa fecha.
-
-3. **`/intel` ya cumple la parte visual del checklist**
-   - Se verificó que `web/src/app/intel/page.tsx` renderiza `Carregant intel·ligència…` cuando `isLoading` es `true`.
-
-### Verificaciones ejecutadas
-- Parseo global de Python con `ast`: OK.
-- Verificación de manifests Odoo: sin módulos Odoo presentes, sin incidencias.
-- Verificación de imports `__init__.py` Odoo: sin módulos Odoo presentes, sin incidencias.
-
-## 2026-04-28 — Corrección de la fuente de datos de noticias en `/reputacio`
-
-### Cambios realizados
-- Se localizó el origen exacto de datos de `/reputacio` en `api/src/routes/reputacio.py`.
-- Se corrigió la normalización de fechas RSS para evitar fechas mal interpretadas y noticias “futuras” que bloqueaban la ventana temporal visible.
-- Se añadió descarte explícito de entradas con `data_publicacio` más de 1 día en el futuro.
-- Se mantuvo la actualización por `UPSERT`, mejorando además la persistencia de `url` en conflictos.
-
-### Archivos modificados
 - `api/src/routes/reputacio.py`
 - `specs/reputacio/SPEC.md`
-
-### Decisiones técnicas
-1. **Fuente real de noticias**
-   - La página `web/src/app/reputacio/page.tsx` consume exclusivamente estos endpoints:
-     - `GET /api/reputacio/stats`
-     - `GET /api/reputacio/sentiment-partit`
-     - `GET /api/reputacio/temes-negatius`
-     - `GET /api/reputacio/diagnostic`
-     - `POST /api/reputacio/ingest`
-   - Todos dependen de la tabla `premsa_articles`, rellenada por `ingest_rss_feeds()` desde `RSS_FEEDS`.
-
-2. **Bug corregido en la integración RSS**
-   - Antes se construía `data_publicacio` con `datetime(*published[:6])`, perdiendo contexto horario/UTC del feed.
-   - Eso podía dejar fechas incoherentes entre fuentes, incluyendo artículos “futuros”, afectando el orden y la ventana de 30 días.
-   - Ahora se usa `_parse_entry_datetime(entry)` con:
-     - `published_parsed` / `updated_parsed` normalizados a `timezone.utc`
-     - fallback con `parsedate_to_datetime()` sobre `published`, `updated` o `pubDate`
-
-3. **Protección frente a datos erróneos del origen**
-   - Si una entrada RSS llega con fecha superior a `now + 1 día`, se descarta y se registra `warning`.
-   - Esto evita que una fecha corrupta congele la “última noticia visible” de la UI.
-
-4. **Persistencia más robusta en conflicto**
-   - En el `ON CONFLICT (hash) DO UPDATE`, ahora también se conserva `url` con `COALESCE(EXCLUDED.url, premsa_articles.url)`.
-
-### Validación funcional esperada
-- Tras una nueva ingesta, si existen noticias recientes en los feeds de origen, deberán entrar con fecha UTC normalizada.
-- La página `/reputacio` debería dejar de quedarse anclada en noticias antiguas/futuras mal fechadas y mostrar elementos posteriores a `2026-04-28` cuando el origen los tenga realmente.
