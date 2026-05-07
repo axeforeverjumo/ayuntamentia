@@ -45,6 +45,83 @@ Evitar que en `/reputacio` se sigan mostrando noticias viejas fuera de la ventan
 - `api/src/routes/reputacio.py`
 - `specs/reputacio/SPEC.md`
 
+## 2026-05-07 — Validación de caché y estrategia de revalidación en /reputacio
+
+### Objetivo
+Evitar que `/reputacio` o sus endpoints queden congelados por caché de navegador, CDN o capas intermedias, mostrando noticias antiguas más tiempo del esperado.
+
+### Cambios realizados
+**Archivo:** `api/src/routes/reputacio.py`
+- Se añadió el helper `_set_no_store_headers(response)`.
+- Se aplicó en todos los endpoints del área `/api/reputacio`:
+  - `GET /stats`
+  - `GET /sentiment-partit`
+  - `GET /temes-negatius`
+  - `POST /ingest`
+  - `GET /diagnostic`
+  - `POST /reclassify`
+- Los headers enviados ahora fuerzan no cachear en navegador ni CDN:
+  - `Cache-Control: no-store, no-cache, must-revalidate, max-age=0, s-maxage=0`
+  - `Pragma: no-cache`
+  - `Expires: 0`
+  - `CDN-Cache-Control: no-store`
+  - `Surrogate-Control: no-store`
+  - `Vercel-CDN-Cache-Control: no-store`
+
+**Archivo:** `web/src/app/reputacio/page.tsx`
+- Se añadió `export const dynamic = 'force-dynamic';` al entrypoint de la ruta.
+- Aunque la página es client component y ya usa `fetch(..., { cache: 'no-store' })`, esta marca deja explícito que la ruta no debe tratarse como contenido estático ni ISR por parte de Next.
+
+### Decisiones técnicas
+- Se aplica una política de **no-store** en dos capas:
+  - **Frontend/Next** para impedir congelación por render estático o heurísticas de caché de la ruta.
+  - **Backend/FastAPI** para impedir caché HTTP en navegador, proxy reverso o CDN.
+- Se evita introducir TTL cortos o revalidación temporal porque el problema reportado era de “congelación”; para este caso, `no-store` es la política más segura.
+- Se mantiene el refresco cliente cada 30 segundos y el sync manual ya existente como estrategia activa de actualización.
+
+### Verificación ejecutada
+Evidencia obtenida revisando el código activo:
+
+```text
+== web/src/app/reputacio/page.tsx ==
+3: export const dynamic = 'force-dynamic';
+160:     fetch(`${API}/api/reputacio/stats?dies=30`, { cache: 'no-store' })
+170:       fetch(`${API}/api/reputacio/sentiment-partit?partit=${selectedPartit}&dies=30`, { cache: 'no-store' }).then(r => r.ok ? r.json() : null).catch(() => null),
+171:       fetch(`${API}/api/reputacio/temes-negatius?partit=${selectedPartit}&dies=30`, { cache: 'no-store' }).then(r => r.ok ? r.json() : null).catch(() => null),
+179:     fetch(`${API}/api/reputacio/diagnostic?partit=${selectedPartit}&dies=30`, { cache: 'no-store' })
+289:       const response = await fetch(`${API}/api/reputacio/ingest`, {
+290:         method: 'POST',
+291:         cache: 'no-store',
+292:       });
+
+== api/src/routes/reputacio.py ==
+162:     response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0, s-maxage=0"
+163:     response.headers["Pragma"] = "no-cache"
+164:     response.headers["Expires"] = "0"
+165:     response.headers["CDN-Cache-Control"] = "no-store"
+166:     response.headers["Surrogate-Control"] = "no-store"
+167:     response.headers["Vercel-CDN-Cache-Control"] = "no-store"
+```
+
+Chequeo puntual adicional:
+
+```text
+force-dynamic: True
+no-store fetch count: 5
+ingest POST no-store explicit: True
+```
+
+Conclusión de la validación:
+- **Página `/reputacio`**: marcada como dinámica en Next con `force-dynamic`, evitando tratamiento estático/ISR.
+- **Fetches del cliente**: todos los accesos a `/api/reputacio/*` usan `cache: 'no-store'`, incluido el `POST /ingest`.
+- **Endpoints FastAPI**: todos los endpoints del área devuelven headers explícitos `no-store` para navegador y CDN.
+- **Nginx**: no hay configuración de Nginx versionada en este repo que sobrescriba estos headers, así que dentro del alcance del repositorio no queda ninguna política adicional detectada que congele esta ruta.
+
+### Archivos modificados
+- `api/src/routes/reputacio.py`
+- `web/src/app/reputacio/page.tsx`
+- `specs/reputacio/SPEC.md`
+
 ## 2026-05-07 — Corrección runtime en diagnóstico de /reputacio
 
 ### Objetivo

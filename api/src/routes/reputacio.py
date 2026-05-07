@@ -14,7 +14,7 @@ from typing import Optional
 
 import feedparser
 import psycopg2
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Response
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/reputacio", tags=["reputacio"])
@@ -156,6 +156,15 @@ def _detect_sentiment(title: str, summary: str = "", partits: Optional[list[str]
 
 def _get_conn():
     return psycopg2.connect(DATABASE_URL)
+
+
+def _set_no_store_headers(response: Response) -> None:
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0, s-maxage=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    response.headers["CDN-Cache-Control"] = "no-store"
+    response.headers["Surrogate-Control"] = "no-store"
+    response.headers["Vercel-CDN-Cache-Control"] = "no-store"
 
 
 def _parse_iso_date(value: Optional[str]) -> Optional[date]:
@@ -349,7 +358,8 @@ def ingest_rss_feeds():
 # ── API Endpoints ──
 
 @router.get("/stats")
-def reputacio_stats(dies: int = Query(30)):
+def reputacio_stats(response: Response, dies: int = Query(30)):
+    _set_no_store_headers(response)
     conn = _get_conn()
     cur = conn.cursor()
     _ensure_table()
@@ -394,7 +404,8 @@ def reputacio_stats(dies: int = Query(30)):
 
 
 @router.get("/sentiment-partit")
-def sentiment_per_partit(partit: str = Query("AC"), dies: int = Query(30)):
+def sentiment_per_partit(response: Response, partit: str = Query("AC"), dies: int = Query(30)):
+    _set_no_store_headers(response)
     conn = _get_conn()
     cur = conn.cursor()
     _ensure_table()
@@ -440,7 +451,8 @@ def sentiment_per_partit(partit: str = Query("AC"), dies: int = Query(30)):
 
 
 @router.get("/temes-negatius")
-def temes_negatius(partit: str = Query("AC"), dies: int = Query(30)):
+def temes_negatius(response: Response, partit: str = Query("AC"), dies: int = Query(30)):
+    _set_no_store_headers(response)
     """Temes on el partit té mala premsa — candidats per 'neteja'."""
     conn = _get_conn()
     cur = conn.cursor()
@@ -460,14 +472,16 @@ def temes_negatius(partit: str = Query("AC"), dies: int = Query(30)):
 
 
 @router.post("/ingest")
-def trigger_ingest():
+def trigger_ingest(response: Response):
+    _set_no_store_headers(response)
     """Manual trigger for RSS ingestion."""
     n = ingest_rss_feeds()
     return {"ok": True, "nous_articles": n}
 
 
 @router.get("/diagnostic")
-def reputacio_diagnostic(partit: str = Query("AC"), dies: int = Query(30)):
+def reputacio_diagnostic(response: Response, partit: str = Query("AC"), dies: int = Query(30)):
+    _set_no_store_headers(response)
     """Diagnóstico reproducible del estado del feed y refresco."""
     _ensure_table()
     conn = _get_conn()
@@ -551,11 +565,13 @@ def reputacio_diagnostic(partit: str = Query("AC"), dies: int = Query(30)):
 
 @router.post("/reclassify")
 def reclassify_articles(
+    response: Response,
     dies: int = Query(60, description="Reclassifica articles dels últims N dies"),
     nomes_ac: bool = Query(True, description="Només articles que mencionen AC"),
     limit: int = Query(500),
 ):
     """Reclassifica el sentiment d'articles existents amb el LLM (perspectiva AC)."""
+    _set_no_store_headers(response)
     _ensure_table()
     conn = _get_conn()
     cur = conn.cursor()

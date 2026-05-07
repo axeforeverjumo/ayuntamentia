@@ -1,5 +1,7 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { PageHeader } from '@/components/warroom/PageHeader';
@@ -284,7 +286,10 @@ export default function ReputacioPage() {
     setIsSyncing(true);
     setDiagnosticError(null);
     try {
-      const response = await fetch(`${API}/api/reputacio/ingest`, { method: 'POST' });
+      const response = await fetch(`${API}/api/reputacio/ingest`, {
+        method: 'POST',
+        cache: 'no-store',
+      });
       if (!response.ok) {
         throw new Error(`sync_failed_${response.status}`);
       }
