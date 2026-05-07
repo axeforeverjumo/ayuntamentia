@@ -9,6 +9,7 @@ import { PanelBox } from '@/components/warroom/PanelBox';
 import { StatusLine, StatusBadge } from '@/components/warroom/StatusBadge';
 import { AlertFeed, TrendingBar } from '@/components/warroom/AlertFeed';
 import { traduirTema } from '@/lib/temesCatala';
+import { actaDetailPath, conversaPath, visibleRoutes } from '@/lib/navigation';
 const API = process.env.NEXT_PUBLIC_API_URL || '';
 
 const MapaCatalunyaLeaflet = dynamic(
@@ -168,7 +169,7 @@ export default function DashboardPage() {
             {actividad.length > 0 ? (
               <div>
                 {actividad.slice(0, 6).map((acta: any, i: number) => (
-                  <Link key={i} href={`/actas/${acta.id}`} style={{
+                  <Link key={i} href={actaDetailPath(acta.id)} style={{
                     display: 'grid', gridTemplateColumns: '1fr auto',
                     gap: 10, padding: '10px 0',
                     borderBottom: i < 5 ? '1px dashed var(--line-soft)' : 'none',
@@ -225,7 +226,7 @@ export default function DashboardPage() {
                 'Dossier contradiccions PP',
                 'Speech pel ple de Vic',
               ].map((q, i) => (
-                <Link key={i} href={`/chat?q=${encodeURIComponent(q)}`} style={{
+                <Link key={i} href={conversaPath({ q })} style={{
                   padding: '6px 12px', textDecoration: 'none', borderRadius: 'var(--r-full)',
                   background: 'var(--bg-elevated)', border: '.5px solid var(--border)',
                   color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', fontSize: 12,
@@ -235,7 +236,7 @@ export default function DashboardPage() {
               ))}
             </div>
           </div>
-          <Link href="/chat" style={{
+          <Link href={visibleRoutes.conversa} style={{
             display: 'inline-flex', alignItems: 'center', gap: 8,
             background: 'var(--brand)', color: '#E8F1F9', border: '1px solid var(--brand)',
             padding: '14px 24px', fontFamily: 'var(--font-mono)', fontSize: 13,

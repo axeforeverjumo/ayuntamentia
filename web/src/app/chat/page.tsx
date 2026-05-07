@@ -14,6 +14,7 @@ import type { WorkspaceMode } from '@/lib/workspaceStorage';
 import { PageHeader } from '@/components/warroom/PageHeader';
 import { StatusBadge, LiveDot, StatusLine } from '@/components/warroom/StatusBadge';
 import { Gauge } from '@/components/landing/primitives';
+import { visibleRoutes, conversaPath } from '@/lib/navigation';
 
 const MODES = [
   { id: 'monitor', label: 'Monitor', color: 'var(--wr-phosphor)', hint: 'Què es diu de...', icon: '◉' },
@@ -160,7 +161,7 @@ function ChatPageInner() {
     sendMessage(q);
     // Clean the URL so a refresh doesn't re-trigger.
     if (typeof window !== 'undefined') {
-      window.history.replaceState({}, '', '/chat');
+      window.history.replaceState({}, '', visibleRoutes.conversa);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
@@ -246,7 +247,7 @@ function ChatPageInner() {
               </button>
             );
           })}
-          <Link href="/chat/workspace" style={{
+          <Link href={visibleRoutes.espaiDeTreball} style={{
             marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6,
             padding: '7px 11px', border: '1px solid var(--line)', color: 'var(--bone)',
             fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '.06em',

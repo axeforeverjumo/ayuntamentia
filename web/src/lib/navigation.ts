@@ -1,6 +1,6 @@
-import { ROUTE_PATHS } from './routes';
+import { VISIBLE_ROUTES, visiblePath } from './visibleRoutes';
 
-export const visibleRoutes = ROUTE_PATHS;
+export const visibleRoutes = VISIBLE_ROUTES;
 
 export function withQuery(path: string, params: Record<string, string | number | boolean | undefined | null>): string {
   const search = new URLSearchParams();
@@ -21,7 +21,7 @@ export function regidorDetailPath(id: string | number): string {
 }
 
 export function actaDetailPath(id: string | number): string {
-  return `/actas/${id}`;
+  return visiblePath(`/actes/${id}`);
 }
 
 export function cercaPath(query?: string): string {

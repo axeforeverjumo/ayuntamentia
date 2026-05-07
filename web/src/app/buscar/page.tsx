@@ -10,6 +10,7 @@ import { SearchInput } from '@/components/ui/SearchInput';
 import { apiClient } from '@/lib/ApiClient';
 import type { SearchResponse, SearchResult } from '@/lib/types';
 import { formatDate } from '@/lib/utils';
+import { actaDetailPath, municipiDetailPath } from '@/lib/navigation';
 
 const RESULTS_PER_PAGE = 10;
 

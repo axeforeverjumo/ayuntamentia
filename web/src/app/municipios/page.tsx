@@ -17,6 +17,7 @@ import {
 import { SearchInput } from '@/components/ui/SearchInput';
 import { apiClient } from '@/lib/ApiClient';
 import type { Municipio } from '@/lib/types';
+import { municipiDetailPath } from '@/lib/navigation';
 
 const PROVINCIAS = ['Totes', 'Barcelona', 'Girona', 'Lleida', 'Tarragona'];
 
@@ -196,7 +197,7 @@ export default function MunicipiosPage() {
 function MunicipioCard({ municipio }: { municipio: Municipio }) {
   return (
     <Link
-      href={`/municipios/${municipio.id}`}
+      href={municipiDetailPath(municipio.id)}
       style={{
         display: 'block', background: 'var(--bg-surface)', border: '.5px solid var(--border)',
         borderRadius: 'var(--r-lg)', padding: 16, textDecoration: 'none', transition: 'border-color .15s',

@@ -39,7 +39,7 @@ const navItems: NavItem[] = [
   { href: visibleRoutes.municipis, label: 'Municipis', icon: MapPin, hint: '947 municipis' },
   { href: visibleRoutes.regidors, label: 'Regidors', icon: Users, hint: 'Alineació i perfils' },
   { href: visibleRoutes.reputacio, label: 'Reputació', icon: Radar, hint: 'Premsa · sentiment' },
-  { href: visibleRoutes.inteligencia, label: 'Intel·ligència', icon: ShieldCheck, hint: 'Estratègia' },
+  { href: visibleRoutes.intelLigencia, label: 'Intel·ligència', icon: ShieldCheck, hint: 'Estratègia' },
   { href: visibleRoutes.parlament, label: 'Parlament', icon: Building2, hint: 'DSPC · sessions' },
   { href: visibleRoutes.informes, label: 'Informes', icon: FileText, hint: 'Biblioteca + briefs' },
 ];

@@ -10,6 +10,7 @@ import {
 import { ContextualChat } from "@/components/ui/ContextualChat";
 import { PanelBox } from "@/components/warroom/PanelBox";
 import { StatusBadge } from "@/components/warroom/StatusBadge";
+import { actaDetailPath, visibleRoutes } from "@/lib/navigation";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "";
 
@@ -46,7 +47,7 @@ export default function MunicipioDetailPage() {
   if (error || !data) {
     return (
       <div style={{ padding: 24 }}>
-        <Link href="/municipios" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-meta)', textDecoration: 'none', marginBottom: 24 }}>
+        <Link href={visibleRoutes.municipis} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-meta)', textDecoration: 'none', marginBottom: 24 }}>
           <ChevronLeft style={{ width: 14, height: 14 }} /> Municipis
         </Link>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '80px 0', background: 'var(--bg-surface)', border: '.5px solid var(--border)', borderRadius: 'var(--r-lg)' }}>
@@ -66,7 +67,7 @@ export default function MunicipioDetailPage() {
 
   return (
     <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <Link href="/municipios" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-meta)', textDecoration: 'none' }}>
+      <Link href={visibleRoutes.municipis} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-meta)', textDecoration: 'none' }}>
         <ChevronLeft style={{ width: 14, height: 14 }} /> Municipis
       </Link>
 
@@ -140,7 +141,7 @@ export default function MunicipioDetailPage() {
                 <p style={{ fontSize: 13, color: 'var(--text-meta)', textAlign: 'center', padding: '32px 20px', margin: 0 }}>Sense plens processats</p>
               ) : (
                 plenos.map((p: any) => (
-                  <Link key={p.id} href={`/actas/${p.id}`}
+                  <Link key={p.id} href={actaDetailPath(p.id)}
                     style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 20px', borderBottom: '.5px solid var(--border)', textDecoration: 'none', transition: 'background .15s' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <Calendar style={{ width: 14, height: 14, color: 'var(--text-meta)' }} />
