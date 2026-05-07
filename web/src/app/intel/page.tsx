@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import type { CSSProperties } from 'react';
 import Link from 'next/link';
 import { PageHeader } from '@/components/warroom/PageHeader';
 import { KPICard, KPIGrid } from '@/components/warroom/KPICard';
@@ -22,6 +23,11 @@ type Promesa = {
   rechazadas: number; aprobadas: number; municipios_contradictores: string[] | null;
 };
 
+const intelLoadingShellStyle: CSSProperties = {
+  textAlign: 'center',
+  padding: '80px 0',
+};
+
 const TABS = [
   { id: 'ranking', label: 'Rànquing intern', color: 'var(--wr-phosphor)' },
   { id: 'tendencies', label: 'Tendències', color: 'var(--wr-amber)' },
@@ -36,13 +42,24 @@ export default function IntelPage() {
   const [prom, setProm] = useState<Promesa[]>([]);
   const [partido, setPartido] = useState('');
   const [order, setOrder] = useState<'divergencia' | 'alineacion'>('divergencia');
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    setIsLoading(true);
     const q = new URLSearchParams({ order, limit: '50' });
     if (partido) q.set('partido', partido);
-    fetch(`${API}/api/intel/ranking-concejales?${q}`).then(r => r.ok ? r.json() : []).then(d => setRanking(Array.isArray(d) ? d : [])).catch(() => {});
-    fetch(`${API}/api/intel/tendencias`).then(r => r.ok ? r.json() : []).then(d => setTend(Array.isArray(d) ? d : [])).catch(() => {});
-    fetch(`${API}/api/intel/promesas-incumplidas`).then(r => r.ok ? r.json() : []).then(d => setProm(Array.isArray(d) ? d : [])).catch(() => {});
+    Promise.all([
+      fetch(`${API}/api/intel/ranking-concejales?${q}`).then(r => r.ok ? r.json() : []),
+      fetch(`${API}/api/intel/tendencias`).then(r => r.ok ? r.json() : []),
+      fetch(`${API}/api/intel/promesas-incumplidas`).then(r => r.ok ? r.json() : []),
+    ])
+      .then(([rankingData, tendData, promData]) => {
+        setRanking(Array.isArray(rankingData) ? rankingData : []);
+        setTend(Array.isArray(tendData) ? tendData : []);
+        setProm(Array.isArray(promData) ? promData : []);
+      })
+      .catch(() => {})
+      .finally(() => setIsLoading(false));
   }, [partido, order]);
 
   const maxTend = tend.length > 0 ? Math.max(...tend.map(t => t.actual)) : 1;
@@ -112,6 +129,17 @@ export default function IntelPage() {
       </div>
 
       <div style={{ padding: '20px 26px' }}>
+        {isLoading && (
+          <div style={intelLoadingShellStyle}>
+            <div className="pulse-dot" style={{ width: 12, height: 12, borderRadius: 12, background: 'var(--wr-phosphor)', margin: '0 auto 14px' }} />
+            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 22, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 8 }}>
+              Carregant intel·ligència…
+            </div>
+            <p style={{ fontSize: 13, color: 'var(--fog)', maxWidth: 420, margin: '0 auto' }}>
+              Estem creuant rànquings, tendències i promeses perquè la pàgina no sembli buida mentre arriben les dades.
+            </p>
+          </div>
+        )}
 
         {/* ─── TAB 1: RÀNQUING INTERN ─── */}
         {tab === 'ranking' && (

@@ -156,6 +156,20 @@ def _get_conn():
     return psycopg2.connect(DATABASE_URL)
 
 
+def cleanup_old_articles(days_to_keep: int = 30) -> int:
+    """Elimina noticias antiguas fuera de la ventana operativa."""
+    _ensure_table()
+    conn = _get_conn()
+    cur = conn.cursor()
+    threshold = datetime.now() - timedelta(days=days_to_keep)
+    cur.execute("DELETE FROM premsa_articles WHERE data_publicacio IS NOT NULL AND data_publicacio < %s", (threshold,))
+    deleted = cur.rowcount
+    conn.commit()
+    conn.close()
+    logger.info(f"Premsa cleanup: {deleted} articles eliminats (>{days_to_keep} dies)")
+    return deleted
+
+
 def _ensure_table():
     conn = _get_conn()
     cur = conn.cursor()
@@ -202,6 +216,7 @@ def _detect_partits(text: str) -> list[str]:
 def ingest_rss_feeds():
     """Ingest all RSS feeds — called by celery beat."""
     _ensure_table()
+    cleanup_old_articles(30)
     conn = _get_conn()
     cur = conn.cursor()
     total_new = 0
@@ -372,6 +387,86 @@ def trigger_ingest():
     """Manual trigger for RSS ingestion."""
     n = ingest_rss_feeds()
     return {"ok": True, "nous_articles": n}
+
+
+@router.get("/diagnostic")
+def reputacio_diagnostic(partit: str = Query("AC"), dies: int = Query(30)):
+    """Diagnóstico reproducible del estado del feed y refresco."""
+    _ensure_table()
+    conn = _get_conn()
+    cur = conn.cursor()
+    since = datetime.now() - timedelta(days=dies)
+
+    cur.execute("SELECT max(data_publicacio)::date, min(data_publicacio)::date, count(*) FROM premsa_articles")
+    max_date, min_date, total_articles = cur.fetchone()
+
+    cur.execute(
+        """
+        SELECT titol, font, data_publicacio::date, data_ingesta
+        FROM premsa_articles
+        WHERE %s = ANY(partits) AND data_publicacio >= %s
+        ORDER BY data_publicacio DESC NULLS LAST
+        LIMIT 5
+        """,
+        (partit, since),
+    )
+    latest_articles = [
+        {
+            "titol": row[0],
+            "font": row[1],
+            "data_publicacio": str(row[2]) if row[2] else None,
+            "data_ingesta": row[3].isoformat() if row[3] else None,
+        }
+        for row in cur.fetchall()
+    ]
+
+    cur.execute("SELECT count(*) FROM premsa_articles WHERE data_publicacio < %s", (since,))
+    old_articles = cur.fetchone()[0]
+    conn.close()
+
+    feed_status = []
+    for feed_cfg in RSS_FEEDS:
+        try:
+            feed = feedparser.parse(feed_cfg["url"])
+            entry = feed.entries[0] if feed.entries else None
+            feed_status.append({
+                "font": feed_cfg["nom"],
+                "url": feed_cfg["url"],
+                "status": getattr(feed, "status", None),
+                "entries": len(feed.entries),
+                "bozo": bool(getattr(feed, "bozo", 0)),
+                "latest_title": entry.get("title") if entry else None,
+                "latest_published": entry.get("published", entry.get("updated")) if entry else None,
+            })
+        except Exception as e:
+            feed_status.append({
+                "font": feed_cfg["nom"],
+                "url": feed_cfg["url"],
+                "status": "error",
+                "entries": 0,
+                "bozo": True,
+                "latest_title": None,
+                "latest_published": None,
+                "error": str(e),
+            })
+
+    return {
+        "partit": partit,
+        "dies": dies,
+        "db": {
+            "total_articles": total_articles,
+            "min_data_publicacio": str(min_date) if min_date else None,
+            "max_data_publicacio": str(max_date) if max_date else None,
+            "old_articles_outside_window": old_articles,
+            "latest_articles_for_partit": latest_articles,
+        },
+        "scheduler": {
+            "client_auto_refresh_seconds": 30,
+            "server_ingest_expected_minutes": 30,
+            "cleanup_on_ingest": True,
+        },
+        "feeds": feed_status,
+    }
 
 
 @router.post("/reclassify")
