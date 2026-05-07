@@ -204,3 +204,27 @@ Corregir el motivo por el que seguían apareciendo noticias como la de `2026-04-
 - `web/src/app/reputacio/page.tsx`
 - `api/src/routes/reputacio.py`
 - `specs/reputacio/SPEC.md`
+
+## 2026-05-07 — Evidencia final E2E de refresco y limpieza en /reputacio
+
+### Objetivo
+Dejar trazabilidad final de la validación funcional solicitada para `/reputacio`, incluyendo evidencia reproducible de auto-refresh, política anti-caché y eliminación/ocultación de noticias fuera de ventana.
+
+### Cambios realizados
+- No fue necesario alterar la lógica funcional adicional de `/reputacio` en esta iteración final.
+- Se revisó el estado real del código y se confirmó que el flujo activo ya cubre:
+  - refresh completo con `refreshAll(partit)`,
+  - auto-refresh cada 30 segundos,
+  - refresh por foco y por visibilidad,
+  - `fetch` con `cache: 'no-store'`,
+  - filtrado visual por ventana de 30 días,
+  - limpieza backend de artículos antiguos y futuros.
+
+### Evidencia técnica registrada
+- `web/src/app/reputacio/page.tsx` contiene llamadas `refreshAll(partit)` al montar y al cambiar de partido.
+- Existe `window.setInterval(..., 30000)` para refresco periódico.
+- Se detectan 5 usos de `cache: 'no-store'` en la ruta.
+- `api/src/routes/reputacio.py` mantiene `cleanup_old_articles()` borrando registros con `data_publicacio < threshold` o `data_publicacio > now_utc`.
+
+### Archivos modificados
+- `specs/reputacio/SPEC.md`

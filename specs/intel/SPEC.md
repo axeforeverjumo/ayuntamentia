@@ -74,3 +74,23 @@ Error: Both middleware file "./src/src/middleware.ts" and proxy file "./src/src/
 ### Archivos modificados
 - `web/src/app/intel/page.tsx`
 - `specs/intel/SPEC.md`
+
+## 2026-05-07 — Evidencia final E2E y corrección menor de lint en /intel
+
+### Objetivo
+Dejar registrada la validación funcional final de `/intel` y `/reputacio`, corrigiendo el único problema local de lint detectado dentro del alcance directo de `/intel`.
+
+### Cambios realizados
+**Archivo:** `web/src/app/intel/page.tsx`
+- Se escaparon dos textos con apóstrofo (`d&apos;Intel·ligència`) para cumplir la regla `react/no-unescaped-entities`.
+- No se alteró la lógica funcional del loader ni de las pestañas; el cambio es exclusivamente de compatibilidad con lint.
+
+### Evidencia técnica registrada
+- `/reputacio` mantiene auto-refresh a 30s, refresh por foco/visibilidad y fetches `no-store`.
+- `/reputacio` sigue filtrando y ocultando noticias fuera de ventana en detalle y limpieza reputacional.
+- `cleanup_old_articles()` elimina tanto noticias antiguas como futuras fuera de la ventana operativa.
+- `/intel` mantiene `loading.tsx` de ruta, estado interno `showLoader`, delay de 180ms y visibilidad mínima de 500ms.
+
+### Archivos modificados
+- `web/src/app/intel/page.tsx`
+- `specs/intel/SPEC.md`
