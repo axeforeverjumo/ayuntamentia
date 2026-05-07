@@ -73,3 +73,35 @@ La causa más probable es **una combinación de falta de contenido nuevo en la t
 - [GAP] Sustituir o reparar los feeds RSS que hoy responden 403/404 (`El Punt Avui`, `ACN`, `Catalunya Press`).
 - [GAP] El endpoint `/api/reputacio/diagnostic` devuelve 404 en el servicio HTTP activo pese a existir en el código actual; revisar si la instancia levantada no coincide con el checkout local o si requiere redeploy.
 - [GAP] Revisar por qué los artículos en BD tienen fechas futuras (`2026`) y confirmar si el origen RSS está publicando timestamps adelantados o si existe un problema de normalización de fechas.
+
+## 2026-04-28 — Ajuste incremental tras el diagnóstico
+
+### Cambios realizados
+- Se mantuvo el diagnóstico previo de `/reputacio` como base de la tarea.
+- Se corrigió el refresco automático del cliente para evitar solapes de `refreshAll()` cuando coinciden el `setInterval`, la carga inicial y el sync manual.
+- Se confirmó que `/intel` ya muestra un estado de carga explícito mientras llegan los datos.
+
+### Archivos modificados
+- `web/src/app/reputacio/page.tsx`
+- `specs/reputacio/SPEC.md`
+
+### Decisiones técnicas
+1. **Guardia de refresco en cliente**
+   - Se añadió `useRef` con `refreshInFlightRef` en `web/src/app/reputacio/page.tsx`.
+   - `refreshAll()` ahora aborta si ya hay una actualización en vuelo.
+   - Esto reduce condiciones de carrera entre:
+     - carga inicial,
+     - polling cada 30s,
+     - botón manual `Sync ara`.
+
+2. **Diagnóstico sigue apuntando a backend/datos, no a ausencia de polling**
+   - El cliente ya tenía polling y visualización de la última fecha visible.
+   - El cambio no altera la causa raíz probable documentada: si la BD sigue anclada en `2026-04-28`, la UI seguirá mostrando esa fecha.
+
+3. **`/intel` ya cumple la parte visual del checklist**
+   - Se verificó que `web/src/app/intel/page.tsx` renderiza `Carregant intel·ligència…` cuando `isLoading` es `true`.
+
+### Verificaciones ejecutadas
+- Parseo global de Python con `ast`: OK.
+- Verificación de manifests Odoo: sin módulos Odoo presentes, sin incidencias.
+- Verificación de imports `__init__.py` Odoo: sin módulos Odoo presentes, sin incidencias.

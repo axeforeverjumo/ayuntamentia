@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { PageHeader } from '@/components/warroom/PageHeader';
 import { KPICard, KPIGrid } from '@/components/warroom/KPICard';
@@ -151,6 +151,7 @@ export default function ReputacioPage() {
   const [lastSyncAt, setLastSyncAt] = useState<string | null>(null);
   const [diagnosticError, setDiagnosticError] = useState<string | null>(null);
   const [diagnostic, setDiagnostic] = useState<any>(null);
+  const refreshInFlightRef = useRef(false);
 
   const loadStats = () =>
     fetch(`${API}/api/reputacio/stats?dies=30`)
@@ -180,13 +181,27 @@ export default function ReputacioPage() {
       })
       .catch(() => null);
 
-  const refreshAll = (selectedPartit: string) =>
-    Promise.all([loadStats(), loadDetall(selectedPartit), loadDiagnostic(selectedPartit)]).then(([statsData, detailBundle, diagnosticData]) => ({
-      statsData,
-      detallData: detailBundle.detallData,
-      negatiusData: detailBundle.negatiusData,
-      diagnosticData,
-    }));
+  const refreshAll = async (selectedPartit: string) => {
+    if (refreshInFlightRef.current) {
+      return null;
+    }
+    refreshInFlightRef.current = true;
+    try {
+      const [statsData, detailBundle, diagnosticData] = await Promise.all([
+        loadStats(),
+        loadDetall(selectedPartit),
+        loadDiagnostic(selectedPartit),
+      ]);
+      return {
+        statsData,
+        detallData: detailBundle.detallData,
+        negatiusData: detailBundle.negatiusData,
+        diagnosticData,
+      };
+    } finally {
+      refreshInFlightRef.current = false;
+    }
+  };
 
   useEffect(() => {
     refreshAll(partit);
