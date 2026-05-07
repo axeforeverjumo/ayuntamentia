@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import Link from 'next/link';
 import { PageHeader } from '@/components/warroom/PageHeader';
@@ -120,12 +120,33 @@ export default function IntelPage() {
   const [prom, setProm] = useState<Promesa[]>([]);
   const [partido, setPartido] = useState('');
   const [order, setOrder] = useState<'divergencia' | 'alineacion'>('divergencia');
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showLoader, setShowLoader] = useState(false);
+  const [loadingAnnouncement, setLoadingAnnouncement] = useState('Carregant intel·ligència estratègica');
+  const loadingDelayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const minVisibleRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const loaderShownAtRef = useRef<number | null>(null);
 
   useEffect(() => {
+    const LOADER_DELAY_MS = 180;
+    const MIN_VISIBLE_MS = 500;
+
     setIsLoading(true);
+    setLoadingAnnouncement('Carregant intel·ligència estratègica');
+
+    if (loadingDelayRef.current) clearTimeout(loadingDelayRef.current);
+    if (minVisibleRef.current) clearTimeout(minVisibleRef.current);
+    loaderShownAtRef.current = null;
+
+    loadingDelayRef.current = setTimeout(() => {
+      loaderShownAtRef.current = Date.now();
+      setShowLoader(true);
+      setLoadingAnnouncement('Carregant intel·ligència estratègica. Les dades triguen una mica més del normal.');
+    }, LOADER_DELAY_MS);
+
     const q = new URLSearchParams({ order, limit: '50' });
     if (partido) q.set('partido', partido);
+
     Promise.all([
       fetch(`${API}/api/intel/ranking-concejales?${q}`).then(r => r.ok ? r.json() : []),
       fetch(`${API}/api/intel/tendencias`).then(r => r.ok ? r.json() : []),
@@ -137,7 +158,34 @@ export default function IntelPage() {
         setProm(Array.isArray(promData) ? promData : []);
       })
       .catch(() => {})
-      .finally(() => setIsLoading(false));
+      .finally(() => {
+        setIsLoading(false);
+
+        if (loadingDelayRef.current) {
+          clearTimeout(loadingDelayRef.current);
+          loadingDelayRef.current = null;
+        }
+
+        if (!loaderShownAtRef.current) {
+          setShowLoader(false);
+          setLoadingAnnouncement('Intel·ligència carregada');
+          return;
+        }
+
+        const elapsed = Date.now() - loaderShownAtRef.current;
+        const remainingVisible = Math.max(MIN_VISIBLE_MS - elapsed, 0);
+
+        minVisibleRef.current = setTimeout(() => {
+          setShowLoader(false);
+          setLoadingAnnouncement('Intel·ligència carregada');
+          loaderShownAtRef.current = null;
+        }, remainingVisible);
+      });
+
+    return () => {
+      if (loadingDelayRef.current) clearTimeout(loadingDelayRef.current);
+      if (minVisibleRef.current) clearTimeout(minVisibleRef.current);
+    };
   }, [partido, order]);
 
   const maxTend = tend.length > 0 ? Math.max(...tend.map(t => t.actual)) : 1;
@@ -207,8 +255,26 @@ export default function IntelPage() {
       </div>
 
       <div style={{ padding: '20px 26px' }}>
-        {isLoading && (
-          <div style={intelLoadingShellStyle}>
+        <div
+          aria-live="polite"
+          aria-atomic="true"
+          style={{
+            position: 'absolute',
+            width: 1,
+            height: 1,
+            padding: 0,
+            margin: -1,
+            overflow: 'hidden',
+            clip: 'rect(0, 0, 0, 0)',
+            whiteSpace: 'nowrap',
+            border: 0,
+          }}
+        >
+          {isLoading ? loadingAnnouncement : 'Intel·ligència carregada'}
+        </div>
+
+        {showLoader && (
+          <div style={intelLoadingShellStyle} role="status" aria-busy="true" aria-label="Carregant dades d'intel·ligència">
             <IntelLoadingPanel />
           </div>
         )}
