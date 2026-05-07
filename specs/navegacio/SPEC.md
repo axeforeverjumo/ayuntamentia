@@ -84,3 +84,21 @@ Rutes visibles detectades a l’app web:
 - `web/src/proxy.ts`
 - `web/src/lib/navigation.ts`
 - `specs/navegacio/SPEC.md`
+
+## 2026-05-07 — Enduriment final dels enllaços visibles
+
+### Objectiu
+Tancar la regressió restant on encara es generava un enllaç visible literal en castellà dins la UI, assegurant que també les URLs compartides des d'alertes surtin de la font canònica catalana.
+
+### Canvis realitzats
+- **Arxiu:** `web/src/app/alertas/page.tsx`
+- S'ha substituït la construcció literal de l'URL compartible `'/alertas?id=…'` per `visibleRoutes.alertes`, mantenint la query però forçant el path visible català canònic.
+- S'ha afegit l'import de `visibleRoutes` perquè la vista d'alertes no pugui reintroduir paths visibles literals fora de la convenció centralitzada.
+
+### Decisions tècniques
+- Qualsevol URL visible, incloses les de compartir/copiar al porta-retalls, ha de construir-se des de `visibleRoutes` o helpers de `navigation.ts`.
+- Es considera regressió qualsevol path literal visible en components de presentació encara que el `proxy` el pugui redirigir després.
+
+### Arxius modificats
+- `web/src/app/alertas/page.tsx`
+- `specs/navegacio/SPEC.md`
