@@ -149,6 +149,7 @@ export default function ReputacioPage() {
   const [tab, setTab] = useState<'overview' | 'detall' | 'neteja'>('overview');
   const [sentimentFilter, setSentimentFilter] = useState<'tots' | 'positiu' | 'neutre' | 'negatiu'>('tots');
   const [latestArticles, setLatestArticles] = useState<any[]>([]);
+  const [sourcesCatalog, setSourcesCatalog] = useState<any>(null);
 
   const fetchOverview = useCallback(() => {
     fetch(`${API}/api/reputacio/stats?dies=30`, { cache: 'no-store' })
@@ -159,6 +160,11 @@ export default function ReputacioPage() {
     fetch(`${API}/api/reputacio/latest?limit=8&dies=30`, { cache: 'no-store' })
       .then(r => r.ok ? r.json() : null)
       .then(d => setLatestArticles(d?.articles || []))
+      .catch(() => {});
+
+    fetch(`${API}/api/reputacio/sources`, { cache: 'no-store' })
+      .then(r => r.ok ? r.json() : null)
+      .then(setSourcesCatalog)
       .catch(() => {});
   }, []);
 
@@ -201,8 +207,8 @@ export default function ReputacioPage() {
         title={<>Reputació i <span style={{ color: 'var(--brand-l)', fontWeight: 400, fontStyle: 'italic' }}>premsa.</span></>}
         info={{
           title: 'Reputació i premsa',
-          description: "Monitoratge de 9 diaris catalans en temps real. Veu què diu la premsa de cada partit, detecta articles negatius i proposa estratègies de millora amb la Sala d'Intel·ligència. La funció 'Neteja' és l'arma secreta: selecciona un article negatiu i la IA et proposa 3 accions concretes.",
-          dataSource: 'Vilaweb, ARA, NacióDigital, El Punt Avui, ACN, Betevé, La Vanguardia, El Periódico, Catalunya Press · actualització cada 30 min',
+          description: "Monitoratge ampliat de premsa i fonts d'influència. Veu què diu la premsa de cada partit, detecta articles negatius i proposa estratègies de millora amb la Sala d'Intel·ligència. La funció 'Neteja' és l'arma secreta: selecciona un article negatiu i la IA et proposa 3 accions concretes.",
+          dataSource: 'Catàleg ampliat de premsa nacional, regional i local + xarxes prioritzades verificables · actualització cada 30 min',
           tips: [
             "Clica un partit a les barres de mencions per veure'n el detall",
             "Al tab 'Neteja', el botó 'Netejar' obre la Sala d'Intel·ligència amb una estratègia de millora automàtica",
@@ -333,6 +339,44 @@ export default function ReputacioPage() {
                   </div>
                 ) : (
                   <EmptyState text="Encara no hi ha notícies recents ingestades" />
+                )}
+              </PanelBox>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 16, marginTop: 16 }}>
+              <PanelBox title="Catàleg de fonts ampliat" subtitle={`${sourcesCatalog?.premsa?.length || 0} fonts de premsa + ${sourcesCatalog?.xarxes?.length || 0} fonts socials`} tone="phos">
+                {sourcesCatalog?.premsa?.length ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {sourcesCatalog.premsa.slice(0, 10).map((source: any, i: number) => (
+                      <div key={i} style={{ padding: '8px 0', borderBottom: '1px dashed var(--line-soft)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+                          <span style={{ fontSize: 12, color: 'var(--paper)' }}>{source.nom}</span>
+                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--wr-phosphor)' }}>{source.ambit} · {source.prioritat}</span>
+                        </div>
+                        <div style={{ fontSize: 10, color: 'var(--fog)', marginTop: 4 }}>
+                          {(source.territoris || []).join(', ')}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <EmptyState text="Catàleg pendent de carregar" />
+                )}
+              </PanelBox>
+
+              <PanelBox title="Cobertura local prioritària" subtitle="municipis i territori" tone="amber">
+                {sourcesCatalog?.prioritats_locals?.length ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {sourcesCatalog.prioritats_locals.map((item: any, i: number) => (
+                      <div key={i} style={{ paddingBottom: 10, borderBottom: '1px dashed var(--line-soft)' }}>
+                        <div style={{ fontSize: 12, color: 'var(--paper)', marginBottom: 4 }}>{item.territori}</div>
+                        <div style={{ fontSize: 10, color: 'var(--fog)', marginBottom: 4 }}>{item.racional}</div>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--wr-amber)' }}>{item.fonts_prioritaries.join(' · ')}</div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <EmptyState text="Sense prioritats locals definides" />
                 )}
               </PanelBox>
             </div>

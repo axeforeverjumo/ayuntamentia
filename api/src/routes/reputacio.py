@@ -12,6 +12,8 @@ from email.utils import parsedate_to_datetime
 from html import unescape
 from typing import Optional
 
+from ..services.reputacio_sources import get_rss_feeds, get_source_catalog
+
 import feedparser
 import psycopg2
 from fastapi import APIRouter, Query, Response
@@ -21,16 +23,8 @@ router = APIRouter(prefix="/api/reputacio", tags=["reputacio"])
 
 DATABASE_URL = os.environ.get("DATABASE_URL", "")
 
-# RSS feeds de premsa catalana
-RSS_FEEDS = [
-    {"nom": "Vilaweb", "url": "https://www.vilaweb.cat/feed/", "idioma": "ca"},
-    {"nom": "NacióDigital", "url": "https://www.naciodigital.cat/rss", "idioma": "ca"},
-    {"nom": "ARA", "url": "https://www.ara.cat/rss/", "idioma": "ca"},
-    {"nom": "El Punt Avui", "url": "https://www.elpuntavui.cat/?format=feed&type=rss", "idioma": "ca"},
-    {"nom": "Betevé", "url": "https://beteve.cat/feed/", "idioma": "ca"},
-    {"nom": "La Vanguardia", "url": "https://www.lavanguardia.com/rss/politica.xml", "idioma": "es"},
-    {"nom": "El Periódico", "url": "https://www.elperiodico.com/es/rss/politica/rss.xml", "idioma": "es"},
-]
+# Catàleg ampliat de fonts de reputació i feeds RSS actius
+RSS_FEEDS = get_rss_feeds()
 
 PARTITS_KEYWORDS = {
     "AC": ["aliança catalana", "aliança", "sílvia orriols", "orriols"],
@@ -501,11 +495,19 @@ def temes_negatius(response: Response, partit: str = Query("AC"), dies: int = Qu
     return {"partit": partit, "articles": articles}
 
 
+@router.get("/sources")
+def reputacio_sources(response: Response):
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return get_source_catalog()
+
+
 @router.post("/ingest")
 def trigger_ingest():
     """Manual trigger for RSS ingestion."""
     result = ingest_rss_feeds()
-    return {"ok": True, **result}
+    return {"ok": True, **result, "fonts_actives": len(RSS_FEEDS)}
 
 
 @router.post("/reclassify")

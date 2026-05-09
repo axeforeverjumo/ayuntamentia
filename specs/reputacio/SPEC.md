@@ -117,3 +117,34 @@
 - `api/src/routes/reputacio.py` ya devolvía respuestas no cacheables y ahora además ejecuta `DELETE FROM premsa_articles WHERE data_publicacio < cutoff`.
 - `npm --prefix web run build` completó correctamente con rutas `/reputacio` y `/intel` generadas.
 - La sintaxis Python global se verificó con éxito.
+
+## 2026-05-09 — Ampliación de fuentes de prensa y catálogo de reputación
+
+### Cambios realizados
+- Se creó `api/src/services/reputacio_sources.py` con un catálogo estructurado y ampliado de fuentes de reputación.
+- Se añadieron nuevas fuentes de prensa nacionales, regionales y locales al catálogo: `Diari de Girona`, `Regió7`, `Segre`, `Diari de Tarragona`, `Tot Barcelona`, `El Món`, `e-Notícies`, `ElCaso.cat`, además de las ya existentes.
+- Se incorporaron metadatos por fuente: `tipus`, `ambit`, `territoris`, `prioritat`, `fiabilitat`, `es_local` y `categories`.
+- Se definieron prioridades de cobertura local por territorio para reforzar municipios y comarcas con menor eco en prensa nacional.
+- Se documentó un catálogo de fuentes sociales priorizadas y criterios explícitos para descartar ruido sin verificación.
+- Se conectó la ingesta RSS existente para que use el catálogo centralizado mediante `get_rss_feeds()`.
+- Se añadió el endpoint `GET /api/reputacio/sources` para exponer el catálogo ampliado al frontend.
+- Se actualizó `web/src/app/reputacio/page.tsx` para mostrar el catálogo ampliado y la priorización de cobertura local dentro del panel de reputación.
+- Se actualizó la descripción funcional de la página para reflejar que el módulo ya trabaja con prensa nacional, regional, local y fuentes sociales verificables.
+
+### Archivos modificados
+- `api/src/services/reputacio_sources.py`
+- `api/src/routes/reputacio.py`
+- `web/src/app/reputacio/page.tsx`
+- `specs/reputacio/SPEC.md`
+
+### Decisiones técnicas
+- Se evitó introducir migraciones de base de datos porque el brief se podía cubrir ampliando el catálogo de entrada y la capa de exposición del módulo.
+- Se centralizó el catálogo de fuentes en un servicio Python reutilizable para evitar volver a hardcodear listas RSS en la ruta.
+- Las fuentes sociales se modelan como catálogo y criterio editorial, no como ingesta automática, para respetar el requisito de minimizar ruido y priorizar solo señales verificables.
+- La priorización local se dejó por territorios/comarcas clave, que sirve como base operativa para futuras expansiones más finas por municipio.
+- Se mantuvo el alcance quirúrgico: sin tocar pipeline, sin cambiar esquema SQL y sin refactorizar el resto de endpoints.
+
+### Validación funcional esperada
+- `GET /api/reputacio/sources` devuelve el catálogo completo de prensa, redes y prioridades locales.
+- `POST /api/reputacio/ingest` ahora informa también de `fonts_actives` además del resultado de la ingesta.
+- La página `/reputacio` muestra visualmente tanto el catálogo ampliado como la cobertura local prioritaria.

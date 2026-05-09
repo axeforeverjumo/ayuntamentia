@@ -1,0 +1,307 @@
+from __future__ import annotations
+
+from typing import Any
+
+SOURCE_CATALOG: list[dict[str, Any]] = [
+    {
+        "nom": "VilaWeb",
+        "url": "https://www.vilaweb.cat/feed/",
+        "idioma": "ca",
+        "tipus": "premsa",
+        "ambit": "nacional",
+        "territoris": ["Catalunya"],
+        "prioritat": "alta",
+        "fiabilitat": "alta",
+        "es_local": False,
+        "categories": ["politica", "actualitat"],
+    },
+    {
+        "nom": "NacióDigital",
+        "url": "https://www.naciodigital.cat/rss",
+        "idioma": "ca",
+        "tipus": "premsa",
+        "ambit": "nacional",
+        "territoris": ["Catalunya"],
+        "prioritat": "alta",
+        "fiabilitat": "alta",
+        "es_local": False,
+        "categories": ["politica", "actualitat"],
+    },
+    {
+        "nom": "ARA",
+        "url": "https://www.ara.cat/rss/",
+        "idioma": "ca",
+        "tipus": "premsa",
+        "ambit": "nacional",
+        "territoris": ["Catalunya"],
+        "prioritat": "alta",
+        "fiabilitat": "alta",
+        "es_local": False,
+        "categories": ["politica", "actualitat"],
+    },
+    {
+        "nom": "El Punt Avui",
+        "url": "https://www.elpuntavui.cat/?format=feed&type=rss",
+        "idioma": "ca",
+        "tipus": "premsa",
+        "ambit": "nacional",
+        "territoris": ["Catalunya"],
+        "prioritat": "alta",
+        "fiabilitat": "alta",
+        "es_local": False,
+        "categories": ["politica", "territori"],
+    },
+    {
+        "nom": "Betevé",
+        "url": "https://beteve.cat/feed/",
+        "idioma": "ca",
+        "tipus": "premsa",
+        "ambit": "local",
+        "territoris": ["Barcelona"],
+        "prioritat": "alta",
+        "fiabilitat": "alta",
+        "es_local": True,
+        "categories": ["barcelona", "municipal", "actualitat"],
+    },
+    {
+        "nom": "La Vanguardia",
+        "url": "https://www.lavanguardia.com/rss/politica.xml",
+        "idioma": "es",
+        "tipus": "premsa",
+        "ambit": "nacional",
+        "territoris": ["Catalunya", "Espanya"],
+        "prioritat": "alta",
+        "fiabilitat": "alta",
+        "es_local": False,
+        "categories": ["politica"],
+    },
+    {
+        "nom": "El Periódico",
+        "url": "https://www.elperiodico.com/es/rss/politica/rss.xml",
+        "idioma": "es",
+        "tipus": "premsa",
+        "ambit": "nacional",
+        "territoris": ["Catalunya", "Espanya"],
+        "prioritat": "alta",
+        "fiabilitat": "alta",
+        "es_local": False,
+        "categories": ["politica"],
+    },
+    {
+        "nom": "Diari de Girona",
+        "url": "https://www.diaridegirona.cat/rss/section/1505-portada.xml",
+        "idioma": "ca",
+        "tipus": "premsa",
+        "ambit": "regional",
+        "territoris": ["Girona", "Comarques gironines"],
+        "prioritat": "alta",
+        "fiabilitat": "alta",
+        "es_local": False,
+        "categories": ["territori", "municipal"],
+    },
+    {
+        "nom": "Regió7",
+        "url": "https://www.regio7.cat/rss/section/1505-portada.xml",
+        "idioma": "ca",
+        "tipus": "premsa",
+        "ambit": "regional",
+        "territoris": ["Catalunya Central", "Bages", "Berguedà", "Solsonès"],
+        "prioritat": "alta",
+        "fiabilitat": "alta",
+        "es_local": False,
+        "categories": ["territori", "municipal"],
+    },
+    {
+        "nom": "Segre",
+        "url": "https://www.segre.com/rss.xml",
+        "idioma": "ca",
+        "tipus": "premsa",
+        "ambit": "regional",
+        "territoris": ["Lleida", "Ponent", "Pirineu"],
+        "prioritat": "alta",
+        "fiabilitat": "alta",
+        "es_local": False,
+        "categories": ["territori", "municipal"],
+    },
+    {
+        "nom": "Diari de Tarragona",
+        "url": "https://www.diaridetarragona.com/rss/section/1505-portada.xml",
+        "idioma": "ca",
+        "tipus": "premsa",
+        "ambit": "regional",
+        "territoris": ["Tarragona", "Camp de Tarragona", "Terres de l'Ebre"],
+        "prioritat": "alta",
+        "fiabilitat": "alta",
+        "es_local": False,
+        "categories": ["territori", "municipal"],
+    },
+    {
+        "nom": "Tot Barcelona",
+        "url": "https://www.totbarcelona.cat/feed",
+        "idioma": "ca",
+        "tipus": "premsa",
+        "ambit": "local",
+        "territoris": ["Barcelona"],
+        "prioritat": "alta",
+        "fiabilitat": "mitjana",
+        "es_local": True,
+        "categories": ["barcelona", "municipal"],
+    },
+    {
+        "nom": "El Món",
+        "url": "https://www.elmon.cat/feed/",
+        "idioma": "ca",
+        "tipus": "premsa",
+        "ambit": "nacional",
+        "territoris": ["Catalunya"],
+        "prioritat": "mitjana",
+        "fiabilitat": "mitjana",
+        "es_local": False,
+        "categories": ["politica", "actualitat"],
+    },
+    {
+        "nom": "e-Notícies",
+        "url": "https://www.e-noticies.cat/rss.xml",
+        "idioma": "ca",
+        "tipus": "premsa",
+        "ambit": "nacional",
+        "territoris": ["Catalunya"],
+        "prioritat": "mitjana",
+        "fiabilitat": "mitjana",
+        "es_local": False,
+        "categories": ["politica", "opinió"],
+    },
+    {
+        "nom": "ElCaso.cat",
+        "url": "https://elcaso.elnacional.cat/ca/rss.xml",
+        "idioma": "ca",
+        "tipus": "premsa",
+        "ambit": "nacional",
+        "territoris": ["Catalunya"],
+        "prioritat": "mitjana",
+        "fiabilitat": "mitjana",
+        "es_local": False,
+        "categories": ["successos", "ordre-public"],
+    },
+]
+
+SOCIAL_SOURCE_CATALOG: list[dict[str, Any]] = [
+    {
+        "nom": "X / comptes institucionals municipals",
+        "tipus": "xarxes",
+        "plataforma": "X",
+        "ambit": "local",
+        "prioritat": "alta",
+        "fiabilitat": "alta",
+        "verificacio_requerida": True,
+        "criteris_inclusio": [
+            "compte oficial d'ajuntament, partit local o portaveu verificable",
+            "impacte demostrable en conversa municipal",
+        ],
+        "criteris_exclusio": [
+            "comptes anònims sense traçabilitat",
+            "capturas o afirmacions sense font original",
+        ],
+    },
+    {
+        "nom": "Instagram / mitjans i creadors locals",
+        "tipus": "xarxes",
+        "plataforma": "Instagram",
+        "ambit": "local",
+        "prioritat": "mitjana",
+        "fiabilitat": "mitjana",
+        "verificacio_requerida": True,
+        "criteris_inclusio": [
+            "perfil amb audiència local rellevant i identitat coneguda",
+            "publicacions amb evidència visual o enllaç a font real",
+        ],
+        "criteris_exclusio": [
+            "meme accounts sense autoria clara",
+            "reposts sense context ni verificació",
+        ],
+    },
+    {
+        "nom": "Facebook / pàgines locals de barri o municipi",
+        "tipus": "xarxes",
+        "plataforma": "Facebook",
+        "ambit": "local",
+        "prioritat": "mitjana",
+        "fiabilitat": "mitjana",
+        "verificacio_requerida": True,
+        "criteris_inclusio": [
+            "pàgina arrelada al municipi amb activitat sostinguda",
+            "distribució recurrent de notícies o incidències reals",
+        ],
+        "criteris_exclusio": [
+            "rumors sense prova",
+            "publicacions manipulades o sense data/context",
+        ],
+    },
+]
+
+LOCAL_SOURCE_PRIORITIES: list[dict[str, Any]] = [
+    {
+        "territori": "Barcelona",
+        "fonts_prioritaries": ["Betevé", "Tot Barcelona"],
+        "racional": "capital i màxima densitat mediàtica municipal",
+    },
+    {
+        "territori": "Girona i comarques gironines",
+        "fonts_prioritaries": ["Diari de Girona"],
+        "racional": "cobertura territorial recurrent de municipis petits i mitjans",
+    },
+    {
+        "territori": "Catalunya Central",
+        "fonts_prioritaries": ["Regió7"],
+        "racional": "seguiment proper de plens, conflictes i actors locals",
+    },
+    {
+        "territori": "Lleida / Ponent / Pirineu",
+        "fonts_prioritaries": ["Segre"],
+        "racional": "font regional clau per municipis amb menys cobertura nacional",
+    },
+    {
+        "territori": "Tarragona / Ebre",
+        "fonts_prioritaries": ["Diari de Tarragona"],
+        "racional": "segueix política municipal i reputació local al sud del país",
+    },
+]
+
+
+def get_rss_feeds() -> list[dict[str, str]]:
+    return [
+        {"nom": source["nom"], "url": source["url"], "idioma": source["idioma"]}
+        for source in SOURCE_CATALOG
+        if source.get("tipus") == "premsa" and source.get("url")
+    ]
+
+
+def get_source_catalog() -> dict[str, Any]:
+    return {
+        "premsa": SOURCE_CATALOG,
+        "xarxes": SOCIAL_SOURCE_CATALOG,
+        "prioritats_locals": LOCAL_SOURCE_PRIORITIES,
+        "criteris_soroll": {
+            "descartar": [
+                "fonts sense autoria verificable",
+                "afirmacions sense enllaç, document o prova observable",
+                "comptes hiperpartidistes de baixa traçabilitat que només recirculen rumors",
+                "contingut viral sense relació operativa amb reputació municipal",
+            ],
+            "prioritzar": [
+                "mitjans amb cobertura local sostinguda",
+                "fonts institucionals o periodístiques contrastables",
+                "perfils socials amb influència real en el municipi i identitat coneguda",
+            ],
+        },
+        "moduls": [
+            {
+                "nom": "neteja_reputacio",
+                "objectiu": "detectar focs reputacionals, desactivar narratives adverses i preparar resposta coordinada",
+            },
+            {
+                "nom": "altaveu",
+                "objectiu": "amplificar oportunitats positives, reforçar cobertura favorable i convertir-la en difusió guanyadora",
+            },
+        ],
+    }
