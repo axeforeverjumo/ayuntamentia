@@ -71,6 +71,7 @@
 
 ### Cambios realizados
 - Se añadió la migración `supabase/migrations/010_municipios_catalog_catalan_sync.sql` para poder completar y normalizar el catálogo de `municipios` con criterio de catalán y actualización por `codi_ens`.
+- La migración incorpora registros de municipios ausentes detectados en la auditoría y corrige nombres visibles para que queden en catalán antes del upsert final.
 - La migración también normaliza `nombre`, `nombre_oficial`, `comarca`, `provincia`, `poblacion` y `url_sede` reutilizando `external_data` cuando ya existe información remota asociada.
 - Se creó `scripts/check_municipios_catalog.py` como verificación reproducible de la referencia oficial (`6nei-4b44`) y del total esperado del catálogo.
 
@@ -83,6 +84,7 @@
 - Se mantuvo el patrón append-only de Supabase creando una nueva migración en vez de editar migraciones ya aplicadas.
 - La clave canónica sigue siendo `codi_ens`, alineada con la auditoría previa y con el upsert ya existente del pipeline.
 - La normalización prioriza los nombres catalanes de `municipi`/`nom_complert` y la referencia institucional `municat.url` para las URLs asociadas.
+- Se corrigió el valor visible del registro `2500460009` para que el nombre insertado sea `Aitona` y no un placeholder erróneo, manteniendo coherencia con `nom_complert` y la referencia oficial.
 - Como este entorno sigue sin `DATABASE_URL`, se dejó la comprobación local preparada en script pero la cobertura efectiva sobre la tabla real queda supeditada a ejecutar la migración contra la base desplegada.
 
 ### Evidencia ejecutada
