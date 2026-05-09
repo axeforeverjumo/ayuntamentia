@@ -8,3 +8,4 @@ qdrant-client==1.13.*
 python-jose[cryptography]==3.3.*
 pydantic==2.11.*
 feedparser
+pytest==8.3.*

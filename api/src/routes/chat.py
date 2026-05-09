@@ -5,6 +5,7 @@ import json
 import re
 import time
 from typing import Optional
+from datetime import datetime
 from openai import OpenAI
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel
@@ -172,6 +173,17 @@ Responde SOLO JSON."""
 
 _ANSWER_PROMPT_TMPL = """Eres AjuntamentIA, cap de gabinet de $CLIENT_NOMBRE ($CLIENT_PARTIDO). Parles amb un polític que necessita MUNICIÓ UTILITZABLE, no anàlisis acadèmiques. Tot el que diguis ho pot fer servir AVUI en una roda de premsa, tuit o entrevista.
 
+PROTOCOL DE VERACITAT I ANTI-AL·LUCINACIÓ (OBLIGATORI):
+- Un argumentari, acusació, comparativa factual o proposta d'acció només es pot afirmar si queda sostingut per les dades consultades.
+- Cada afirmació factual rellevant ha d'estar ancorada a una evidència concreta: cita literal, votació, resultat de ple, resum documental o mètrica retornada pels tools.
+- Si falten cites o suport documental suficient, NO omplis buits. Redueix el to, marca la cautela i limita't a allò verificable.
+- CONTRACTE DE RESPOSTA: cada bullet factual ha d'acabar amb `[Municipi · DD/MM/YYYY]` o bé ha d'explicar explícitament que no consta la data/municipi en la font consultada.
+- CONTRACTE DE RESPOSTA: qualsevol cita literal s'ha de mostrar en blockquote i ha de venir acompanyada d'autor o partit, municipi i data quan constin.
+- Si el bloc `Avaluació de veracitat` indica `status=reject`, NO generis argumentari ofensiu ni conclusions fortes: explica en català que no hi ha base documental prou sòlida.
+- Si `status=caution`, només pots donar hipòtesis prudents, preguntes de seguiment i següents verificacions; evita atribuir intencions, causalitats o frases no citades.
+- Està PROHIBIT inventar cites, percentatges, municipis, dates, acords, contradiccions o consensos no presents a les dades.
+- Quan hi hagi conflicte entre fonts o baixa cobertura, ho has d'explicitar dins `## Veredicto` o `## Punts clau`.
+
 ⭐ REGLA D'IDIOMA ABSOLUTA: RESPON SEMPRE EN CATALÀ, sense excepcions, encara que l'usuari pregunti en castellà, anglès o qualsevol altra llengua. MAI responguis en castellà ni en cap altra llengua diferent del català. Fins i tot els títols, bullets, frases d'atac i citacions les expresses en català (les citacions literals extretes dels documents es mantenen en la seva llengua original entre cometes).
 
 ESTRUCTURA OBLIGATORIA (markdown EXACTO):
@@ -233,6 +245,19 @@ def get_llm():
 class ChatRequest(BaseModel):
     message: str
     history: list[dict] = []
+
+
+class VeracityAssessment(BaseModel):
+    status: str
+    confidence: str
+    evidence_count: int
+    documentary_support_required: bool
+    missing_support_reasons: list[str] = []
+    conflicting_support_reasons: list[str] = []
+    allowed_claim_types: list[str] = []
+    recommended_actions: list[str] = []
+    citation_requirements: list[str] = []
+    sources_summary: list[dict] = []
 
 
 # === Expansión bilingüe CA↔ES ===
@@ -1596,13 +1621,27 @@ def _detect_partido_in_query(text: str) -> str:
     return ""
 
 
-def _build_emergency_answer(message: str, tool_results: list[str]) -> str:
+def _build_emergency_answer(message: str, tool_results: list[str], veracity: VeracityAssessment | None = None) -> str:
     """Respuesta de emergencia si el LLM no contesta. Usa formato estructurado y un
     resumen textual de los datos disponibles sin volcar JSON al usuario."""
     summary_lines: list[str] = []
     total_rows = _count_useful_rows(tool_results)
     partido_q = _detect_partido_in_query(message)
     mode_label = f"**{partido_q}**" if partido_q else "la teva consulta"
+
+    if veracity and veracity.status == "reject":
+        reason = veracity.missing_support_reasons[0] if veracity.missing_support_reasons else "No hi ha base documental suficient."
+        return "\n".join([
+            "## Veredicto",
+            "No puc construir un argumentari verificable amb les dades disponibles.",
+            "",
+            "## Punts clau",
+            f"- {reason}",
+            "- Calen més fonts documentals abans de convertir això en missatge polític públic.",
+            "",
+            "## I ara què?",
+            "Concreta partit, tema i període o força una nova cerca amb fonts més específiques abans de publicar res.",
+        ])
 
     summary_lines.append(f"## Veredicto")
     summary_lines.append(
@@ -1712,6 +1751,177 @@ Han de ser concretes, curtes (<90 caràcters), SEMPRE EN CATALÀ (mai en castell
 Respon NOMÉS JSON: {"followups": ["...", "...", "..."]}"""
 
 
+def _normalize_date(value) -> str:
+    if value in (None, ""):
+        return ""
+    if isinstance(value, datetime):
+        return value.date().isoformat()
+    return str(value)[:10]
+
+
+def _summarize_source_item(item: dict, *, tool_name: str) -> dict:
+    return {
+        "tool": tool_name,
+        "municipio": item.get("municipio") or item.get("municipi") or "",
+        "fecha": _normalize_date(item.get("fecha")),
+        "tema": item.get("tema") or "",
+        "titulo": item.get("titulo") or item.get("punto_titulo") or "",
+        "partido": item.get("partido") or item.get("partido_objetivo") or item.get("partido_emisor") or "",
+        "has_quote": bool(item.get("argumento") or item.get("cita") or item.get("texto") or item.get("extracto")),
+    }
+
+
+def _extract_evidence_items(tool_name: str, parsed) -> list[dict]:
+    if isinstance(parsed, list):
+        return [item for item in parsed if isinstance(item, dict)]
+    if not isinstance(parsed, dict):
+        return []
+
+    candidates: list[dict] = []
+    keys_by_tool = {
+        "buscar_votaciones": ["detalle"],
+        "dossier_adversario": ["citas_sobre_tema", "citas_generales", "votaciones_detalle", "votos_contracorriente", "incoherencias"],
+        "monitoring_partido": ["intervenciones_propias", "menciones_rivales", "menciones_en_puntos", "confrontaciones_directas", "eco_social"],
+        "narrativas_cruzadas": ["confrontaciones_directas", "narrativas_replicadas", "menciones_relevantes"],
+        "contradicciones_partido": ["incoherencias_por_tema", "votos_contracorriente"],
+        "estadisticas": ["temas", "pipeline"],
+    }
+    for key in keys_by_tool.get(tool_name, []):
+        value = parsed.get(key)
+        if isinstance(value, list):
+            candidates.extend(item for item in value if isinstance(item, dict))
+
+    if not candidates:
+        fallback_keys = ["detalle", "votaciones", "resultados", "items"]
+        for key in fallback_keys:
+            value = parsed.get(key)
+            if isinstance(value, list):
+                candidates.extend(item for item in value if isinstance(item, dict))
+
+    if not candidates and not parsed.get("error"):
+        candidates.append(parsed)
+    return candidates
+
+
+def _assess_veracity(question: str, plan: dict | None, tool_results: list[str], sources: list[dict]) -> VeracityAssessment:
+    q = (question or "").lower()
+    intent = ((plan or {}).get("intent") or "consulta").lower()
+    document_sensitive = any(word in q for word in [
+        "argumentari", "argumentario", "respon", "respuesta", "ataca", "atacar", "defensa",
+        "defensar", "defender", "nota de premsa", "nota de prensa", "roda de premsa", "tweet",
+        "xarxes", "social", "titular", "compareixença", "comparecencia",
+    ]) or intent in {"atacar", "defender", "comparar"}
+
+    evidence_items: list[dict] = []
+    quote_count = 0
+    factual_count = 0
+    conflicting_signals = 0
+    used_tools: set[str] = set()
+
+    for tr in tool_results:
+        try:
+            header, payload = tr.split("]:\n", 1) if "]:\n" in tr else ("", tr)
+            tool_name = header[1:].split("(", 1)[0] if header.startswith("[") else "desconocida"
+            used_tools.add(tool_name)
+            parsed = json.loads(payload)
+        except Exception:
+            continue
+
+        items = _extract_evidence_items(tool_name, parsed)
+        for item in items[:10]:
+            evidence_items.append(_summarize_source_item(item, tool_name=tool_name))
+            if item.get("argumento") or item.get("cita") or item.get("texto") or item.get("extracto"):
+                quote_count += 1
+            if item.get("titulo") or item.get("tema") or item.get("resumen") or item.get("resultado") or item.get("sentido"):
+                factual_count += 1
+
+        if tool_name == "contradicciones_partido" and isinstance(parsed, dict):
+            conflicting_signals += len(parsed.get("incoherencias_por_tema") or [])
+        if tool_name == "dossier_adversario" and isinstance(parsed, dict):
+            conflicting_signals += len(parsed.get("incoherencias") or [])
+
+    evidence_count = len(evidence_items)
+    missing_support_reasons: list[str] = []
+    conflicting_support_reasons: list[str] = []
+    allowed_claim_types: list[str] = []
+    recommended_actions: list[str] = []
+    citation_requirements: list[str] = []
+
+    if evidence_count == 0:
+        missing_support_reasons.append("Cap tool ha retornat evidència aprofitable per sostenir afirmacions.")
+    if document_sensitive and quote_count == 0:
+        missing_support_reasons.append("La consulta demana argumentari o acció comunicativa però no hi ha cites o extractes textuals verificables.")
+    if factual_count == 0 and evidence_count > 0:
+        missing_support_reasons.append("Hi ha activitat recuperada però no prou fets estructurats per construir un argumentari robust.")
+    if not used_tools:
+        missing_support_reasons.append("No consta cap cerca executada amb èxit.")
+
+    if conflicting_signals > 0:
+        conflicting_support_reasons.append(
+            f"S'han detectat {conflicting_signals} senyals d'incoherència o conflicte entre fonts/resultats; cal explicitar-les sense simplificar-les."
+        )
+
+    if evidence_count >= 6 and factual_count >= 3 and (not document_sensitive or quote_count >= 1):
+        status = "grounded"
+        confidence = "alta"
+        allowed_claim_types = [
+            "resums executius factuals",
+            "argumentari amb cites literals i dates",
+            "comparatives entre partits basades en votacions o declaracions documentades",
+            "propostes d'acció limitades al que es desprèn de l'evidència",
+        ]
+        recommended_actions = [
+            "Inclou només afirmacions recolzades per cites, votacions o resultats concrets.",
+            "Tanca cada punt factual amb municipi i data.",
+        ]
+    elif evidence_count >= 2 and factual_count >= 1:
+        status = "caution"
+        confidence = "mitjana"
+        allowed_claim_types = [
+            "resums prudents",
+            "hipòtesis condicionades",
+            "peticions de més verificació abans d'emetre un argumentari complet",
+        ]
+        recommended_actions = [
+            "Evita conclusions rotundes o acusacions directes.",
+            "Explica quina evidència hi ha i quina falta.",
+            "Proposa noves cerques o comprovacions abans d'usar-ho en públic.",
+        ]
+    else:
+        status = "reject"
+        confidence = "baixa"
+        allowed_claim_types = [
+            "explicar que no hi ha base documental suficient",
+            "demanar concretar tema, partit o període",
+        ]
+        recommended_actions = [
+            "No generis argumentari ni frases atacables.",
+            "Indica clarament que la base actual no és prou verificable.",
+        ]
+
+    citation_requirements.extend([
+        "Cada afirmació factual rellevant ha d'anar lligada a municipi i data.",
+        "No es poden presentar cites literals si no provenen dels tools retornats.",
+    ])
+    if document_sensitive:
+        citation_requirements.append("Per a argumentaris i propostes de canal, exigeix almenys una cita o extracte documental verificable abans d'afirmar intencions o posicions.")
+    if conflicting_signals > 0:
+        citation_requirements.append("Si hi ha contradiccions entre fonts, s'han d'explicitar en lloc d'escollir una versió sense suport.")
+
+    return VeracityAssessment(
+        status=status,
+        confidence=confidence,
+        evidence_count=evidence_count,
+        documentary_support_required=document_sensitive,
+        missing_support_reasons=missing_support_reasons,
+        conflicting_support_reasons=conflicting_support_reasons,
+        allowed_claim_types=allowed_claim_types,
+        recommended_actions=recommended_actions,
+        citation_requirements=citation_requirements,
+        sources_summary=evidence_items[:8] or sources[:8],
+    )
+
+
 @router.get("/config")
 def chat_config():
     """Devuelve la configuración del cliente (partido que usa la herramienta).
@@ -1801,6 +2011,8 @@ def chat(
         tool_results.append(f"[buscar_actas fallback]:\n{result}")
         tools_used.append("buscar_actas")
 
+    veracity = _assess_veracity(req.message, plan, tool_results, sources)
+
     # Step 3: Answer with data
     data = "\n\n---\n\n".join(tool_results)
     intent_hint = {
@@ -1825,17 +2037,21 @@ def chat(
         "oportunidad": f"INTENCIÓN DETECTADA: OPORTUNIDAD. Cliente: {CLIENT_NOMBRE} ({CLIENT_PARTIDO}). Objetivo: hueco comunicativo para {CLIENT_PARTIDO}. La sección '¿Y ahora qué?' DEBE identificar el espacio concreto a ocupar.",
         "consulta": "INTENCIÓN: CONSULTA. Responde de forma útil e informada.",
     }.get(intent, "")
+    veracity_payload = json.dumps(veracity.model_dump(), ensure_ascii=False)
     msgs = [{"role": "system", "content": ANSWER_PROMPT + "\n\n" + intent_hint}]
     for h in req.history[-6:]:
         msgs.append({"role": h.get("role", "user"), "content": h.get("content", "")})
-    msgs.append({"role": "user", "content": f"Dades consultades:\n\n{data[:14000]}\n\nPregunta: {req.message}"})
+    msgs.append({"role": "user", "content": f"Avaluació de veracitat:\n{veracity_payload}\n\nDades consultades:\n\n{data[:14000]}\n\nPregunta: {req.message}"})
 
     answer = ""
     try:
         r2 = _llm_call(client, retries=2, model=MODEL, messages=msgs, temperature=0.3, max_tokens=4000)
         answer = r2.choices[0].message.content or ""
     except Exception:
-        answer = _build_emergency_answer(req.message, tool_results)
+        answer = _build_emergency_answer(req.message, tool_results, veracity)
+
+    if veracity.status == "reject":
+        answer = _build_emergency_answer(req.message, tool_results, veracity)
 
     # Step 4: Follow-ups (best-effort, no bloquea)
     follow_ups: list[str] = []
@@ -1863,6 +2079,9 @@ def chat(
             "useful_rows": useful,
             "retried": retried,
             "intent": intent,
+            "veracity_status": veracity.status,
+            "veracity_confidence": veracity.confidence,
+            "veracity_evidence_count": veracity.evidence_count,
             "latency_ms": int((time.time() - t0) * 1000),
         },
         request=request,
@@ -1872,4 +2091,5 @@ def chat(
         "sources": sources[:6],
         "follow_ups": follow_ups,
         "intent": intent,
+        "veracity": veracity.model_dump(),
     }
