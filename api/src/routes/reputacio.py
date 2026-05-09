@@ -329,18 +329,23 @@ def ingest_rss_feeds():
 # ── API Endpoints ──
 
 @router.get("/latest")
-def reputacio_latest(limit: int = Query(50, ge=1, le=200)):
+def reputacio_latest(
+    limit: int = Query(50, ge=1, le=200),
+    dies: int = Query(30, ge=1, le=365),
+):
     conn = _get_conn()
     cur = conn.cursor()
     _ensure_table()
+    since = datetime.now(timezone.utc) - timedelta(days=dies)
 
     cur.execute("""
     SELECT titol, resum, font, url, sentiment, sentiment_score, data_publicacio, partits
     FROM premsa_articles
     WHERE data_publicacio IS NOT NULL
+      AND data_publicacio >= %s
     ORDER BY data_publicacio DESC, id DESC
     LIMIT %s
-    """, (limit,))
+    """, (since, limit))
     articles = [{
         "titol": r[0],
         "resum": r[1],

@@ -155,7 +155,7 @@ export default function ReputacioPage() {
       .then(setStats)
       .catch(() => {});
 
-    fetch(`${API}/api/reputacio/latest?limit=8`, { cache: 'no-store' })
+    fetch(`${API}/api/reputacio/latest?limit=8&dies=30`, { cache: 'no-store' })
       .then(r => r.ok ? r.json() : null)
       .then(d => setLatestArticles(d?.articles || []))
       .catch(() => {});
