@@ -7,7 +7,7 @@ import { PageHeader } from '@/components/warroom/PageHeader';
 import { KPICard, KPIGrid } from '@/components/warroom/KPICard';
 import { PanelBox } from '@/components/warroom/PanelBox';
 import { StatusLine, StatusBadge } from '@/components/warroom/StatusBadge';
-import { AlertFeed, TrendingBar } from '@/components/warroom/AlertFeed';
+import { TrendingBar } from '@/components/warroom/AlertFeed';
 import { traduirTema } from '@/lib/temesCatala';
 import { APP_ROUTES, buildRoute } from '@/lib/routes';
 const API = process.env.NEXT_PUBLIC_API_URL || '';
@@ -142,29 +142,8 @@ export default function DashboardPage() {
           </PanelBox>
         </div>
 
-        {/* Row 2: Intel stream + Últims plens */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          <PanelBox title="Intel stream" subtitle="últimes 24h" tone="red">
-            {actividad.length > 0 ? (
-              <AlertFeed items={actividad.slice(0, 8).map((a: any) => ({
-                time: a.fecha?.slice(5, 10) || '',
-                severity: 'media' as const,
-                type: a.tipo || 'ACTA',
-                text: `${a.municipio} — ${a.tipo || 'Ordinària'} · ${a.num_puntos || 0} punts`,
-                municipio: a.municipio,
-              }))} maxVisible={6} />
-            ) : (
-              <div style={{ padding: '30px 0', textAlign: 'center' }}>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--fog)', letterSpacing: '.1em', textTransform: 'uppercase' }}>
-                  Esperant noves actes...
-                </div>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--fog)', marginTop: 8 }}>
-                  El pipeline processa actes cada 15 minuts
-                </div>
-              </div>
-            )}
-          </PanelBox>
-
+        {/* Row 2: Últims plens */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12 }}>
           <PanelBox title="Últims plens processats" subtitle={`${actividad.length} recents`} tone="phos">
             {actividad.length > 0 ? (
               <div>
