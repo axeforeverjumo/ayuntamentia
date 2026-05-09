@@ -989,6 +989,682 @@ Se entrega únicamente la especificación operativa solicitada.
 
 ---
 
+## 2026-05-10 — Submódulo `amplificar difusión` / `altaveu` (exploración)
+
+### Objetivo
+Definir el submódulo `altaveu` dentro de reputación para **detectar oportunidades favorables de comunicación, priorizar acciones de difusión con impacto electoral y mejorar la percepción pública**. Debe comportarse como un departamento de prensa de alto nivel: disciplinado, orientado a oportunidades reales, con foco local y obsesión por evitar errores, humo y triunfalismo vacío.
+
+### Alcance de esta iteración
+- **Tipo de tarea:** exploración/documentación.
+- **Sin cambios de código de producción**.
+- Se cubre el checklist pedido:
+  - objetivos, entradas y salidas del módulo `amplificar difusión`
+  - detección de oportunidades favorables de comunicación
+  - propuestas de activación por canal y audiencia
+
+---
+
+## 1) Contexto revisado en el repositorio
+
+Archivos auditados para esta definición:
+- `README.md`
+- `api/src/routes/reputacio.py`
+- `api/src/services/reputacio_sources.py`
+- `specs/reputacio/SPEC.md`
+
+Conclusiones del estado actual:
+- El backend ya expone un catálogo de fuentes de reputación y distingue entre `premsa` y `xarxes`.
+- El servicio `api/src/services/reputacio_sources.py` ya nombra explícitamente el módulo `altaveu`, pero solo como objetivo de alto nivel; todavía no existe una especificación operativa completa.
+- El trabajo previo del SPEC ya definió tres bloques imprescindibles que `altaveu` debe reutilizar:
+  - ampliación de medios y prensa local
+  - señales sociales relevantes
+  - filtro de ruido y comprobación de realidad
+- Por tanto, `altaveu` no debe construir difusión sobre volumen bruto, sino sobre **oportunidades verificadas y territoralmente útiles**, especialmente en municipios pequeños y medianos donde la prensa local y las redes con arraigo pesan más que la viralidad genérica.
+
+---
+
+## 2) Propósito del submódulo `altaveu`
+
+### 2.1 Definición funcional
+
+`altaveu` es el submódulo encargado de:
+- detectar cobertura, hechos, gestos, validaciones o ventanas narrativas favorables
+- evaluar si esas oportunidades merecen ser amplificadas
+- recomendar cómo convertirlas en **visibilidad útil, buena percepción pública y potencial ganancia de voto**
+- proponer activaciones concretas por canal, territorio y audiencia
+
+### 2.2 Filosofía operativa
+
+El módulo debe actuar como una mezcla de:
+- **war room positivo**
+- **departamento de prensa premium**
+- **equipo de earned media + rapid response inversa**
+
+Eso implica:
+- aprovechar rápido lo favorable antes de que se enfríe
+- no vender humo ni exagerar logros dudosos
+- priorizar legitimidad local y prueba social real
+- elegir el canal correcto para cada audiencia
+- usar disciplina narrativa: un mensaje claro, repetible y verificable
+
+### 2.3 Resultado esperado
+
+No basta con encontrar noticias positivas.
+El resultado esperado es:
+1. identificar **qué oportunidad existe realmente**
+2. estimar **si vale la pena activarla**
+3. decidir **qué relato conviene empujar**
+4. recomendar **canal, audiencia, portavoz y formato**
+5. medir si la oportunidad puede traducirse en imagen, agenda o voto
+
+---
+
+## 3) Objetivos del módulo
+
+### 3.1 Objetivos primarios
+
+1. **Detectar oportunidades favorables accionables**
+   - hechos, menciones, validaciones o comparativas que ayuden a reforzar imagen pública
+
+2. **Maximizar visibilidad útil**
+   - no solo alcance bruto, sino exposición ante públicos que importan electoralmente
+
+3. **Mejorar percepción pública con base verificable**
+   - convertir gestión, apoyo social, contraste favorable o cobertura local positiva en reputación tangible
+
+4. **Ayudar a ganar votos y legitimidad**
+   - priorizar oportunidades que mejoran confianza, competencia percibida, proximidad o liderazgo
+
+5. **Aprovechar ventanas de agenda antes que los rivales**
+   - activar difusión cuando el momento político, el medio o la conversación local favorecen la expansión
+
+### 3.2 Objetivos secundarios
+
+- reforzar argumentarios de concejales y portavoces
+- dar continuidad a éxitos de gestión o posicionamientos eficaces
+- convertir cobertura local en activos reutilizables para campaña y relato
+- detectar terceros que validan de forma creíble un mensaje propio
+
+### 3.3 Anti-objetivos
+
+`altaveu` no debe:
+- amplificar contenido dudoso o no verificado
+- confundir likes con persuasión electoral
+- sobreactivar mensajes pequeños hasta quemarlos
+- promover triunfalismo que pueda volverse en contra
+- priorizar difusión estatal si la oportunidad es local y la conversión real ocurre en territorio
+
+---
+
+## 4) Entradas del módulo
+
+### 4.1 Entradas de señal favorable
+
+1. **Cobertura de prensa positiva o utilizable**
+   - artículos favorables
+   - piezas neutrales con framing aprovechable
+   - comparativas donde el cliente queda mejor que rivales
+   - eco territorial de una decisión, propuesta o intervención
+
+2. **Señales sociales verificadas**
+   - apoyo de entidades, periodistas, líderes comunitarios o perfiles influyentes
+   - conversación local favorable
+   - reconocimiento a gestión, presencia o respuesta política
+   - contenido orgánico reutilizable
+
+3. **Eventos y hitos políticos**
+   - plenos, mociones, iniciativas, intervenciones, visitas, anuncios, acuerdos, resultados o rectificaciones exitosas
+
+4. **Señales de contraste competitivo**
+   - errores de rivales que abren hueco
+   - divisiones entre adversarios
+   - comparación favorable en coherencia, rapidez, cercanía o firmeza
+
+5. **Memoria de oportunidades previas**
+   - territorios, temas o formatos donde históricamente la amplificación funcionó bien
+
+### 4.2 Metadatos mínimos requeridos
+
+Toda oportunidad debería llegar con estos campos o equivalentes:
+- fuente
+- tipo de fuente
+- enlace u origen
+- fecha
+- territorio principal
+- actor beneficiado
+- tema principal
+- tono
+- evidencia disponible
+- `confidence_score`
+- alcance estimado
+- audiencia dominante
+- grado de reutilización posible
+
+### 4.3 Entradas editoriales/estratégicas
+
+La activación final depende también de:
+- prioridad electoral del municipio o territorio
+- tipo de audiencia al que afecta la oportunidad
+- sensibilidad del tema
+- capacidad del actor local para ejecutar difusión
+- saturación narrativa previa
+- encaje con el posicionamiento político del cliente
+
+---
+
+## 5) Salidas del módulo
+
+### 5.1 Salidas operativas principales
+
+1. **Oportunidad priorizada**
+   - resumen del hecho favorable
+   - score de oportunidad
+   - nivel de urgencia
+   - confianza
+   - motivo táctico
+
+2. **Diagnóstico de amplificación**
+   - qué hecho está verificado
+   - qué ángulo conviene enfatizar
+   - por qué puede resonar
+   - qué audiencia tiene más probabilidad de reaccionar bien
+
+3. **Plan de activación**
+   - canal recomendado
+   - audiencia objetivo
+   - portavoz sugerido
+   - formato sugerido
+   - ventana temporal óptima
+
+4. **Mensaje núcleo y argumentario breve**
+   - claim principal
+   - 3-5 bullets reutilizables
+   - prueba social o factual a citar
+
+5. **Plan de seguimiento**
+   - señales de éxito esperadas
+   - si conviene segunda ola
+   - criterio de cierre o reciclaje posterior
+
+### 5.2 Estados posibles de salida
+
+- `ignore`
+- `monitor`
+- `prepare_assets`
+- `activate_local`
+- `activate_multichannel`
+- `pitch_press`
+- `amplify_with_allies`
+- `hold_for_better_timing`
+
+---
+
+## 6) Qué constituye una oportunidad favorable de comunicación
+
+### 6.1 Tipos básicos de oportunidad
+
+1. **Validación externa creíble**
+   - un medio, entidad o actor respetado valida un hecho, postura o resultado favorable
+
+2. **Logro de gestión con prueba clara**
+   - hay un resultado tangible que puede mejorar percepción de competencia o eficacia
+
+3. **Comparativa favorable frente a rivales**
+   - el cliente aparece como más coherente, más rápido, más cercano o más resolutivo
+
+4. **Sintonía social o comunitaria**
+   - una demanda vecinal, sectorial o territorial encaja con el mensaje propio y permite conexión emocional/política
+
+5. **Ventana de agenda local**
+   - un tema entra en conversación municipal y existe una posición propia fuerte que puede capitalizarse
+
+6. **Reparación reputacional con giro positivo**
+   - un problema previo se resuelve, se corrige o se reencuadra con legitimidad
+
+7. **Microoportunidad territorial**
+   - cobertura pequeña pero muy importante en un municipio específico donde la proximidad pesa más que el volumen
+
+### 6.2 Regla de oro
+
+Una oportunidad favorable no es solo “algo bueno”.
+Debe cumplir una combinación suficiente de estas condiciones:
+- verificable
+- relevante para percepción pública
+- amplificable por algún canal real
+- útil para alguna audiencia concreta
+- conectable con voto, confianza, liderazgo o agenda
+
+---
+
+## 7) Sistema de detección de oportunidades favorables
+
+### 7.1 Flujo de detección
+
+1. **Captura de señal favorable**
+   - entra una mención, artículo, gesto, apoyo o evento
+
+2. **Filtro de realidad y ruido**
+   - se descarta humo, vanity metrics o apoyo débil sin trazabilidad
+
+3. **Agrupación de oportunidad**
+   - varias menciones sobre el mismo hecho favorable se agrupan en una sola oportunidad
+
+4. **Clasificación de oportunidad**
+   - tipo, tema, territorio, actor beneficiado, audiencia potencial, vida útil
+
+5. **Scoring de oportunidad**
+   - impacto reputacional, valor electoral, capacidad de difusión, autoridad del emisor, urgencia temporal
+
+6. **Decisión de activación**
+   - no activar, preparar material, activar local, empujar multicanal, ofrecer a prensa, movilizar aliados
+
+7. **Seguimiento**
+   - evaluar eco, repetición, legitimación adicional y fatiga de mensaje
+
+### 7.2 Regla central del flujo
+
+Antes de amplificar, el sistema debe responder:
+- **¿es verdad?**
+- **¿a quién le importa?**
+- **¿en qué territorio pesa?**
+- **¿qué canal convierte mejor esta señal en percepción o voto?**
+- **¿tenemos mejores oportunidades compitiendo por atención al mismo tiempo?**
+
+---
+
+## 8) Criterios para detectar oportunidades con valor real
+
+### 8.1 Señales fuertes
+
+Una oportunidad sube de prioridad si presenta varias de estas señales:
+- cobertura en prensa local o regional fiable
+- validación por tercero creíble no alineado automáticamente
+- evidencia tangible de gestión o impacto
+- encaje con un tema sensible o prioritario para el municipio
+- posibilidad de personalizar el mensaje a audiencia clara
+- comparación favorable frente a rival o contexto adverso
+- potencial de reutilización en argumentario, redes, prensa o intervención pública
+
+### 8.2 Señales débiles o engañosas
+
+Se debe rebajar o descartar si la supuesta oportunidad depende sobre todo de:
+- autopropaganda sin contraste externo
+- una sola cuenta amiga con poco peso real
+- engagement superficial o artificial
+- tema irrelevante para el territorio
+- mensaje que gusta internamente pero no tiene traducción pública útil
+- dato incompleto que puede desmontarse al amplificarlo
+
+### 8.3 Jerarquía editorial de oportunidad
+
+De mayor a menor valor táctico:
+1. validación externa local/regional con hecho comprobable
+2. logro de gestión con prueba y afectación visible
+3. comparativa favorable clara
+4. apoyo orgánico de actores comunitarios con legitimidad
+5. tendencia conversacional social favorable ya verificada
+6. señal positiva interna sin legitimación externa
+
+---
+
+## 9) Métrica de oportunidad y priorización
+
+### 9.1 Dimensiones del `opportunity_score` (`0-100`)
+
+1. **Impacto reputacional positivo (`0-20`)**
+   - cuánto puede mejorar imagen, competencia percibida o legitimidad
+
+2. **Valor electoral (`0-20`)**
+   - capacidad de mover simpatía, confianza o predisposición al voto en audiencia útil
+
+3. **Autoridad de la validación (`0-15`)**
+   - peso del medio, actor, entidad o perfil que legitima la oportunidad
+
+4. **Centralidad territorial (`0-15`)**
+   - relevancia del territorio afectado y proximidad al público donde importa
+
+5. **Amplificabilidad multicanal (`0-10`)**
+   - facilidad para convertir la oportunidad en formatos reutilizables
+
+6. **Urgencia / ventana temporal (`0-10`)**
+   - riesgo de perder valor si no se activa rápido
+
+7. **Claridad factual (`0-10`)**
+   - facilidad para comunicarla sin ambigüedades ni riesgo de corrección posterior
+
+### 9.2 Interpretación sugerida
+
+- `0-24` → oportunidad marginal
+- `25-49` → oportunidad secundaria
+- `50-69` → oportunidad buena
+- `70-84` → oportunidad alta
+- `85-100` → oportunidad prioritaria
+
+### 9.3 Regla correctora
+
+Una oportunidad con score alto pero con `confidence_score` insuficiente no debe activarse automáticamente.
+Primero debe pasar por revisión editorial o humana.
+
+---
+
+## 10) Propuestas de activación por canal y audiencia
+
+### 10.1 Prensa local / comarcal
+
+**Cuándo usarla**
+- logro de gestión municipal
+- respuesta eficaz a problema vecinal
+- dato o decisión con impacto claro en territorio
+- comparativa favorable que interesa a públicos locales
+
+**Audiencia principal**
+- votante local indeciso
+- tejido vecinal
+- comerciantes, entidades, asociaciones
+- personas que siguen la actualidad municipal
+
+**Acciones recomendadas**
+- pitch a periodista o medio local
+- nota breve territorializada
+- ofrecer titular claro + dato + portavoz local
+- convertir una cobertura positiva en segunda pieza de seguimiento
+
+**Objetivo táctico**
+- legitimidad y penetración territorial
+
+### 10.2 Redes sociales institucionales
+
+**Cuándo usarla**
+- oportunidad verificable con mensaje simple y visualizable
+- hitos de gestión, agenda, declaraciones o contraste político claro
+
+**Audiencia principal**
+- base propia
+- simpatizantes blandos
+- público local que consume titulares rápidos
+
+**Acciones recomendadas**
+- post corto con claim central
+- carrusel/resumen visual
+- clip breve de portavoz
+- cita de tercero validando el hecho
+
+**Objetivo táctico**
+- velocidad, repetición y control del framing
+
+### 10.3 WhatsApp / difusión cerrada / grupos de apoyo
+
+**Cuándo usarla**
+- oportunidad local que requiere propagación rápida y capilar
+- mensaje simple, útil para reenviar
+- argumentario de movilización o activación comunitaria
+
+**Audiencia principal**
+- militancia
+- red de simpatizantes
+- cargos locales
+- microinfluencers comunitarios
+
+**Acciones recomendadas**
+- texto corto con titular + enlace
+- bullet points reutilizables
+- pieza visual o corte de audio muy breve
+- indicación de “qué decir” y “qué no sobredimensionar”
+
+**Objetivo táctico**
+- multiplicación orgánica controlada
+
+### 10.4 Portavoces y concejales
+
+**Cuándo usarla**
+- oportunidad con potencial de convertirse en argumento político recurrente
+- comparativas favorables o validaciones externas fuertes
+
+**Audiencia principal**
+- pleno, radio local, entrevistas, actos, puerta a puerta, medios comarcales
+
+**Acciones recomendadas**
+- mini-argumentario de 3-5 frases
+- dato ancla
+- formulación adaptada a tono institucional o combativo
+- versión corta para intervención oral
+
+**Objetivo táctico**
+- convertir oportunidad mediática en persuasión política directa
+
+### 10.5 Aliados, entidades y terceros validadores
+
+**Cuándo usarla**
+- existe apoyo orgánico creíble o validación social utilizable
+- interesa ampliar legitimidad más allá del partido
+
+**Audiencia principal**
+- votante escéptico
+- comunidad local
+- sectores sociales concretos
+
+**Acciones recomendadas**
+- amplificar testimonios o reconocimientos verificables
+- facilitar materiales compartibles
+- promover eco cruzado con prudencia
+
+**Objetivo táctico**
+- prueba social y credibilidad externa
+
+### 10.6 Formatos largos o evergreen
+
+**Cuándo usarla**
+- oportunidad con vida útil larga o valor estratégico acumulable
+- ejemplo: balance de gestión, comparativa temática, éxito sostenido, caso local ejemplar
+
+**Audiencia principal**
+- cuadros, periodistas, votante interesado, equipo de campaña
+
+**Acciones recomendadas**
+- dossier breve
+- hilo/documento FAQ
+- pieza de web o landing temática
+- repositorio de ejemplos para argumentarios
+
+**Objetivo táctico**
+- convertir una oportunidad puntual en activo duradero
+
+---
+
+## 11) Playbooks por tipo de audiencia
+
+### 11.1 Votante local indeciso
+
+Qué suele funcionar:
+- prueba de gestión concreta
+- mejora visible en problema cotidiano
+- tono útil, no ideológico en exceso
+- validación externa local
+
+Activación recomendada:
+- prensa local + post institucional + portavoz de proximidad
+
+### 11.2 Base propia y simpatizantes
+
+Qué suele funcionar:
+- contraste claro con rivales
+- sensación de avance, firmeza o acierto
+- piezas simples de compartir
+
+Activación recomendada:
+- redes + WhatsApp + mini-argumentario para replicación
+
+### 11.3 Entidades y comunidad organizada
+
+Qué suele funcionar:
+- reconocimiento a demandas vecinales
+- evidencia de escucha, resolución o colaboración
+- tono respetuoso y territorial
+
+Activación recomendada:
+- contacto directo, prensa local, mensajes de portavoz local, materiales contextualizados
+
+### 11.4 Periodistas y prescriptores locales
+
+Qué suele funcionar:
+- novedad clara
+- dato comprobable
+- impacto local concreto
+- acceso rápido a portavoz y contexto
+
+Activación recomendada:
+- pitch breve, enfoque territorial, titular limpio y evidencia preparada
+
+---
+
+## 12) Riesgos y controles para evitar errores
+
+### 12.1 Riesgos principales
+
+- amplificar una señal que luego se matiza o cae
+- sobredimensionar un logro pequeño y generar rechazo
+- usar un tono triunfalista en un contexto social delicado
+- gastar atención en una oportunidad irrelevante mientras otra mejor expira
+- intentar nacionalizar una oportunidad que solo funciona en clave local
+
+### 12.2 Reglas de control
+
+1. amplificar solo hechos que superen `reality check`
+2. priorizar legitimación externa frente a autobombo
+3. no activar multicanal si la oportunidad todavía no tiene mensaje sólido
+4. adaptar tono a audiencia y sensibilidad
+5. cortar la difusión cuando aparezcan fatiga, backlash o riesgo de sobreexposición
+
+---
+
+## 13) KPIs del módulo
+
+### 13.1 KPIs de detección
+
+- oportunidades favorables detectadas por territorio y tema
+- ratio de oportunidades válidas vs oportunidades descartadas
+- porcentaje de oportunidades con validación externa
+
+### 13.2 KPIs de activación
+
+- tiempo desde detección hasta activación
+- porcentaje de oportunidades activadas por canal
+- reutilización de activos en portavoces, redes y prensa
+
+### 13.3 KPIs de eficacia
+
+- aumento de cobertura favorable cualificada
+- crecimiento de menciones positivas verificadas
+- penetración territorial de mensajes activados
+- oportunidades que generan activos reutilizables en argumentario
+- porcentaje de activaciones que mejoran percepción o refuerzan agenda local
+
+### 13.4 KPI rector
+
+El KPI central no es “publicar más”, sino:
+- **convertir oportunidades verificadas en visibilidad útil, legitimidad pública y mejor predisposición electoral**
+
+---
+
+## 14) Integración con `limpiar reputación`
+
+### 14.1 Complementariedad funcional
+
+- `limpiar reputación` contiene daño, corrige y apaga fuegos
+- `altaveu` detecta viento a favor y lo convierte en tracción política
+
+### 14.2 Reglas compartidas
+
+Ambos comparten:
+- catálogo de fuentes
+- priorización de prensa local
+- filtro de ruido
+- comprobación de realidad
+- `confidence_score`
+
+### 14.3 Diferencia táctica
+
+- `limpiar reputación` pregunta: **¿cómo evitamos perder?**
+- `altaveu` pregunta: **¿cómo aprovechamos esto para ganar?**
+
+---
+
+## 15) Recomendaciones de implementación futura
+
+Sin tocar producción en esta tarea, una implementación posterior debería introducir:
+
+1. **Modelo de oportunidad favorable**
+   - `opportunity_id`
+   - `opportunity_type`
+   - `opportunity_score`
+   - `confidence_score`
+   - `target_audience`
+   - `recommended_channel`
+   - `recommended_format`
+   - `recommended_spokesperson`
+   - `activation_status`
+
+2. **Agrupación de señales por oportunidad**
+   - no tratar cada artículo/post positivo como caso aislado
+
+3. **Plantillas de activación por canal**
+   - prensa local
+   - redes institucionales
+   - WhatsApp / difusión cerrada
+   - portavoz / pleno / entrevista
+
+4. **Cola editorial de priorización**
+   - decidir qué oportunidades se activan primero cuando compiten entre sí
+
+5. **Panel futuro de altavoz**
+   - oportunidades abiertas
+   - scoring
+   - audiencia sugerida
+   - canales propuestos
+   - estado de ejecución y seguimiento
+
+---
+
+## 16) Decisiones técnicas y editoriales tomadas
+
+1. `altaveu` se define como módulo de **amplificación estratégica de oportunidades**, no como simple feed de noticias positivas.
+2. La unidad operativa principal debe ser la **oportunidad agrupada**, no la mención individual.
+3. La prensa local y los actores territoriales tienen prioridad estructural en municipios pequeños y medianos.
+4. La activación debe priorizar valor electoral y legitimidad, no vanidad de métricas.
+5. La oportunidad solo debe activarse si es verificable y si existe una audiencia claramente beneficiaria.
+6. El módulo debe recomendar también **esperar** cuando una oportunidad aún no está madura o puede mejorar con mejor timing.
+7. Los argumentarios de concejales son una salida central del módulo, no un efecto secundario.
+
+---
+
+## 17) Archivos modificados
+
+- `specs/reputacio/SPEC.md`
+
+Cambios realizados en esta iteración:
+- se añade una nueva sección específica para el submódulo `amplificar difusión` / `altaveu`
+- se definen objetivos, entradas y salidas operativas del módulo
+- se especifica cómo detectar oportunidades favorables de comunicación
+- se documentan criterios de scoring y priorización de oportunidades
+- se añaden playbooks de activación por canal y por audiencia
+- se deja trazabilidad a los archivos reales revisados del repositorio
+
+---
+
+## 18) Límites de esta iteración
+
+No se implementa en esta tarea:
+- scoring en backend
+- persistencia de oportunidades en base de datos
+- endpoints nuevos FastAPI
+- UI específica del módulo `altaveu`
+- automatización de mensajes o campañas
+- integración con métricas reales de distribución por canal
+
+Se entrega únicamente la especificación operativa solicitada.
+
+---
+
 ## 2026-05-09 — Filtro de ruido y comprobación de realidad en reputació
 
 ### Objetivo
