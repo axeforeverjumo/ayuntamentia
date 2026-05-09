@@ -1,7 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import type { CSSProperties } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { PageHeader } from '@/components/warroom/PageHeader';
 import { KPICard, KPIGrid } from '@/components/warroom/KPICard';
@@ -9,7 +8,6 @@ import { PanelBox } from '@/components/warroom/PanelBox';
 import { StatusLine, StatusBadge } from '@/components/warroom/StatusBadge';
 import { TrendingBar } from '@/components/warroom/AlertFeed';
 import { Gauge } from '@/components/landing/primitives';
-import { conversaPath } from '@/lib/navigation';
 import { traduirTema } from '@/lib/temesCatala';
 
 const API = process.env.NEXT_PUBLIC_API_URL || '';
@@ -22,88 +20,6 @@ type Tendencia = { tema: string; actual: number; previo: number; delta: number; 
 type Promesa = {
   tema: string; partido_parlament: string;
   rechazadas: number; aprobadas: number; municipios_contradictores: string[] | null;
-};
-
-function IntelLoadingPanel() {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 18, marginBottom: 20 }}>
-      <div style={{
-        ...intelSkeletonStyle,
-        padding: '24px',
-        display: 'grid',
-        gridTemplateColumns: '1.2fr .8fr',
-        gap: 20,
-        alignItems: 'center',
-      }}>
-        <div>
-          <div className="pulse-dot" style={{ width: 12, height: 12, borderRadius: 12, background: 'var(--wr-phosphor)', margin: '0 0 14px' }} />
-          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 24, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 8 }}>
-            Carregant intel·ligència…
-          </div>
-          <p style={{ fontSize: 13, color: 'var(--fog)', maxWidth: 520, margin: '0 0 16px' }}>
-            Estem creuant rànquings, tendències i promeses perquè la pàgina no sembli buida mentre arriben les dades.
-          </p>
-          <div style={{ display: 'grid', gap: 10, maxWidth: 420 }}>
-            <div className="skeleton" style={{ height: 12, borderRadius: 999, background: 'rgba(58,125,181,.14)' }} />
-            <div className="skeleton" style={{ height: 12, width: '84%', borderRadius: 999, background: 'rgba(58,125,181,.14)' }} />
-            <div className="skeleton" style={{ height: 12, width: '68%', borderRadius: 999, background: 'rgba(58,125,181,.14)' }} />
-          </div>
-        </div>
-
-        <div style={{
-          border: '1px solid rgba(58,125,181,.25)',
-          background: 'rgba(58,125,181,.05)',
-          padding: '18px 20px',
-        }}>
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--wr-phosphor)', letterSpacing: '.12em', textTransform: 'uppercase', marginBottom: 10 }}>
-            Progrés de càrrega
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {['Connectant amb l’API', 'Creuant rànquings i tendències', 'Preparant la vista inicial'].map((step, index) => (
-              <div key={step} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span
-                  className="pulse-dot"
-                  style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: 8,
-                    background: index === 2 ? 'var(--fog)' : 'var(--wr-phosphor)',
-                    animationDelay: `${index * 0.2}s`,
-                  }}
-                />
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: index === 2 ? 'var(--fog)' : 'var(--paper)' }}>
-                  {step}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 12 }}>
-        {[0, 1, 2].map((item) => (
-          <div key={item} className="skeleton" style={{ ...intelSkeletonStyle, height: 118 }} />
-        ))}
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 16 }}>
-        <div className="skeleton" style={{ ...intelSkeletonStyle, height: 280 }} />
-        <div className="skeleton" style={{ ...intelSkeletonStyle, height: 280 }} />
-      </div>
-    </div>
-  );
-}
-
-const intelLoadingShellStyle: CSSProperties = {
-  textAlign: 'center',
-  padding: '28px 0 12px',
-};
-
-const intelSkeletonStyle: CSSProperties = {
-  border: '1px solid var(--line)',
-  background: 'var(--ink-2)',
-  position: 'relative',
-  overflow: 'hidden',
 };
 
 const TABS = [
@@ -120,80 +36,14 @@ export default function IntelPage() {
   const [prom, setProm] = useState<Promesa[]>([]);
   const [partido, setPartido] = useState('');
   const [order, setOrder] = useState<'divergencia' | 'alineacion'>('divergencia');
-  const [isLoading, setIsLoading] = useState(false);
-  const [showLoader, setShowLoader] = useState(false);
-  const [loadingAnnouncement, setLoadingAnnouncement] = useState('Carregant intel·ligència estratègica');
-  const loadingDelayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const minVisibleRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const loaderShownAtRef = useRef<number | null>(null);
-
-  const loadIntelData = useCallback(() => {
-    const LOADER_DELAY_MS = 180;
-    const MIN_VISIBLE_MS = 500;
-
-    setIsLoading(true);
-    setLoadingAnnouncement('Carregant intel·ligència estratègica');
-
-    if (loadingDelayRef.current) clearTimeout(loadingDelayRef.current);
-    if (minVisibleRef.current) clearTimeout(minVisibleRef.current);
-    loaderShownAtRef.current = null;
-
-    loadingDelayRef.current = setTimeout(() => {
-      loaderShownAtRef.current = Date.now();
-      setShowLoader(true);
-      setLoadingAnnouncement('Carregant intel·ligència estratègica. Les dades triguen una mica més del normal.');
-    }, LOADER_DELAY_MS);
-
-    const q = new URLSearchParams({ order, limit: '50' });
-    if (partido) q.set('partido', partido);
-
-    Promise.all([
-      fetch(`${API}/api/intel/ranking-concejales?${q}`).then(r => r.ok ? r.json() : []),
-      fetch(`${API}/api/intel/tendencias`).then(r => r.ok ? r.json() : []),
-      fetch(`${API}/api/intel/promesas-incumplidas`).then(r => r.ok ? r.json() : []),
-    ])
-      .then(([rankingData, tendData, promData]) => {
-        setRanking(Array.isArray(rankingData) ? rankingData : []);
-        setTend(Array.isArray(tendData) ? tendData : []);
-        setProm(Array.isArray(promData) ? promData : []);
-      })
-      .catch(() => {})
-      .finally(() => {
-        setIsLoading(false);
-
-        if (loadingDelayRef.current) {
-          clearTimeout(loadingDelayRef.current);
-          loadingDelayRef.current = null;
-        }
-
-        if (!loaderShownAtRef.current) {
-          setShowLoader(false);
-          setLoadingAnnouncement('Intel·ligència carregada');
-          return;
-        }
-
-        const elapsed = Date.now() - loaderShownAtRef.current;
-        const remainingVisible = Math.max(MIN_VISIBLE_MS - elapsed, 0);
-
-        minVisibleRef.current = setTimeout(() => {
-          setShowLoader(false);
-          setLoadingAnnouncement('Intel·ligència carregada');
-          loaderShownAtRef.current = null;
-        }, remainingVisible);
-      });
-  }, [order, partido]);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      loadIntelData();
-    }, 0);
-
-    return () => {
-      clearTimeout(timer);
-      if (loadingDelayRef.current) clearTimeout(loadingDelayRef.current);
-      if (minVisibleRef.current) clearTimeout(minVisibleRef.current);
-    };
-  }, [loadIntelData]);
+    const q = new URLSearchParams({ order, limit: '50' });
+    if (partido) q.set('partido', partido);
+    fetch(`${API}/api/intel/ranking-concejales?${q}`).then(r => r.ok ? r.json() : []).then(d => setRanking(Array.isArray(d) ? d : [])).catch(() => {});
+    fetch(`${API}/api/intel/tendencias`).then(r => r.ok ? r.json() : []).then(d => setTend(Array.isArray(d) ? d : [])).catch(() => {});
+    fetch(`${API}/api/intel/promesas-incumplidas`).then(r => r.ok ? r.json() : []).then(d => setProm(Array.isArray(d) ? d : [])).catch(() => {});
+  }, [partido, order]);
 
   const maxTend = tend.length > 0 ? Math.max(...tend.map(t => t.actual)) : 1;
 
@@ -262,29 +112,6 @@ export default function IntelPage() {
       </div>
 
       <div style={{ padding: '20px 26px' }}>
-        <div
-          aria-live="polite"
-          aria-atomic="true"
-          style={{
-            position: 'absolute',
-            width: 1,
-            height: 1,
-            padding: 0,
-            margin: -1,
-            overflow: 'hidden',
-            clip: 'rect(0, 0, 0, 0)',
-            whiteSpace: 'nowrap',
-            border: 0,
-          }}
-        >
-          {isLoading ? loadingAnnouncement : 'Intel·ligència carregada'}
-        </div>
-
-        {showLoader && (
-          <div style={intelLoadingShellStyle} role="status" aria-busy="true" aria-label="Carregant dades d'intel·ligència">
-            <IntelLoadingPanel />
-          </div>
-        )}
 
         {/* ─── TAB 1: RÀNQUING INTERN ─── */}
         {tab === 'ranking' && (
@@ -579,14 +406,14 @@ export default function IntelPage() {
                       <span style={{ color: 'var(--wr-red-2)' }}>Vulnerabilitat</span> = % de divergents sobre el total de regidors del partit. Un partit pot tenir alineació mitjana alta i 0 divergents alhora: vol dir que tots els regidors es mantenen &ge; 70% de fidelitat.
                     </p>
                   </div>
-                  <Link href={conversaPath({ mode: 'atacar' })} style={{
+                  <Link href="/chat?mode=atacar" style={{
                     display: 'inline-flex', alignItems: 'center', gap: 8,
                     background: 'var(--brand)', color: '#E8F1F9', border: '1px solid var(--brand)',
                     borderRadius: 'var(--r-md)', padding: '10px 16px', fontFamily: 'var(--font-mono)', fontSize: 11,
                     letterSpacing: '.1em', textTransform: 'uppercase', fontWeight: 700,
                     textDecoration: 'none', boxShadow: '0 0 20px -6px rgba(15,76,129,.4)',
                   }}>
-                    ◼ Analitzar rival a la Sala d&apos;Intel·ligència →
+                    ◼ Analitzar rival a la Sala d'Intel·ligència →
                   </Link>
                 </div>
 
@@ -646,7 +473,7 @@ export default function IntelPage() {
                           </>
                         )}
 
-                        <Link href={conversaPath({ mode: 'atacar', q: `Analitza les debilitats i contradiccions internes del ${p.name}. Quins regidors no segueixen la línia del partit? On hi ha divergències municipals?` })}
+                        <Link href={`/chat?mode=atacar&q=${encodeURIComponent(`Analitza les debilitats i contradiccions internes del ${p.name}. Quins regidors no segueixen la línia del partit? On hi ha divergències municipals?`)}`}
                           style={{
                             display: 'block', marginTop: 12, padding: '8px 12px',
                             background: 'transparent', border: '1px dashed var(--line)',
@@ -654,7 +481,7 @@ export default function IntelPage() {
                             letterSpacing: '.08em', textTransform: 'uppercase', textDecoration: 'none',
                             textAlign: 'center',
                           }}>
-                          → Explotar a la Sala d&apos;Intel·ligència
+                          → Explotar a la Sala d'Intel·ligència
                         </Link>
                       </div>
                     </div>

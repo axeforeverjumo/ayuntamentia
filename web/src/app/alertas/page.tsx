@@ -12,7 +12,6 @@ import { AlertaDetailModal } from '@/components/ui/AlertaDetailModal';
 import { ReglaFormModal } from '@/components/ui/ReglaFormModal';
 import type { Alerta, AlertasStats, AlertSeverity, AlertEstado, AlertaRegla } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { visibleRoutes } from '@/lib/navigation';
 
 type ListResponse = { total: number; page: number; results: Alerta[] } | Alerta[];
 
@@ -671,7 +670,7 @@ function AlertaCard({
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                const url = `${window.location.origin}${visibleRoutes.alertes}?id=${alerta.id}`;
+                const url = `${window.location.origin}/alertas?id=${alerta.id}`;
                 navigator.clipboard.writeText(url);
                 setCopied(true);
                 setTimeout(() => setCopied(false), 2000);

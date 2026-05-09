@@ -21,7 +21,6 @@ import {
 } from 'lucide-react';
 import { useTheme } from '@/lib/useTheme';
 import { getSupabaseBrowser } from '@/lib/supabaseBrowser';
-import { visibleRoutes } from '@/lib/navigation';
 
 interface NavItem {
   href: string;
@@ -32,16 +31,16 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { href: visibleRoutes.tauler, label: 'Tauler', icon: LayoutDashboard, hint: 'Visió executiva' },
-  { href: visibleRoutes.conversa, label: "Sala d'Intel·ligència", icon: Crosshair, hint: 'Xat multimode' },
-  { href: visibleRoutes.cerca, label: 'Cercar', icon: Search, hint: 'Cerca universal' },
-  { href: visibleRoutes.alertes, label: 'Alertes', icon: Bell, hint: 'Regles actives' },
-  { href: visibleRoutes.municipis, label: 'Municipis', icon: MapPin, hint: '947 municipis' },
-  { href: visibleRoutes.regidors, label: 'Regidors', icon: Users, hint: 'Alineació i perfils' },
-  { href: visibleRoutes.reputacio, label: 'Reputació', icon: Radar, hint: 'Premsa · sentiment' },
-  { href: visibleRoutes.intelLigencia, label: 'Intel·ligència', icon: ShieldCheck, hint: 'Estratègia' },
-  { href: visibleRoutes.parlament, label: 'Parlament', icon: Building2, hint: 'DSPC · sessions' },
-  { href: visibleRoutes.informes, label: 'Informes', icon: FileText, hint: 'Biblioteca + briefs' },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, hint: 'Visió executiva' },
+  { href: '/chat', label: "Sala d'Intel·ligència", icon: Crosshair, hint: 'Chat multi-mode' },
+  { href: '/buscar', label: 'Cercar', icon: Search, hint: 'Cerca universal' },
+  { href: '/alertas', label: 'Alertes', icon: Bell, hint: 'Regles actives' },
+  { href: '/municipios', label: 'Municipis', icon: MapPin, hint: '947 municipis' },
+  { href: '/regidors', label: 'Regidors', icon: Users, hint: 'Alineació i perfils' },
+  { href: '/reputacio', label: 'Reputació', icon: Radar, hint: 'Premsa · sentiment' },
+  { href: '/intel', label: 'Intel·ligència', icon: ShieldCheck, hint: 'Estratègia' },
+  { href: '/parlament', label: 'Parlament', icon: Building2, hint: 'DSPC · sessions' },
+  { href: '/informes', label: 'Informes', icon: FileText, hint: 'Biblioteca + briefs' },
 ];
 
 export function Sidebar() {
@@ -79,10 +78,10 @@ export function Sidebar() {
 
   async function handleLogout() {
     await getSupabaseBrowser().auth.signOut();
-    window.location.href = visibleRoutes.inici;
+    window.location.href = '/';
   }
 
-  if (pathname === visibleRoutes.autenticacio || pathname === visibleRoutes.inici) return null;
+  if (pathname === '/login' || pathname === '/') return null;
 
   const isLight = theme === 'light';
 
@@ -93,7 +92,7 @@ export function Sidebar() {
     >
       {/* Brand */}
       <div style={{ padding: '14px 16px', borderBottom: '.5px solid var(--border)' }}>
-        <Link href={visibleRoutes.inici} style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
+        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
           <div style={{
             width: 26, height: 26, display: 'grid', placeItems: 'center',
             borderRadius: 6, background: 'var(--brand)', flexShrink: 0,
@@ -124,8 +123,8 @@ export function Sidebar() {
         </p>
         {navItems.map((item) => {
           const isActive =
-            item.href === visibleRoutes.tauler
-              ? pathname === visibleRoutes.tauler
+            item.href === '/dashboard'
+              ? pathname === '/dashboard'
               : pathname.startsWith(item.href);
           const Icon = item.icon;
 
@@ -152,7 +151,7 @@ export function Sidebar() {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div>{item.label}</div>
               </div>
-              {item.href === visibleRoutes.alertes && alertCount > 0 && (
+              {item.href === '/alertas' && alertCount > 0 && (
                 <span style={{
                   background: 'var(--danger)', color: '#fff',
                   fontFamily: 'var(--font-sans)', fontSize: 9, fontWeight: 600,
@@ -168,12 +167,12 @@ export function Sidebar() {
       <div style={{ borderTop: '.5px solid var(--border)', padding: '10px 12px' }}>
         {user?.rol === 'admin' && (
           <Link
-            href={visibleRoutes.administracio}
+            href="/admin"
             style={{
               display: 'flex', alignItems: 'center', gap: 9, padding: '8px 10px',
               marginBottom: 2, fontSize: 12.5, color: 'var(--text-meta)', textDecoration: 'none',
               borderRadius: 'var(--r-sm)',
-              background: pathname.startsWith(visibleRoutes.administracio) ? 'var(--bg-elevated)' : 'transparent',
+              background: pathname.startsWith('/admin') ? 'var(--bg-elevated)' : 'transparent',
             }}
           >
             <ShieldCheck size={15} strokeWidth={1.5} />
@@ -193,7 +192,7 @@ export function Sidebar() {
           <span>{theme === 'dark' ? 'Mode clar' : 'Mode fosc'}</span>
         </button>
         <Link
-          href={visibleRoutes.configuracio}
+          href="/settings"
           style={{
             display: 'flex', alignItems: 'center', gap: 9, padding: '8px 10px',
             marginBottom: 2, fontSize: 12.5, color: 'var(--text-meta)', textDecoration: 'none',

@@ -3,7 +3,6 @@
 import { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getSupabaseBrowser } from '@/lib/supabaseBrowser';
-import { visibleRoutes } from '@/lib/navigation';
 
 export default function LoginPage() {
   return (
@@ -16,7 +15,7 @@ export default function LoginPage() {
 function LoginInner() {
   const router = useRouter();
   const params = useSearchParams();
-  const next = params.get('next') || visibleRoutes.tauler;
+  const next = params.get('next') || '/dashboard';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [mode, setMode] = useState<'password' | 'magic'>('password');

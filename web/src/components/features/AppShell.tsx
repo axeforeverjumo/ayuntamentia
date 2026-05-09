@@ -4,9 +4,8 @@ import { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { Menu, X } from 'lucide-react';
 import { Sidebar } from './Sidebar';
-import { visibleRoutes } from '@/lib/navigation';
 
-const SHELL_EXCLUDED = [visibleRoutes.inici, visibleRoutes.autenticacio, visibleRoutes.legal, visibleRoutes.aterratge];
+const SHELL_EXCLUDED = ['/', '/login', '/legal', '/landing'];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();

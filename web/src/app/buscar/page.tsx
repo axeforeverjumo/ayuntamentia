@@ -10,7 +10,6 @@ import { SearchInput } from '@/components/ui/SearchInput';
 import { apiClient } from '@/lib/ApiClient';
 import type { SearchResponse, SearchResult } from '@/lib/types';
 import { formatDate } from '@/lib/utils';
-import { actaDetailPath, municipiDetailPath } from '@/lib/navigation';
 
 const RESULTS_PER_PAGE = 10;
 
@@ -296,7 +295,7 @@ export default function BuscarPage() {
 }
 
 function SearchResultCard({ result }: { result: SearchResult }) {
-  const href = result.tipo === 'municipio' ? municipiDetailPath(result.id) : actaDetailPath(result.id);
+  const href = result.tipo === 'municipio' ? `/municipios/${result.id}` : `/actas/${result.id}`;
   return (
     <Link href={href} style={{
       display: 'block', background: 'var(--bg-surface)', border: '.5px solid var(--border)',

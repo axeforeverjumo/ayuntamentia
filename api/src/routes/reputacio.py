@@ -7,14 +7,12 @@ import os
 import json
 import hashlib
 import logging
-import time
-from datetime import datetime, timedelta, timezone, date
-from email.utils import parsedate_to_datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
 import feedparser
 import psycopg2
-from fastapi import APIRouter, Query, Response
+from fastapi import APIRouter, Query
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/reputacio", tags=["reputacio"])
@@ -158,92 +156,6 @@ def _get_conn():
     return psycopg2.connect(DATABASE_URL)
 
 
-def _set_no_store_headers(response: Response) -> None:
-    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0, s-maxage=0"
-    response.headers["Pragma"] = "no-cache"
-    response.headers["Expires"] = "0"
-    response.headers["CDN-Cache-Control"] = "no-store"
-    response.headers["Surrogate-Control"] = "no-store"
-    response.headers["Vercel-CDN-Cache-Control"] = "no-store"
-
-
-def _parse_iso_date(value: Optional[str]) -> Optional[date]:
-    if not value:
-        return None
-    text = str(value).strip()
-    if not text:
-        return None
-    try:
-        return date.fromisoformat(text[:10])
-    except Exception:
-        return None
-
-
-def _article_within_window(article_date: Optional[str], days: int) -> bool:
-    parsed = _parse_iso_date(article_date)
-    if not parsed:
-        return False
-    today = datetime.now(timezone.utc).date()
-    cutoff = today - timedelta(days=days)
-    return cutoff <= parsed <= today
-
-
-def _parse_entry_datetime(entry) -> Optional[datetime]:
-    """Normalitza dates RSS a UTC aware evitant timestamps locals/futurs incorrectes."""
-    candidates = [
-        entry.get("published_parsed"),
-        entry.get("updated_parsed"),
-    ]
-    for parsed in candidates:
-        if parsed:
-            try:
-                return datetime.fromtimestamp(time.mktime(parsed), tz=timezone.utc)
-            except Exception:
-                continue
-
-    text_candidates = [
-        entry.get("published"),
-        entry.get("updated"),
-        entry.get("pubDate"),
-    ]
-    for value in text_candidates:
-        if not value:
-            continue
-        try:
-            dt = parsedate_to_datetime(value)
-            if dt.tzinfo is None:
-                dt = dt.replace(tzinfo=timezone.utc)
-            else:
-                dt = dt.astimezone(timezone.utc)
-            return dt
-        except Exception:
-            continue
-
-    return None
-
-
-def cleanup_old_articles(days_to_keep: int = 30) -> int:
-    """Elimina noticias antiguas y fechas futuras fuera de la ventana operativa."""
-    _ensure_table()
-    conn = _get_conn()
-    cur = conn.cursor()
-    now_utc = datetime.now(timezone.utc)
-    threshold = now_utc - timedelta(days=days_to_keep)
-    cur.execute(
-        """
-        DELETE FROM premsa_articles
-        WHERE data_publicacio IS NOT NULL
-          AND (data_publicacio < %s OR data_publicacio > %s)
-        """,
-        (threshold, now_utc),
-    )
-    deleted = cur.rowcount
-    conn.commit()
-    conn.close()
-    logger.info(f"Premsa cleanup: {deleted} articles eliminats fora de finestra ({days_to_keep} dies)")
-    return deleted
-
-
 def _ensure_table():
     conn = _get_conn()
     cur = conn.cursor()
@@ -290,7 +202,6 @@ def _detect_partits(text: str) -> list[str]:
 def ingest_rss_feeds():
     """Ingest all RSS feeds — called by celery beat."""
     _ensure_table()
-    cleanup_old_articles(30)
     conn = _get_conn()
     cur = conn.cursor()
     total_new = 0
@@ -302,18 +213,17 @@ def ingest_rss_feeds():
                 title = entry.get("title", "")
                 summary = entry.get("summary", entry.get("description", ""))
                 link = entry.get("link", "")
+                published = entry.get("published_parsed") or entry.get("updated_parsed")
+
                 if not title:
                     continue
 
-                pub_date = _parse_entry_datetime(entry)
-                if pub_date and pub_date > datetime.now(timezone.utc) + timedelta(days=1):
-                    logger.warning(
-                        "Skipping future-dated RSS entry from %s: %s (%s)",
-                        feed_cfg["nom"],
-                        title[:120],
-                        pub_date.isoformat(),
-                    )
-                    continue
+                pub_date = None
+                if published:
+                    try:
+                        pub_date = datetime(*published[:6])
+                    except Exception:
+                        pub_date = datetime.now()
 
                 text = f"{title} {summary}"
                 h = hashlib.md5(f"{feed_cfg['nom']}:{link or title}".encode()).hexdigest()
@@ -322,21 +232,10 @@ def ingest_rss_feeds():
                 sentiment, score = _detect_sentiment(title, summary, partits)
 
                 try:
-                    # Si l'article ja existeix, actualitzem data_publicacio/resum/títol/font/sentiment
-                    # per evitar que es quedi una versió antiga (bug de dades "congelades").
                     cur.execute("""
                     INSERT INTO premsa_articles (hash, font, titol, resum, url, data_publicacio, partits, sentiment, sentiment_score)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    ON CONFLICT (hash) DO UPDATE SET
-                        font = EXCLUDED.font,
-                        titol = EXCLUDED.titol,
-                        resum = EXCLUDED.resum,
-                        url = COALESCE(EXCLUDED.url, premsa_articles.url),
-                        data_publicacio = COALESCE(EXCLUDED.data_publicacio, premsa_articles.data_publicacio),
-                        partits = EXCLUDED.partits,
-                        sentiment = EXCLUDED.sentiment,
-                        sentiment_score = EXCLUDED.sentiment_score,
-                        data_ingesta = NOW()
+                    ON CONFLICT (hash) DO NOTHING
                     """, (h, feed_cfg["nom"], title, summary[:500] if summary else None,
                           link, pub_date, partits, sentiment, score))
                     if cur.rowcount > 0:
@@ -358,8 +257,7 @@ def ingest_rss_feeds():
 # ── API Endpoints ──
 
 @router.get("/stats")
-def reputacio_stats(response: Response, dies: int = Query(30)):
-    _set_no_store_headers(response)
+def reputacio_stats(dies: int = Query(30)):
     conn = _get_conn()
     cur = conn.cursor()
     _ensure_table()
@@ -404,8 +302,7 @@ def reputacio_stats(response: Response, dies: int = Query(30)):
 
 
 @router.get("/sentiment-partit")
-def sentiment_per_partit(response: Response, partit: str = Query("AC"), dies: int = Query(30)):
-    _set_no_store_headers(response)
+def sentiment_per_partit(partit: str = Query("AC"), dies: int = Query(30)):
     conn = _get_conn()
     cur = conn.cursor()
     _ensure_table()
@@ -451,8 +348,7 @@ def sentiment_per_partit(response: Response, partit: str = Query("AC"), dies: in
 
 
 @router.get("/temes-negatius")
-def temes_negatius(response: Response, partit: str = Query("AC"), dies: int = Query(30)):
-    _set_no_store_headers(response)
+def temes_negatius(partit: str = Query("AC"), dies: int = Query(30)):
     """Temes on el partit té mala premsa — candidats per 'neteja'."""
     conn = _get_conn()
     cur = conn.cursor()
@@ -472,106 +368,19 @@ def temes_negatius(response: Response, partit: str = Query("AC"), dies: int = Qu
 
 
 @router.post("/ingest")
-def trigger_ingest(response: Response):
-    _set_no_store_headers(response)
+def trigger_ingest():
     """Manual trigger for RSS ingestion."""
     n = ingest_rss_feeds()
     return {"ok": True, "nous_articles": n}
 
 
-@router.get("/diagnostic")
-def reputacio_diagnostic(response: Response, partit: str = Query("AC"), dies: int = Query(30)):
-    _set_no_store_headers(response)
-    """Diagnóstico reproducible del estado del feed y refresco."""
-    _ensure_table()
-    conn = _get_conn()
-    cur = conn.cursor()
-    since = datetime.now() - timedelta(days=dies)
-
-    cur.execute("SELECT max(data_publicacio)::date, min(data_publicacio)::date, count(*) FROM premsa_articles")
-    max_date, min_date, total_articles = cur.fetchone()
-
-    cur.execute(
-        """
-        SELECT titol, font, data_publicacio::date, data_ingesta
-        FROM premsa_articles
-        WHERE %s = ANY(partits) AND data_publicacio >= %s
-        ORDER BY data_publicacio DESC NULLS LAST
-        LIMIT 5
-        """,
-        (partit, since),
-    )
-    latest_articles = [
-        {
-            "titol": row[0],
-            "font": row[1],
-            "data_publicacio": str(row[2]) if row[2] else None,
-            "data_ingesta": row[3].isoformat() if row[3] else None,
-        }
-        for row in cur.fetchall()
-    ]
-
-    cur.execute("SELECT count(*) FROM premsa_articles WHERE data_publicacio < %s", (since,))
-    old_articles = cur.fetchone()[0]
-    conn.close()
-
-    latest_visible_date = str(max_date) if max_date and max_date >= since.date() else None
-
-    feed_status = []
-    for feed_cfg in RSS_FEEDS:
-        try:
-            feed = feedparser.parse(feed_cfg["url"])
-            entry = feed.entries[0] if feed.entries else None
-            feed_status.append({
-                "font": feed_cfg["nom"],
-                "url": feed_cfg["url"],
-                "status": getattr(feed, "status", None),
-                "entries": len(feed.entries),
-                "bozo": bool(getattr(feed, "bozo", 0)),
-                "latest_title": entry.get("title") if entry else None,
-                "latest_published": entry.get("published", entry.get("updated")) if entry else None,
-            })
-        except Exception as e:
-            feed_status.append({
-                "font": feed_cfg["nom"],
-                "url": feed_cfg["url"],
-                "status": "error",
-                "entries": 0,
-                "bozo": True,
-                "latest_title": None,
-                "latest_published": None,
-                "error": str(e),
-            })
-
-    return {
-        "partit": partit,
-        "dies": dies,
-        "db": {
-            "total_articles": total_articles,
-            "min_data_publicacio": str(min_date) if min_date else None,
-            "max_data_publicacio": str(max_date) if max_date else None,
-            "latest_visible_date": latest_visible_date,
-            "old_articles_outside_window": old_articles,
-            "latest_articles_for_partit": latest_articles,
-        },
-        "scheduler": {
-            "client_auto_refresh_seconds": 30,
-            "server_ingest_expected_minutes": 30,
-            "cleanup_on_ingest": True,
-        },
-        "feeds": feed_status,
-    }
-
-
 @router.post("/reclassify")
 def reclassify_articles(
-    response: Response,
     dies: int = Query(60, description="Reclassifica articles dels últims N dies"),
     nomes_ac: bool = Query(True, description="Només articles que mencionen AC"),
     limit: int = Query(500),
 ):
     """Reclassifica el sentiment d'articles existents amb el LLM (perspectiva AC)."""
-    _set_no_store_headers(response)
     _ensure_table()
     conn = _get_conn()
     cur = conn.cursor()

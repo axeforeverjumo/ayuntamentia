@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { municipiDetailPath } from "@/lib/navigation";
+import Link from "next/link";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "";
 
@@ -98,7 +98,7 @@ export function MapaCatalunyaLeaflet() {
             { direction: "top", offset: [0, -4] }
           );
           marker.on("click", () => {
-            window.location.href = municipiDetailPath(m.id);
+            window.location.href = `/municipios/${m.id}`;
           });
           marker.addTo(markersLayerRef.current);
         });

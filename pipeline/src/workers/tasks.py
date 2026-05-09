@@ -267,24 +267,13 @@ def evaluate_alert_rules():
 def ingest_premsa():
     """Ingesta RSS de premsa catalana — cada 30 min."""
     import httpx
-
-    api_candidates = [
-        os.getenv("API_INTERNAL_URL"),
-        "http://api:8050",
-        "http://localhost:8050",
-    ]
-    tried = []
-
-    for api_url in [candidate for candidate in api_candidates if candidate]:
-        try:
-            tried.append(api_url)
-            r = httpx.post(f"{api_url}/api/reputacio/ingest", timeout=120)
-            r.raise_for_status()
-            result = r.json()
-            result["api_url"] = api_url
-            logger.info(f"Premsa ingestada via {api_url}: {result}")
-            return result
-        except Exception as e:
-            logger.warning(f"Error ingesting premsa via {api_url}: {e}")
-
-    return {"error": "no_reachable_api", "tried": tried}
+    api_url = os.getenv("API_INTERNAL_URL", "http://localhost:8050")
+    try:
+        r = httpx.post(f"{api_url}/api/reputacio/ingest", timeout=120)
+        r.raise_for_status()
+        result = r.json()
+        logger.info(f"Premsa ingestada: {result}")
+        return result
+    except Exception as e:
+        logger.warning(f"Error ingesting premsa: {e}")
+        return {"error": str(e)}

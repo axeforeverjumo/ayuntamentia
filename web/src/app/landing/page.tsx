@@ -1,7 +1,6 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { visibleRoutes } from '@/lib/navigation';
 import { CommandBar } from '@/components/landing/CommandBar';
 import {
   LandingNav, LandingMarquee, LandingHero, LandingHow,
@@ -12,7 +11,7 @@ import { OpsWall, CapabilitiesGrid, MissionCTA } from '@/components/landing/Pent
 
 export default function LandingPage() {
   const router = useRouter();
-  const enter = () => router.push(visibleRoutes.autenticacio);
+  const enter = () => router.push('/login');
 
   return (
     <div className="grain" style={{ minHeight: '100vh', background: 'var(--ink)' }}>

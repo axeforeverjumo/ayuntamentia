@@ -1,8 +1,6 @@
 'use client';
 
-export const dynamic = 'force-dynamic';
-
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { PageHeader } from '@/components/warroom/PageHeader';
 import { KPICard, KPIGrid } from '@/components/warroom/KPICard';
@@ -10,7 +8,6 @@ import { PanelBox } from '@/components/warroom/PanelBox';
 import { StatusLine, StatusBadge } from '@/components/warroom/StatusBadge';
 import { TrendingBar } from '@/components/warroom/AlertFeed';
 import { Gauge } from '@/components/landing/primitives';
-import { conversaPath } from '@/lib/navigation';
 
 const API = process.env.NEXT_PUBLIC_API_URL || '';
 
@@ -84,7 +81,7 @@ function ArticleCard({ article, partit, compact }: { article: any; partit?: stri
             }}>Llegir →</a>
           )}
           {partit && (
-            <Link href={conversaPath({ mode: 'monitor', q: buildAnalitzaPrompt(partit, article) })} style={{
+            <Link href={`/chat?mode=monitor&q=${encodeURIComponent(buildAnalitzaPrompt(partit, article))}`} style={{
               padding: '4px 8px', background: 'rgba(212,58,31,.08)', border: '1px solid rgba(212,58,31,.3)',
               color: 'var(--wr-red-2)', fontFamily: 'var(--font-mono)', fontSize: 9,
               textDecoration: 'none', textAlign: 'center',
@@ -150,157 +147,15 @@ export default function ReputacioPage() {
   const [negatius, setNegatius] = useState<any[]>([]);
   const [tab, setTab] = useState<'overview' | 'detall' | 'neteja'>('overview');
   const [sentimentFilter, setSentimentFilter] = useState<'tots' | 'positiu' | 'neutre' | 'negatiu'>('tots');
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [lastSyncAt, setLastSyncAt] = useState<string | null>(null);
-  const [diagnosticError, setDiagnosticError] = useState<string | null>(null);
-  const [diagnostic, setDiagnostic] = useState<any>(null);
-  const refreshInFlightRef = useRef(false);
-
-  const loadStats = () =>
-    fetch(`${API}/api/reputacio/stats?dies=30`, { cache: 'no-store' })
-      .then(r => r.ok ? r.json() : null)
-      .then(data => {
-        setStats(data);
-        return data;
-      })
-      .catch(() => null);
-
-  const loadDetall = (selectedPartit: string) =>
-    Promise.all([
-      fetch(`${API}/api/reputacio/sentiment-partit?partit=${selectedPartit}&dies=30`, { cache: 'no-store' }).then(r => r.ok ? r.json() : null).catch(() => null),
-      fetch(`${API}/api/reputacio/temes-negatius?partit=${selectedPartit}&dies=30`, { cache: 'no-store' }).then(r => r.ok ? r.json() : null).catch(() => null),
-    ]).then(([detallData, negatiusData]) => {
-      setDetall(detallData);
-      setNegatius(negatiusData?.articles || []);
-      return { detallData, negatiusData };
-    });
-
-  const loadDiagnostic = (selectedPartit: string) =>
-    fetch(`${API}/api/reputacio/diagnostic?partit=${selectedPartit}&dies=30`, { cache: 'no-store' })
-      .then(r => r.ok ? r.json() : null)
-      .then(data => {
-        setDiagnostic(data);
-        return data;
-      })
-      .catch(() => null);
-
-  const refreshAll = async (selectedPartit: string) => {
-    if (refreshInFlightRef.current) {
-      return null;
-    }
-    refreshInFlightRef.current = true;
-    try {
-      const [statsData, detailBundle, diagnosticData] = await Promise.all([
-        loadStats(),
-        loadDetall(selectedPartit),
-        loadDiagnostic(selectedPartit),
-      ]);
-      return {
-        statsData,
-        detallData: detailBundle.detallData,
-        negatiusData: detailBundle.negatiusData,
-        diagnosticData,
-      };
-    } finally {
-      refreshInFlightRef.current = false;
-    }
-  };
 
   useEffect(() => {
-    refreshAll(partit);
+    fetch(`${API}/api/reputacio/stats?dies=30`).then(r => r.ok ? r.json() : null).then(setStats).catch(() => {});
   }, []);
 
   useEffect(() => {
-    refreshAll(partit);
+    fetch(`${API}/api/reputacio/sentiment-partit?partit=${partit}&dies=30`).then(r => r.ok ? r.json() : null).then(setDetall).catch(() => {});
+    fetch(`${API}/api/reputacio/temes-negatius?partit=${partit}&dies=30`).then(r => r.ok ? r.json() : null).then(d => setNegatius(d?.articles || [])).catch(() => {});
   }, [partit]);
-
-  useEffect(() => {
-    const handleFocus = () => {
-      refreshAll(partit);
-    };
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        refreshAll(partit);
-      }
-    };
-
-    const interval = window.setInterval(() => {
-      refreshAll(partit);
-    }, 30000);
-
-    window.addEventListener('focus', handleFocus);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      window.clearInterval(interval);
-      window.removeEventListener('focus', handleFocus);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [partit]);
-
-  const withinWindow = (dateText?: string | null, days: number = 30) => {
-    if (!dateText) return false;
-    const normalizedDate = String(dateText).trim().slice(0, 10);
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(normalizedDate)) return false;
-    const parsed = new Date(`${normalizedDate}T00:00:00Z`);
-    if (Number.isNaN(parsed.getTime())) return false;
-
-    const now = new Date();
-    const todayUtc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-    const cutoff = new Date(todayUtc);
-    cutoff.setUTCDate(cutoff.getUTCDate() - days);
-
-    return parsed >= cutoff && parsed <= todayUtc;
-  };
-
-  const filteredArticles = useMemo(() => {
-    const articles = (detall?.articles || []).filter((article: any) => withinWindow(article?.data, 30));
-    return articles;
-  }, [detall]);
-
-  const filteredNegatius = useMemo(() => {
-    return (negatius || []).filter((article: any) => withinWindow(article?.data, 30));
-  }, [negatius]);
-
-  const latestVisibleArticleDate = useMemo(() => {
-    const candidates = [
-      ...filteredArticles.map((article: any) => article?.data).filter(Boolean),
-      ...filteredNegatius.map((article: any) => article?.data).filter(Boolean),
-    ] as string[];
-    if (!candidates.length) return null;
-    return candidates.sort().at(-1) || null;
-  }, [filteredArticles, filteredNegatius]);
-
-  const articleAgeLabel = useMemo(() => {
-    if (!latestVisibleArticleDate) return null;
-    const latest = new Date(`${latestVisibleArticleDate}T00:00:00`);
-    if (Number.isNaN(latest.getTime())) return null;
-    const diffMs = Date.now() - latest.getTime();
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    if (diffDays <= 1) return 'actualitzat avui';
-    return `última notícia visible fa ${diffDays} dies`;
-  }, [latestVisibleArticleDate]);
-
-  const handleSync = async () => {
-    setIsSyncing(true);
-    setDiagnosticError(null);
-    try {
-      const response = await fetch(`${API}/api/reputacio/ingest`, {
-        method: 'POST',
-        cache: 'no-store',
-      });
-      if (!response.ok) {
-        throw new Error(`sync_failed_${response.status}`);
-      }
-      await refreshAll(partit);
-      setLastSyncAt(new Date().toLocaleTimeString('ca-ES', { hour: '2-digit', minute: '2-digit' }));
-    } catch {
-      setDiagnosticError('No s\'ha pogut refrescar la reputació ara mateix.');
-    } finally {
-      setIsSyncing(false);
-    }
-  };
 
   const TABS = [
     { id: 'overview' as const, label: 'Panorama general', color: 'var(--wr-phosphor)' },
@@ -324,44 +179,18 @@ export default function ReputacioPage() {
           ],
         }}
         actions={
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <StatusLine color="var(--wr-phosphor)">
               {stats?.total_articles || 0} articles · 30d
             </StatusLine>
-            {latestVisibleArticleDate && (
-              <StatusLine color="var(--wr-amber)">
-                Última visible: {latestVisibleArticleDate}{articleAgeLabel ? ` · ${articleAgeLabel}` : ''}
-              </StatusLine>
-            )}
-            {lastSyncAt && (
-              <StatusLine color="var(--fog)">
-                Refrescat a les {lastSyncAt}
-              </StatusLine>
-            )}
-            <button
-              onClick={handleSync}
-              disabled={isSyncing}
-              style={{
-                padding: '6px 12px', background: 'transparent', border: '1px solid var(--line)',
-                color: isSyncing ? 'var(--fog)' : 'var(--bone)', fontFamily: 'var(--font-mono)', fontSize: 10,
-                letterSpacing: '.08em', textTransform: 'uppercase', cursor: isSyncing ? 'wait' : 'pointer',
-                opacity: isSyncing ? 0.7 : 1,
-              }}
-            >{isSyncing ? '▸ Syncant…' : '▸ Sync ara'}</button>
+            <button onClick={() => fetch(`${API}/api/reputacio/ingest`, { method: 'POST' }).then(() => window.location.reload())} style={{
+              padding: '6px 12px', background: 'transparent', border: '1px solid var(--line)',
+              color: 'var(--bone)', fontFamily: 'var(--font-mono)', fontSize: 10,
+              letterSpacing: '.08em', textTransform: 'uppercase', cursor: 'pointer',
+            }}>▸ Sync ara</button>
           </div>
         }
       />
-
-      {diagnosticError && (
-        <div style={{ padding: '12px 26px 0' }}>
-          <div style={{
-            padding: '10px 12px', border: '1px solid rgba(212,58,31,.35)', background: 'rgba(212,58,31,.08)',
-            color: 'var(--wr-red-2)', fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.06em', textTransform: 'uppercase',
-          }}>
-            {diagnosticError}
-          </div>
-        </div>
-      )}
 
       {/* Tabs */}
       <div style={{ display: 'flex', borderBottom: '1px solid var(--line)' }}>
@@ -462,41 +291,6 @@ export default function ReputacioPage() {
                 )}
               </PanelBox>
             </div>
-
-            {diagnostic && (
-              <div style={{ marginTop: 16, padding: '18px 20px', background: 'var(--ink-2)', border: '1px solid var(--line)' }}>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--fog)', letterSpacing: '.14em', textTransform: 'uppercase', marginBottom: 12 }}>
-                  Diagnòstic automàtic del feed
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 14 }}>
-                  <div>
-                    <div style={{ fontSize: 11, color: 'var(--fog)', marginBottom: 4 }}>Última data a BD</div>
-                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 14, color: 'var(--paper)' }}>{diagnostic.db?.max_data_publicacio || '—'}</div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 11, color: 'var(--fog)', marginBottom: 4 }}>Articles fora de finestra</div>
-                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 14, color: diagnostic.db?.old_articles_outside_window ? 'var(--wr-amber)' : 'var(--wr-phosphor)' }}>{diagnostic.db?.old_articles_outside_window ?? '—'}</div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 11, color: 'var(--fog)', marginBottom: 4 }}>Refresc client</div>
-                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 14, color: 'var(--paper)' }}>cada {diagnostic.scheduler?.client_auto_refresh_seconds || 30}s</div>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {(diagnostic.feeds || []).slice(0, 9).map((feed: any) => {
-                    const broken = !feed.entries || (typeof feed.status === 'number' && feed.status >= 400) || feed.status === 'error';
-                    return (
-                      <div key={feed.font} style={{ display: 'grid', gridTemplateColumns: '180px 80px 80px 1fr', gap: 10, fontSize: 11, borderTop: '1px dashed var(--line-soft)', paddingTop: 6 }}>
-                        <span style={{ color: 'var(--paper)' }}>{feed.font}</span>
-                        <span style={{ color: broken ? 'var(--wr-red-2)' : 'var(--wr-phosphor)', fontFamily: 'var(--font-mono)' }}>{feed.status ?? '—'}</span>
-                        <span style={{ color: 'var(--fog)', fontFamily: 'var(--font-mono)' }}>{feed.entries} entr.</span>
-                        <span style={{ color: 'var(--fog)' }}>{feed.latest_published || feed.error || 'Sense dades'}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
           </div>
         )}
 
@@ -539,7 +333,7 @@ export default function ReputacioPage() {
                 </div>
 
                 {/* Articles */}
-                <PanelBox title={`Últims articles · ${partit}`} subtitle={`${filteredArticles.length || 0} recents`} tone="amber">
+                <PanelBox title={`Últims articles · ${partit}`} subtitle={`${detall.articles?.length || 0} recents`} tone="amber">
                   {detall.articles?.length > 0 ? (
                     <div>
                       <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
@@ -560,7 +354,7 @@ export default function ReputacioPage() {
                           );
                         })}
                       </div>
-                      {filteredArticles
+                      {detall.articles
                         .filter((a: any) => sentimentFilter === 'tots' || a.sentiment === sentimentFilter)
                         .map((a: any, i: number) => (
                           <ArticleCard key={i} article={a} partit={partit} />
@@ -605,7 +399,7 @@ export default function ReputacioPage() {
                 }}>
                   <div style={{ textAlign: 'center' }}>
                     <div style={{ fontFamily: 'var(--font-sans)', fontSize: 36, fontWeight: 700, color: '#C0392B', lineHeight: 1 }}>
-                      {filteredNegatius.length}
+                      {negatius.length}
                     </div>
                     <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--fog)', letterSpacing: '.1em', textTransform: 'uppercase', marginTop: 4 }}>negatius</div>
                   </div>
@@ -614,9 +408,9 @@ export default function ReputacioPage() {
             </div>
 
             {/* Articles negatius */}
-            {filteredNegatius.length > 0 ? (
+            {negatius.length > 0 ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {filteredNegatius.map((a, i) => (
+                {negatius.map((a, i) => (
                   <div key={i} style={{
                     background: 'rgba(212,58,31,.03)', border: '1px solid rgba(212,58,31,.2)',
                     borderLeft: '3px solid var(--wr-red-2)', padding: '16px 20px',
@@ -644,7 +438,7 @@ export default function ReputacioPage() {
                           textDecoration: 'none', textAlign: 'center',
                         }}>Llegir →</a>
                       )}
-                      <Link href={conversaPath({ mode: 'netejar', q: buildNetejaPrompt(partit, a) })} style={{
+                      <Link href={`/chat?mode=netejar&q=${encodeURIComponent(buildNetejaPrompt(partit, a))}`} style={{
                         padding: '6px 12px', background: 'var(--brand)', color: '#E8F1F9',
                         border: '1px solid var(--brand)', borderRadius: 'var(--r-md)', fontFamily: 'var(--font-mono)', fontSize: 10,
                         letterSpacing: '.08em', textTransform: 'uppercase', fontWeight: 700,
