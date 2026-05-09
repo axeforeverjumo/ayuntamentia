@@ -4,6 +4,7 @@ import path from 'node:path';
 const ROOT = path.resolve('src');
 const EXTENSIONS = new Set(['.ts', '.tsx']);
 const IGNORE_DIRS = new Set(['node_modules', '.next']);
+const IGNORE_FILES = new Set(['proxy.ts']);
 const ALLOWED_PREFIXES = [
   '/api/',
   '/_next/',
@@ -45,6 +46,7 @@ function walk(dir) {
   const files = [];
   for (const entry of entries) {
     if (IGNORE_DIRS.has(entry.name)) continue;
+    if (IGNORE_FILES.has(entry.name)) continue;
     const fullPath = path.join(dir, entry.name);
     if (entry.isDirectory()) {
       files.push(...walk(fullPath));

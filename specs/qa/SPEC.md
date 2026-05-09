@@ -66,3 +66,25 @@
 - El universo esperado en referencia es de **947 municipios**.
 - La clave correcta de completitud es `codi_ens`.
 - El diff nominal de faltantes/inconsistencias queda pendiente únicamente de acceder al catálogo real de la base de datos.
+
+## 2026-05-09 — Completar carga de municipios faltantes
+
+### Cambios realizados
+- Se añadió la migración `supabase/migrations/010_municipios_catalog_catalan_sync.sql` para poder completar y normalizar el catálogo de `municipios` con criterio de catalán y actualización por `codi_ens`.
+- La migración también normaliza `nombre`, `nombre_oficial`, `comarca`, `provincia`, `poblacion` y `url_sede` reutilizando `external_data` cuando ya existe información remota asociada.
+- Se creó `scripts/check_municipios_catalog.py` como verificación reproducible de la referencia oficial (`6nei-4b44`) y del total esperado del catálogo.
+
+### Archivos modificados
+- `supabase/migrations/010_municipios_catalog_catalan_sync.sql`
+- `scripts/check_municipios_catalog.py`
+- `specs/qa/SPEC.md`
+
+### Decisiones técnicas
+- Se mantuvo el patrón append-only de Supabase creando una nueva migración en vez de editar migraciones ya aplicadas.
+- La clave canónica sigue siendo `codi_ens`, alineada con la auditoría previa y con el upsert ya existente del pipeline.
+- La normalización prioriza los nombres catalanes de `municipi`/`nom_complert` y la referencia institucional `municat.url` para las URLs asociadas.
+- Como este entorno sigue sin `DATABASE_URL`, se dejó la comprobación local preparada en script pero la cobertura efectiva sobre la tabla real queda supeditada a ejecutar la migración contra la base desplegada.
+
+### Evidencia ejecutada
+- `python3 scripts/check_municipios_catalog.py` → referencia oficial accesible y total esperado de 947 municipios.
+- `python3 -c "import ast, pathlib; [ast.parse(p.read_text()) for p in pathlib.Path('.').rglob('*.py') if '.git' not in str(p)]"` → sin salida, exit 0.
