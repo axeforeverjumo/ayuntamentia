@@ -147,3 +147,10 @@ Para solicitudes de ejecución comunicativa:
 - Tarea tratada como **EXPLORACIÓN** (documentación), sin cambios en código de producción.
 - Enfoque “official-first retrieval” con scoring compuesto y umbrales de seguridad anti-alucinación.
 - Versionado append-only con metadatos de vigencia y validación humana para trazabilidad política.
+- La estrategia se alinea con el contexto multi-tenant existente (`CLIENT_PARTIDO` / `CLIENT_NOMBRE`), pero prioriza el corpus del cliente activo como filtro duro de recuperación.
+
+### Próximos pasos de implementación sugeridos
+1. Crear esquema persistente para documentos/chunks/versiones del corpus político del cliente.
+2. Añadir pipeline de validación humana antes de marcar contenido como `validated`.
+3. Implementar retrieval híbrido con filtros por `tenant_party`, `validation_status`, `territorial_scope`, `topic_tags` y vigencia.
+4. Exponer trazabilidad de evidencias en la respuesta del chat para auditoría y review.
