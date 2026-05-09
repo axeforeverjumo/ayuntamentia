@@ -15,220 +15,342 @@ Definir cómo incorporar señales de redes sociales dentro del módulo de reputa
 
 ---
 
-## 1) Tipos de perfiles sociales admitidos como fuente reputacional
+## 1) Contexto revisado en el repositorio
 
-Se define una taxonomía de fuentes sociales con política de admisión (permitido / condicionado / excluido):
+Archivos auditados para esta definición:
+- `api/src/routes/reputacio.py`
+- `api/src/services/reputacio_sources.py`
+- `README.md`
 
-### 1.1 Fuentes **permitidas** (alta prioridad)
-1. **Cuentas oficiales institucionales**
-   - Ayuntamientos, plenos, áreas de gobierno, partidos locales con cuenta verificada u oficial.
-   - Valor: máxima trazabilidad, alta verificabilidad.
+Conclusiones del estado actual:
+- El backend de reputación ya distingue entre `premsa` y `xarxes` en el catálogo de fuentes expuesto por `/api/reputacio/sources`.
+- Ya existe una primera base documental/técnica para redes sociales en `SOCIAL_SOURCE_CATALOG`, pero es todavía genérica y no delimita el marco editorial completo solicitado en el brief.
+- La plataforma actual prioriza prensa y fuentes contrastables; por tanto, las redes sociales deben entrar como **señal reputacional asistida y filtrada**, no como fuente automática de verdad factual.
 
-2. **Representantes públicos identificables**
-   - Alcaldía, concejalías, portavocías, diputados vinculados al municipio/comarca.
-   - Requisito: identidad verificable y vínculo público documentado.
+---
 
-3. **Medios de comunicación locales y comarcales**
-   - Cabeceras locales, radios municipales, canales territoriales.
-   - Requisito: historial editorial consistente + publicación periódica.
+## 2) Tipos de perfiles sociales admitidos como fuente reputacional
 
-4. **Periodistas/analistas con cobertura local recurrente**
-   - Perfiles personales con firma profesional y trazabilidad de piezas.
-   - Requisito: al menos una parte sustancial del contenido sobre el territorio objetivo.
+Se define una taxonomía de fuentes sociales con política de admisión: **admitida**, **condicionada** o **excluida**.
 
-5. **Entidades cívicas o sectoriales con impacto local**
-   - Asociaciones vecinales, plataformas de comercio, entidades culturales/deportivas con peso social.
-   - Requisito: actividad pública continuada y comunidad real identificable.
+### 2.1 Fuentes admitidas
 
-### 1.2 Fuentes **condicionadas** (requieren validación reforzada)
-1. **Influencers locales/generalistas**
-   - Se admiten si demuestran influencia real sobre conversación pública municipal.
-   - Exigen validación cuantitativa + revisión humana inicial.
+1. **Cuentas institucionales oficiales**
+   - Ayuntamientos, alcaldías, áreas de gobierno, plenos, grupos municipales y partidos locales oficiales.
+   - Uso principal:
+     - confirmación de posicionamientos públicos
+     - detección de agenda
+     - contraste de incidentes
+   - Valor reputacional: **muy alto** por trazabilidad y relación directa con el municipio.
+
+2. **Cargos públicos y portavoces identificables**
+   - Alcaldía, concejalías, portavocías, diputados ligados al territorio, perfiles oficiales de candidatos.
+   - Requisitos:
+     - identidad pública verificable
+     - vínculo político o institucional demostrable
+     - actividad real y reciente
+
+3. **Medios locales y comarcales presentes en redes**
+   - Páginas o cuentas sociales de periódicos locales, radios municipales, canales comarcales o cabeceras territoriales.
+   - Uso principal:
+     - amplificar cobertura local que a menudo no aparece en prensa nacional
+     - detectar focos reputacionales en municipios pequeños
+
+4. **Periodistas locales o analistas de territorio**
+   - Perfiles personales con firma reconocible y cobertura recurrente del municipio o comarca.
+   - Requisito clave: su contenido debe ser rastreable a trabajo periodístico, observación directa o fuente atribuida.
+
+5. **Entidades cívicas, vecinales o sectoriales con influencia local real**
+   - Asociaciones de vecinos, comerciantes, AMPAs, plataformas sociales, clubes o entidades culturales/deportivas con peso comunitario.
+   - Uso principal:
+     - detectar conflictos de convivencia, limpieza, seguridad, equipamientos, movilidad o servicios
+     - medir clima social y capacidad de movilización local
+
+### 2.2 Fuentes admitidas con validación reforzada
+
+1. **Influencers locales o comarcales**
+   - Admitidos solo si cumplen al menos varios indicadores de influencia real:
+     - audiencia local significativa
+     - engagement sostenido no artificial
+     - recurrencia temática sobre el territorio
+     - identidad conocida o verificable
+   - No deben tratarse como fuente primaria de hechos sin contraste.
 
 2. **Creadores de contenido político no periodístico**
-   - Se admiten con límites: sólo para detección de clima/conversación, no como verdad factual primaria.
+   - Útiles para detectar narrativa, framing, ataques o oportunidades de difusión.
+   - Limitación: valen como **termómetro narrativo**, no como prueba factual suficiente.
 
-3. **Páginas agregadoras/curación**
-   - Uso auxiliar para detección de tendencias; nunca como única fuente de hechos.
+3. **Páginas agregadoras o curadoras locales**
+   - Solo como radar de conversación.
+   - Requieren comprobación posterior en fuentes originales.
 
-### 1.3 Fuentes **excluidas** (ruido/no verificables)
-- Cuentas anónimas sin historial verificable.
-- Perfiles con patrones claros de desinformación o manipulación coordinada.
-- Canales que no permiten trazabilidad de origen (capturas sin contexto, cadenas sin fuente, rumores).
-- Contenido puramente meme/sátira no etiquetado o sin utilidad reputacional operativa.
+### 2.3 Fuentes excluidas
+
+- Cuentas anónimas sin identidad comprobable.
+- Bots o redes con comportamiento coordinado artificial.
+- Páginas dedicadas a rumor, bulo, captura descontextualizada o viralidad sin fuente.
+- Perfiles hiperpartidistas opacos que reciclan acusaciones sin evidencia.
+- Cuentas de sátira, memes o entretenimiento sin valor operativo reputacional.
+- Reposts masivos sin autoría original ni contexto temporal/geográfico.
 
 ---
 
-## 2) Señales para medir relevancia e influencia
+## 3) Señales para medir relevancia e influencia
 
-Se propone una evaluación en dos capas: **eligibilidad** (puede entrar al sistema) y **prioridad** (cuánto pesa en análisis).
+Se propone separar las señales en dos niveles:
+1. **gating editorial**: determina si una fuente puede entrar
+2. **scoring reputacional**: determina cuánto pesa dentro del análisis
 
-### 2.1 Señales de elegibilidad (gating)
-Una fuente entra solo si supera umbrales mínimos:
+### 3.1 Gating editorial mínimo
 
-- **Identidad verificable** (sí/no)
-- **Trazabilidad de fuente** (sí/no)
-- **Actividad reciente** (publicaciones en ventana rolling, p.ej. 90 días)
-- **Coherencia temática mínima** (porcentaje de publicaciones ligadas a municipio/política local)
-- **Riesgo de desinformación** por historial (bajo/medio/alto; alto = excluir)
+Una fuente social solo puede entrar al sistema si cumple estos mínimos:
 
-Si falla identidad o trazabilidad, la fuente se descarta automáticamente.
+- **Identidad verificable**
+  - perfil oficial, periodista identificado, entidad conocida o persona públicamente reconocible
+- **Trazabilidad de origen**
+  - sus afirmaciones remiten a hechos, documentos, imágenes contextualizadas o fuente primaria/localizable
+- **Actividad reciente**
+  - publicaciones dentro de una ventana operativa, por ejemplo últimos 90 días
+- **Afinidad territorial suficiente**
+  - parte relevante de su contenido se refiere al municipio, comarca o ámbito temático observado
+- **Historial aceptable de credibilidad**
+  - no acumula patrones consistentes de desinformación o manipulación
 
-### 2.2 Señales de prioridad (scoring)
-Para fuentes elegibles:
+Regla bloqueante:
+- si falla **identidad verificable** o **trazabilidad**, la fuente queda excluida
+
+### 3.2 Señales de influencia/relevancia para el scoring
 
 1. **Alcance potencial**
-   - Seguidores, suscriptores, audiencia estimada (normalizada por plataforma).
+   - seguidores, suscriptores o audiencia estimada ajustada por plataforma
+   - no se usa sola; evita premiar volumen vacío
 
 2. **Interacción cualificada**
-   - Engagement rate real (comentarios/reacciones compartidos), corrigiendo picos artificiales.
+   - comentarios, compartidos, guardados, respuestas o menciones con continuidad
+   - debe corregirse por picos artificiales o engagement sospechoso
 
-3. **Centralidad local**
-   - Proporción de contenido sobre el municipio/comarca objetivo.
+3. **Centralidad geográfica**
+   - peso del municipio/comarca objetivo dentro del total de publicaciones
+   - una cuenta generalista con 2 posts locales no debe pesar igual que una cuenta centrada en el territorio
 
-4. **Credibilidad histórica**
-   - Ratio de publicaciones confirmables vs. desmentidas/ambiguas.
+4. **Centralidad temática**
+   - recurrencia en temas relevantes para reputación política:
+     - seguretat i convivència
+     - neteja i espai públic
+     - habitatge
+     - mobilitat
+     - fiscalitat
+     - transparència
+     - comerç/empresa
+     - serveis socials
+     - identitat/valors
 
-5. **Capacidad de arrastre narrativo**
-   - Frecuencia con la que su contenido es citado por medios, actores políticos o comunidades locales.
+5. **Credibilidad histórica**
+   - ratio de publicaciones verificables
+   - número de rectificaciones necesarias
+   - consistencia entre afirmaciones y hechos observables
 
-6. **Temporalidad del impacto**
-   - Peso adicional a publicaciones recientes con alta aceleración de difusión.
+6. **Capacidad de arrastre narrativo**
+   - cuánto de su contenido es citado, replicado o contestado por medios, partidos, entidades o conversación local
 
-### 2.3 Fórmula orientativa (para implementación posterior)
-`score_fuente = 0.25 alcance + 0.20 interacción + 0.20 centralidad_local + 0.20 credibilidad + 0.10 arrastre + 0.05 temporalidad`
+7. **Persistencia temporal**
+   - influencia sostenida en semanas/meses, no solo un pico aislado
 
-Notas:
-- Escalas normalizadas 0-100.
-- Si `credibilidad < umbral_min`, se limita score máximo (“techo reputacional”) o se excluye.
-- Revisión humana obligatoria para top señales que disparen alertas críticas.
+8. **Señal de activación reputacional**
+   - capacidad para abrir crisis, acelerar indignación, legitimar relato o generar oportunidad favorable
 
----
+### 3.3 Fórmula orientativa para futura implementación
 
-## 3) Alcance por municipio y temática
+Modelo inicial recomendado:
 
-### 3.1 Segmentación territorial
-Cada fuente y cada publicación debe etiquetarse por:
-- **Municipio principal**
-- **Municipios secundarios** (si aplica)
-- **Comarca/provincia**
-- **Ámbito**: local / comarcal / autonómico / estatal
+`score_fuente = 0.20 alcance + 0.20 interacción + 0.20 centralidad_geográfica + 0.15 centralidad_tematica + 0.15 credibilidad + 0.05 arrastre + 0.05 persistencia`
 
-Regla operativa:
-- En reputación municipal, **priorizar señales locales/comarcales** frente a señales estatales salvo crisis de gran magnitud.
-
-### 3.2 Segmentación temática
-Taxonomía inicial recomendada:
-- Governança i transparència
-- Seguretat i convivència
-- Neteja/espai públic
-- Fiscalitat/pressupost
-- Mobilitat
-- Habitatge
-- Comerç/empresa
-- Educació/cultura/esport
-- Salut/serveis socials
-- Identitat/valors
-
-Cada post puede tener tema primario + secundarios.
-
-### 3.3 Matriz de cobertura mínima
-Por municipio objetivo, mantener cobertura mínima en:
-1. Al menos 3-5 fuentes sociales locales elegibles.
-2. Al menos 2 fuentes de contraste (medio local o cuenta institucional).
-3. Cobertura de temas críticos del municipio (no solo agenda nacional).
-
-Si no se alcanza cobertura mínima, marcar el municipio como **“visibilidad insuficiente”** y bajar confianza analítica.
+Reglas adicionales:
+- si la credibilidad cae por debajo de un umbral, la fuente no puede superar un techo de score
+- para incidentes críticos, toda señal social relevante debe pasar por validación humana antes de activar recomendación operativa
 
 ---
 
-## 4) Diseño funcional de los módulos solicitados
+## 4) Alcance por municipio y temática
 
-### 4.1 Módulo A — Limpiar reputación
-Objetivo: detectar, verificar y neutralizar señales negativas o falsas antes de que escalen.
+### 4.1 Cobertura territorial
 
-Entradas:
-- Menciones negativas de alta propagación.
-- Alertas de narrativas hostiles.
-- Señales de contradicción con hechos verificables.
+Cada fuente social y cada señal capturada debe etiquetarse por:
+- municipio principal
+- municipios secundarios si aplica
+- comarca
+- provincia/demarcación
+- ámbito: local / comarcal / catalán / estatal
 
-Proceso:
-1. Detección temprana (trending local).
-2. Clasificación: crítica legítima vs. desinformación vs. ruido.
-3. Verificación de hechos (fuente oficial/medio fiable).
-4. Propuesta de respuesta: rectificación, contextualización, silencio estratégico o escalado.
-5. Seguimiento de impacto post-respuesta.
+Regla de prioridad territorial:
+- Para reputación municipal, una fuente local o comarcal verificable debe pesar más que una fuente estatal salvo que el incidente ya haya escalado de manera clara a conversación autonómica o nacional.
 
-Salidas:
-- Prioridad de incidentes reputacionales.
-- Playbook de respuesta por tipo de incidente.
-- Indicador de “fuego activo/apagado”.
+### 4.2 Cobertura mínima por municipio
 
-### 4.2 Módulo B — Amplificar difusión (altavoz)
-Objetivo: convertir oportunidades positivas en alcance reputacional útil.
+Para considerar que un municipio tiene una base social operativa suficiente, se recomienda:
+- al menos **3 fuentes sociales locales/comarcales elegibles**
+- al menos **1 cuenta institucional o cargo público verificable**
+- al menos **1 fuente de contraste** adicional, preferentemente medio local o entidad con legitimidad comunitaria
 
-Entradas:
-- Logros de gestión verificables.
-- Ventanas de agenda favorables.
-- Voces aliadas de alta credibilidad local.
+Si no se alcanza ese umbral, el municipio debe quedar marcado como:
+- `cobertura_social_insuficiente`
+- y cualquier conclusión reputacional derivada debe mostrar confianza reducida
 
-Proceso:
-1. Detección de oportunidad.
-2. Selección de narrativa y prueba de veracidad.
-3. Selección de canales/perfiles para difusión.
-4. Secuencia de publicación (timing + formatos).
-5. Medición de lift reputacional.
+### 4.3 Cobertura temática
 
-Salidas:
-- Cola priorizada de oportunidades.
-- Recomendación de portavoces y formatos.
-- Métricas de amplificación efectiva.
+Taxonomía inicial para clasificación temática de señales sociales:
+- governança i transparència
+- seguretat i convivència
+- neteja i espai públic
+- fiscalitat i pressupost
+- mobilitat
+- habitatge
+- comerç i activitat econòmica
+- educació, cultura i esport
+- salut i serveis socials
+- identitat, cohesió i valors
+- urbanisme i equipaments
+- medi ambient i civisme
 
----
-
-## 5) Reglas anti-ruido y anti-basura (calidad de señal)
-
-1. **No usar una única fuente social para afirmar hechos sensibles.**
-2. **Exigir corroboración** (mínimo 2 fuentes, una de alta credibilidad) en incidencias críticas.
-3. **Separar hecho vs. opinión** en el etiquetado.
-4. **Bloquear contenido sin contexto verificable** (capturas recortadas, audios anónimos, etc.).
-5. **Auditar sesgo de plataforma** (no extrapolar una red al sentir general del municipio).
-6. **Registrar nivel de confianza** por señal: alto/medio/bajo.
+Cada publicación debería llevar:
+- tema principal
+- temas secundarios
+- nivel de sensibilidad reputacional: bajo / medio / alto / crítico
 
 ---
 
-## 6) KPIs propuestos para seguimiento reputacional social
+## 5) Qué señales sociales son válidas y útiles
 
-- % de señales sociales verificadas sobre total capturado.
-- Tiempo medio de detección a clasificación de incidente.
-- Tasa de incidentes neutralizados (<72h).
-- Lift de alcance en campañas de altavoz.
-- Cobertura territorial real por municipio (fuentes activas elegibles).
-- Ratio de ruido descartado vs. señal útil.
+### 5.1 Señales válidas
+
+Se consideran útiles para reputación:
+- denuncias o incidencias con fuente observable y contexto claro
+- publicaciones que muestran respuesta social organizada o crítica vecinal trazable
+- posicionamientos públicos de actores con capacidad de agenda local
+- cobertura o eco de medidas municipales en cuentas influyentes del territorio
+- oportunidades favorables verificables para amplificación política
+- cambios de tono o intensidad en conversación local repetidos en varias fuentes elegibles
+
+### 5.2 Señales no válidas o de bajo valor
+
+Se deben descartar o dejar en observación:
+- mensajes sin fecha, lugar o fuente
+- capturas recortadas sin enlace al contenido original
+- acusaciones graves no corroboradas
+- ruido partidista repetitivo sin novedad factual
+- campañas artificiales de engagement dudoso
+- contenido viral genérico sin relación operativa con el municipio objetivo
+
+### 5.3 Regla de comprobación de realidad
+
+Ninguna señal social sensible debe transformarse directamente en verdad reputacional si no hay una de estas validaciones:
+- fuente institucional
+- medio fiable/local contrastable
+- evidencia directa contextualizada
+- coincidencia consistente entre varias fuentes elegibles
 
 ---
 
-## 7) Decisiones técnicas (documentales) tomadas
+## 6) Encaje con los dos módulos pedidos en el brief
 
-1. Priorizar **prensa local + señal social local verificable** como base reputacional municipal.
-2. Establecer un **gating estricto** para excluir ruido no verificable.
-3. Modelar reputación social en dos carriles operativos diferenciados:
-   - limpieza (defensivo)
-   - amplificación (ofensivo)
-4. Introducir scoring con componente de credibilidad para minimizar errores.
-5. Exigir clasificación territorial y temática para evitar análisis genérico sin utilidad táctica.
+### 6.1 Módulo `limpiar reputación`
+
+Objetivo:
+- detectar fuegos reputacionales
+- separar crítica legítima de basura, bulo o ataque coordinado
+- priorizar respuesta con el menor margen de error posible
+
+Entradas prioritarias:
+- cuentas institucionales y portavoces
+- medios locales en redes
+- entidades con legitimidad comunitaria
+- perfiles influyentes verificados con capacidad real de propagación
+
+Reglas operativas:
+- no actuar sobre una sola cuenta dudosa
+- exigir contraste para incidencias sensibles
+- etiquetar cada incidente como:
+  - crítica legítima
+  - error real de gestión
+  - narrativa adversa amplificada
+  - rumor/no verificable
+  - oportunidad de rectificación rápida
+
+### 6.2 Módulo `altavoz`
+
+Objetivo:
+- identificar oportunidades reputacionales positivas
+- amplificar gestión, agenda y narrativas favorables donde exista opción real de ganar imagen y voto
+
+Entradas prioritarias:
+- cobertura favorable verificable
+- cuentas locales con buena credibilidad
+- líderes comunitarios o páginas con capacidad de difusión útil
+- ventanas temáticas donde un mensaje municipal pueda escalar con legitimidad
+
+Reglas operativas:
+- amplificar solo hechos comprobables
+- preferir nodos locales con reputación real antes que cuentas grandes pero desconectadas del territorio
+- medir no solo alcance, sino calidad de la legitimación obtenida
 
 ---
 
-## 8) Archivos modificados
+## 7) Reglas de limpieza de ruido y minimización de errores
 
-- `specs/reputacio/SPEC.md` (creado): especificación de incorporación de fuentes sociales relevantes y delimitación de fuentes válidas/útiles.
+1. **No usar una sola cuenta social como base para conclusiones críticas.**
+2. **Separar hecho, interpretación y emoción** en cada señal.
+3. **Etiquetar confianza** por señal: alta / media / baja.
+4. **Registrar por qué una fuente se admite o se excluye** para auditoría editorial.
+5. **No extrapolar toda la reputación municipal desde una sola plataforma.**
+6. **Revisar manualmente picos de viralidad anómala** antes de activar recomendaciones políticas.
+7. **Distinguir influencia real de ruido partidista**: no todo volumen genera persuasión ni impacto electoral.
 
 ---
 
-## 9) Pendiente para futuras iteraciones (sin implementar en esta tarea)
+## 8) KPIs orientativos para futura implementación
 
-- Definir tabla/catálogo persistente de fuentes sociales y campos exactos.
-- Implementar pipeline de ingestión por plataforma y reglas de deduplicación.
-- Integrar score social en ranking reputacional existente.
-- Diseñar validación humana asistida para incidentes de alta criticidad.
+- porcentaje de señales sociales verificadas sobre total capturado
+- ratio de ruido descartado vs señal útil
+- cobertura social operativa por municipio
+- tiempo medio desde detección hasta clasificación
+- tasa de incidentes reputacionales con validación humana previa
+- oportunidades positivas detectadas y amplificadas con éxito
+- distribución temática de las señales sociales por territorio
+
+---
+
+## 9) Decisiones técnicas y editoriales tomadas
+
+1. Las redes sociales se incorporan como **capa reputacional asistida**, no como fuente automática de verdad.
+2. La elegibilidad depende primero de **identidad verificable + trazabilidad**.
+3. La relevancia debe ponderar **territorio, temática, credibilidad e influencia**, no solo seguidores.
+4. El alcance por municipio se considera insuficiente si no existe un mínimo de fuentes sociales locales elegibles.
+5. Los módulos `limpiar reputación` y `altavoz` comparten catálogo base, pero usan reglas distintas de priorización.
+6. La prensa local y las cuentas territoriales verificables siguen siendo el núcleo más útil para pueblos pequeños y medianos.
+
+---
+
+## 10) Archivos modificados
+
+- `specs/reputacio/SPEC.md`
+
+Cambios realizados en este archivo:
+- sustitución del contenido previo por una especificación centrada explícitamente en fuentes sociales relevantes para reputación
+- incorporación de taxonomía de perfiles admitidos, condicionados y excluidos
+- definición de señales de relevancia e influencia
+- delimitación del alcance por municipio y temática
+- conexión operativa con los módulos `limpiar reputación` y `altavoz`
+- trazabilidad a los archivos reales revisados del repositorio
+
+---
+
+## 11) Límites de esta iteración
+
+No se implementa en esta tarea:
+- ingesta automática por plataforma social
+- persistencia en base de datos de fuentes sociales
+- scoring en backend
+- cambios de frontend
+- automatización de validación humana
+
+Esto queda como trabajo posterior de implementación.
