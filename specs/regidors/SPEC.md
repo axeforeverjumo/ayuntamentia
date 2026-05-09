@@ -357,3 +357,377 @@ La implementació podrà considerar-se alineada amb aquesta spec si compleix:
 - No s'han tocat `api/`, `web/`, `pipeline/` ni `supabase/migrations/` perquè el lliurable demanat és una definició lògica base, no una implementació runtime.
 - La spec assumeix el model real existent i documenta explícitament la principal limitació actual: la manca generalitzada de vot nominal fiable per regidor.
 - La detecció de “premisses contràries” queda definida com a capa semàntica de revisió assistida, no com a regla 100% deterministicament resolta amb l'esquema actual.
+
+---
+
+## 2026-05-09 — Patró de divergència per comentaris i argumentaris
+
+### Context i objectiu
+Aquesta ampliació de la spec defineix **com detectar comentaris, intervencions breus o argumentaris contraris o diferents** respecte de la **regla d'autoritat** carregada al sistema. El focus no és el vot en si, sinó la **desalineació semàntica** entre el discurs observat i la posició oficial/premisses del partit.
+
+La tasca continua sent **EXPLORACIÓ/DISSENY**. No s'han modificat rutes, models, pipelines ni migracions; només s'ha formalitzat el patró de detecció i els seus umbrals explicables perquè una implementació futura pugui ser auditable.
+
+---
+
+### Fonts reals auditades per a aquesta definició
+
+#### Esquema disponible
+1. `supabase/migrations/001_schema.sql`
+   - `linea_partido`: font de veritat explícita amb `tema`, `subtema`, `posicion`, `descripcion`, `keywords`, `vigente_desde`, `vigente_hasta`.
+   - `argumentos`: text observable avui amb `partido`, `posicion`, `argumento` per `punto_id`.
+   - `puntos_pleno`: context del punt (`tema`, `subtema`, `titulo`, `resumen`, `fecha`).
+   - `alertas`: destí natural per a una futura detecció persistent i explicable.
+
+#### Comportament del producte i context operatiu
+2. `api/src/routes/alertas.py`
+   - El detall d'una alerta ja retorna `votaciones` i `argumentos` del `punto_id`.
+   - Això implica que qualsevol futura detecció argumental hauria d'arribar amb evidència suficient per explicar **quin text** ha divergit i **contra quina regla**.
+
+3. `docs/ESTRATEGIA_DATOS.md`
+   - Ja apunta a comparacions de coherència no binàries i a l'ús de similitud de context.
+   - També separa l'argumentari del sentit formal del vot, cosa coherent amb aquesta definició de divergència semàntica.
+
+#### Limitació observada
+4. No s'han trobat al model actual taules específiques de transcripció llarga nominal per regidor.
+   - Per tant, aquesta spec assumeix que la primera iteració operarà sobretot sobre `argumentos.argumento` i, si més endavant hi ha comentaris nominals o corpus RAG estructurat, el mateix patró es podrà ampliar sense canviar la lògica central.
+
+---
+
+## 1) Representació de la regla d'autoritat com a font de veritat
+
+La detecció semàntica només és fiable si la postura oficial no es tracta com un bloc de text difús, sinó com una **unitat canònica comparable**.
+
+### 1.1 Unitat canònica: `authority_rule`
+Cada entrada de `linea_partido` s'ha de projectar lògicament a una unitat semàntica estructurada:
+- `rule_id`
+- `tema`
+- `subtema`
+- `posicion_oficial`
+- `premisa_central`
+- `premisas_secundarias[]`
+- `keywords[]`
+- `scope_temporal`
+- `priority`
+
+Aquesta projecció no exigeix una migració nova immediata: és una **representació lògica** que es pot construir en runtime a partir dels camps existents.
+
+### 1.2 Com derivar `premisa_central` i `premisas_secundarias`
+Atès que avui `linea_partido` només té `descripcion` i `keywords`, la representació inicial ha de seguir aquest criteri:
+- `premisa_central`: la frase principal de `descripcion` que justifica la `posicion`.
+- `premisas_secundarias`: altres motius explícits dins de `descripcion` o expansions derivades de `keywords`.
+- `keywords`: marcadors lèxics, no prova concloent per si sols.
+
+**Exemple lògic:**
+- `posicion='en_contra'`
+- `descripcion='Ens oposem perquè augmenta la pressió fiscal i no garanteix seguretat jurídica.'`
+- `premisa_central='La proposta augmenta la pressió fiscal sense garanties suficients.'`
+- `premisas_secundarias=['Falta seguretat jurídica', 'La mesura no està prou justificada']`
+
+### 1.3 Nivell d'autoritat i prioritat
+Quan hi ha diverses regles potencialment aplicables, la comparació semàntica ha d'usar **una sola regla dominant** segons aquest ordre:
+1. `tema + subtema` vigent a la data del punt.
+2. `tema` vigent a la data del punt.
+3. Si no existeix, no hi ha font autoritativa suficient i el cas queda com `no_evaluable_authority_rule`.
+
+### 1.4 Cas especial: posició `libre`
+Si `linea_partido.posicion = 'libre'`:
+- no s'ha de marcar divergència formal per diferència de postura;
+- només es pot marcar **fricció argumental** si el comentari contradiu una premissa doctrinal explícita carregada al sistema;
+- aquesta detecció sempre ha de sortir amb `needs_human_review = true`.
+
+---
+
+## 2) Representació del comentari o argumentari observat
+
+Per poder comparar, el text observat també s'ha d'estructurar en una unitat analítica mínima: `observed_statement`.
+
+### 2.1 Unitat `observed_statement`
+Per cada `argumentos.argumento` —o futur comentari/intervenció— es recomana derivar:
+- `source_type`: `argumento_partido` | `comentario_regidor` | `intervencion` | `otra_fuente`
+- `source_id`
+- `punto_id`
+- `partido`
+- `speaker_id` (si existeix)
+- `observed_position`
+- `claim_segments[]`
+- `tema` / `subtema`
+- `statement_date`
+
+### 2.2 Segmentació del text en claims comparables
+La comparació no s'ha de fer només sobre el text complet, sinó sobre fragments amb càrrega semàntica pròpia:
+- una afirmació causal;
+- una justificació normativa;
+- una crítica explícita;
+- una prioritat política declarada.
+
+**Exemple:**
+`"Hi votem en contra perquè és massa tou amb l'ocupació i perquè arriba tard."`
+
+Claims derivats:
+1. `La proposta és massa tova amb l'ocupació.`
+2. `La proposta arriba tard.`
+3. `El motiu del vot és insuficiència de duresa/rapidesa.`
+
+### 2.3 Direcció del claim
+Cada claim ha d'intentar etiquetar-se amb una direcció mínima:
+- `supporting`
+- `opposing`
+- `mixed`
+- `unclear`
+
+Això permet distingir entre un comentari crític però alineat amb la línia i un comentari realment contrari.
+
+---
+
+## 3) Pipeline recomanat de comparació semàntica
+
+La detecció de divergència argumental ha de ser multietapa. No n'hi ha prou amb embeddings sols ni amb coincidència de keywords.
+
+### 3.1 Etapa 0 — Gate de comparabilitat
+Abans de comparar semànticament:
+1. validar que hi ha `authority_rule` vigent;
+2. validar que el comentari pertany al mateix `tema`/`subtema` o al mateix `punto_id`;
+3. descartar casos sense text suficient o sense atribució mínima.
+
+Si alguna d'aquestes condicions falla, el resultat és `no_evaluable`.
+
+### 3.2 Etapa 1 — Recuperació de premisses candidates
+Per a cada `claim_segment`, recuperar les premisses de la regla més properes semànticament:
+- `premisa_central`
+- 0..n `premisas_secundarias`
+- `keywords` només com a suport explicatiu
+
+Mètode recomanat:
+- embeddings per trobar proximitat temàtica;
+- top-k petit (1-3 premisses);
+- exclusió de matches febles fora de context.
+
+### 3.3 Etapa 2 — Classificador de relació semàntica
+Per a cada parell `(claim_segment, premisa_rule)` cal classificar la relació en una d'aquestes etiquetes:
+- `entails` — el comentari reforça o replica la premissa oficial.
+- `compatible` — no la replica literalment, però hi és coherent.
+- `matizado` — introdueix matís sense negar la premissa.
+- `drift` — canvia la justificació principal cap a un marc diferent.
+- `contradicts` — nega o gira en sentit contrari la premissa oficial.
+- `irrelevant` — sembla del mateix punt, però no parla realment de la premissa.
+- `uncertain` — senyal insuficient o text ambigu.
+
+### 3.4 Etapa 3 — Agregació per statement
+Un comentari complet pot contenir claims compatibles i claims contradictoris alhora. Cal una agregació final amb pes:
+- pes alt per contradicció de `premisa_central`;
+- pes mitjà per contradicció de `premisas_secundarias`;
+- pes baix per diferència només retòrica o de priorització.
+
+### 3.5 Etapa 4 — Decisió final i explicabilitat
+La sortida no ha de ser un score opac, sinó una classificació amb justificació:
+- etiqueta final;
+- claims conflictius;
+- premisses afectades;
+- intensitat de la divergència;
+- confiança;
+- si necessita revisió humana.
+
+---
+
+## 4) Taxonomia de resultats: què és contradicció i què és desviació
+
+Per evitar falsos positius, la spec separa clarament diversos nivells de discrepància.
+
+### 4.1 `alineado`
+El comentari:
+- defensa la mateixa posició;
+- manté les mateixes premisses centrals;
+- o bé introdueix reformulacions compatibles.
+
+**No genera alerta.**
+
+### 4.2 `matizado`
+El comentari:
+- manté la posició oficial;
+- afegeix context local o subratlla una prioritat diferent;
+- però no desautoritza la premissa central.
+
+**No genera alerta negativa.**
+Pot registrar-se com a variant compatible per analítica.
+
+### 4.3 `ambiguous`
+El text:
+- és curt, el·líptic o ambigu;
+- combina senyals compatibles i contradictoris sense predomini clar;
+- o no permet saber si parla de la mateixa premissa.
+
+**No genera alerta automàtica.**
+Pot anar a revisió si el cas és sensible.
+
+### 4.4 `divergente`
+El comentari:
+- manté potser la mateixa posició de vot formal,
+- però canvia la justificació principal cap a un marc incompatible amb la regla d'autoritat,
+- o desplaça la premissa central per una de diferent que altera el missatge polític.
+
+**Exemple:**
+La línia oficial rebutja una mesura per manca de control pressupostari, però l'argumentari observat la rebutja per ser massa moderada ideològicament. No és contradicció frontal de sentit, però sí desviació material del marc autoritzat.
+
+### 4.5 `contradictorio`
+El comentari:
+- nega explícitament una premissa central de la regla;
+- defensa una justificació oposada;
+- o sosté una posició argumental incompatible amb `posicion_oficial`.
+
+**Això sí és divergència forta** i és la categoria principal per alertes altes.
+
+---
+
+## 5) Umbrals inicials i senyals explicables
+
+Els umbrals han de ser prou clars per poder explicar al reviewer o a l'usuari per què un cas ha estat marcat.
+
+### 5.1 Senyals base per claim
+Per cada claim comparat amb la premissa millor match:
+- `semantic_similarity` (0-1)
+- `relation_label` (`entails`, `compatible`, `matizado`, `drift`, `contradicts`, `irrelevant`, `uncertain`)
+- `direction_conflict` (`true/false`)
+- `premise_priority` (`central`/`secondary`)
+- `position_conflict` (`true/false`) entre `observed_position` i `posicion_oficial`
+
+### 5.2 Regla d'etiquetatge inicial per claim
+**Claim contradictori fort** si es compleix una de les següents:
+- `relation_label = contradicts` i `semantic_similarity >= 0.70`
+- `position_conflict = true` i el claim justifica explícitament la posició oposada
+
+**Claim divergent per drift** si:
+- `relation_label = drift` i `semantic_similarity >= 0.65`
+- no hi ha contradicció frontal, però el marc justificatiu principal és diferent
+
+**Claim compatible/matitzat** si:
+- `relation_label in (compatible, matizado, entails)`
+- i no hi ha `direction_conflict`
+
+### 5.3 Regla d'agregació per statement complet
+**Etiqueta final `contradictorio`** si:
+- hi ha almenys 1 claim contradictori contra `premisa_central`, o
+- hi ha 2+ claims contradictoris contra premisses secundàries, o
+- `observed_position` és oposada a `posicion_oficial` i el text la justifica explícitament.
+
+**Etiqueta final `divergente`** si:
+- no arriba a contradicció forta,
+- però la major part del pes argumental està en claims `drift`, o
+- el comentari substitueix la justificació autoritzada per una altra materialment diferent.
+
+**Etiqueta final `matizado`** si:
+- hi ha compatibilitat global,
+- amb diferències de to, prioritat o detall local.
+
+**Etiqueta final `ambiguous`** si:
+- el resultat depèn d'un únic claim feble,
+- la similitud és baixa,
+- o hi ha senyals en conflicte sense predomini.
+
+### 5.4 Confiança recomanada
+- **Alta**: regla específica `tema+subtema`, text suficient, claim contradictori clar, atribució fiable.
+- **Mitjana**: regla de `tema`, semàntica consistent però amb menys context o atribució agregada.
+- **Baixa**: text curt, match semàntic fronterer, o manca d'atribució nominal.
+
+### 5.5 Condició automàtica de revisió humana
+Forçar `needs_human_review = true` quan:
+- `linea_partido.posicion = 'libre'`
+- només hi ha atribució agregada per partit i no per regidor
+- el text conté ironia, dobles negacions o baixa claredat
+- hi ha contradicció semàntica però `semantic_similarity < 0.70`
+- la decisió final és `divergente` i no `contradictorio`
+
+---
+
+## 6) Exemples operatius
+
+### Cas E1 — Alineat
+**Regla d'autoritat**
+- `posicion_oficial='en_contra'`
+- `premisa_central='La proposta incrementa la pressió fiscal sense garanties.'`
+
+**Argument observat**
+- `"Hi votem en contra perquè puja impostos i no aporta garanties de control."`
+
+**Resultat**
+- `alineado`
+- confiança alta
+- sense alerta
+
+### Cas E2 — Matisat però compatible
+**Regla d'autoritat**
+- `en_contra` per manca de transparència i impacte fiscal
+
+**Argument observat**
+- `"Hi votem en contra perquè el govern arriba tard i tampoc explica bé el cost real."`
+
+**Resultat**
+- `matizado`
+- manté marc crític compatible
+- sense alerta negativa
+
+### Cas E3 — Divergent per canvi de marc
+**Regla d'autoritat**
+- `en_contra` per impacte fiscal i falta de garanties jurídiques
+
+**Argument observat**
+- `"Hi votem en contra perquè la proposta és massa tèbia i hauria de ser molt més dura."`
+
+**Resultat**
+- `divergente`
+- no nega necessàriament el vot, però canvia materialment el marc autoritzat
+- revisió humana recomanada
+
+### Cas E4 — Contradictori fort
+**Regla d'autoritat**
+- `en_contra` perquè la mesura incrementa impostos i perjudica famílies
+
+**Argument observat**
+- `"En realitat aquesta pujada fiscal és positiva i necessària per reforçar serveis."`
+
+**Resultat**
+- `contradictorio`
+- claim oposat a la premissa central
+- alerta alta si l'atribució és fiable
+
+### Cas E5 — Ambigu
+**Argument observat**
+- `"El tema és complex i caldrà seguir parlant-ne."`
+
+**Resultat**
+- `ambiguous`
+- sense base suficient per a divergència
+- no alerta automàtica
+
+---
+
+## 7) Sortida mínima recomanada per a una futura implementació
+
+Per cada comentari o argument analitzat:
+- `evaluation_status`: `evaluable` | `ambiguo` | `no_evaluable`
+- `authority_rule_id`
+- `authority_scope`: `tema_subtema` | `tema` | `none`
+- `observed_source_type`
+- `observed_source_id`
+- `observed_position`
+- `final_label`: `alineado` | `matizado` | `ambiguous` | `divergente` | `contradictorio`
+- `confidence`: `alta` | `media` | `baja`
+- `needs_human_review`
+- `conflicting_claims[]`
+- `matched_premises[]`
+- `explanation`
+- `evidence_refs` (`punto_id`, `argumentos.id`, `linea_partido.id`)
+
+Aquesta estructura és coherent amb el patró existent d'`alertas`, perquè permetria persistir `tipo`, `severidad`, `descripcion` i `contexto` sense perdre traçabilitat.
+
+---
+
+## 8) Decisions tècniques d'aquesta ampliació
+
+- La regla d'autoritat s'ha definit com a **font de veritat semàntica estructurable** a partir de `linea_partido`, sense exigir de moment canvis d'esquema.
+- La comparació s'ha definit com un pipeline de **segmentació → retrieval de premisses → classificació de relació → agregació explicable**.
+- S'han separat explícitament `matizado`, `divergente` i `contradictorio` per evitar que qualsevol diferència retòrica generi una alerta falsa.
+- Els embeddings o la similitud semàntica s'han considerat necessaris però **insuficients** si no van acompanyats d'una etiqueta relacional tipus NLI.
+- La manca actual de comentaris nominals llargs al model obliga a començar per `argumentos.argumento`, però la definició ja és compatible amb futures fonts de comentari/regidor.
+
+### Arxius modificats
+- `specs/regidors/SPEC.md`: afegida una nova secció amb el patró de divergència semàntica per comentaris i argumentaris, incloent representació de la regla d'autoritat, mètrica de contradicció/desviació, umbrals i senyals explicables.
