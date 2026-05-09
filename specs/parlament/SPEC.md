@@ -99,6 +99,59 @@ Comprobaciones manuales sobre código existente:
 - `supabase/migrations/004_parlament.sql` crea el esquema requerido.
 
 ### Pendiente / límites conocidos
-- El código del pipeline aún usa constantes hardcodeadas para URLs/base/user-agent y batch scheduling; la configuración añadida en `.env.example` queda preparada pero no consumida todavía por el código.
 - No se ejecutó un arranque real contra DB/Redis/OpenClaw porque requiere dependencias externas activas y datos/migraciones aplicadas en local.
-- No hay endpoint health específico del módulo parlament; la validación actual se basa en wiring + sintaxis + presencia del esquema.
+- El parser actual sigue limitado a DSPC/PDF y `tipo='pleno'`; comisiones, vídeo y otros tipos siguen fuera del scope operativo actual.
+
+## 2025-08-22 — Activación efectiva de configuración y verificación de operatividad
+
+### Objetivo
+Convertir la configuración de `parlament` en configuración realmente consumida por el código y añadir una comprobación observable para verificar si el módulo puede arrancar con los parámetros presentes.
+
+### Cambios realizados
+1. **Pipeline parametrizado con `PARLAMENT_*`**
+   - `pipeline/src/config.py` ahora expone:
+     - `PARLAMENT_ENABLED`
+     - `PARLAMENT_BASE_URL`
+     - `PARLAMENT_DSPC_INDEX_URL`
+     - `PARLAMENT_USER_AGENT`
+     - `PARLAMENT_BATCH_SIZE`
+     - `PARLAMENT_DISCOVER_HOUR`
+     - `PARLAMENT_ALLOWED_TYPES`
+   - `pipeline/src/ingesta/parlament.py` ya usa `PARLAMENT_BASE_URL`, `PARLAMENT_DSPC_INDEX_URL` y `PARLAMENT_USER_AGENT` en el descubrimiento DSPC.
+   - `pipeline/src/ingesta/parlament_pipeline.py` ya usa `PARLAMENT_USER_AGENT` en las descargas HTTP.
+
+2. **Orquestación condicionada y ajustable**
+   - `pipeline/src/workers/tasks.py` ahora respeta `PARLAMENT_ENABLED`:
+     - `discover_parlament` devuelve `enabled=false` y no procesa si el módulo está desactivado.
+     - `process_parlament_batch` devuelve `enabled=false` y no procesa si el módulo está desactivado.
+   - `process_parlament_batch` usa `PARLAMENT_BATCH_SIZE` en lugar de un lote hardcodeado.
+   - `pipeline/src/workers/celery_app.py` usa `PARLAMENT_DISCOVER_HOUR` para programar el descubrimiento diario.
+
+3. **Verificación observable desde API**
+   - `api/src/routes/parlament.py` añade `GET /api/parlament/config-status`.
+   - Este endpoint informa:
+     - si `PARLAMENT_ENABLED` está activo,
+     - si faltan variables mínimas,
+     - los valores efectivos de configuración relevantes,
+     - si existen en la base de datos `sesiones_parlament`, `puntos_pleno` y `v_contradicciones_rival`.
+   - Con ello el módulo ya tiene una comprobación explícita de operatividad/configuración sin depender de que existan sesiones procesadas.
+
+### Archivos modificados
+- `pipeline/src/config.py`
+- `pipeline/src/ingesta/parlament.py`
+- `pipeline/src/ingesta/parlament_pipeline.py`
+- `pipeline/src/workers/tasks.py`
+- `pipeline/src/workers/celery_app.py`
+- `api/src/routes/parlament.py`
+- `specs/parlament/SPEC.md`
+
+### Decisiones técnicas
+1. **Configuración mínima, sin refactor masivo**: se han activado solo los parámetros ya definidos en `.env.example` y conectados con el código existente.
+2. **Validación de operatividad vía endpoint**: en lugar de forzar un job real contra servicios externos, se expone un chequeo de configuración+esquema más seguro y reproducible en local.
+3. **Feature flag explícito**: `PARLAMENT_ENABLED` permite dejar desplegado el módulo sin ejecutar tareas cuando falte alguna dependencia externa.
+
+### Verificación prevista
+- Sintaxis Python global del repo.
+- Import de `src.main:app` en API.
+- Import de `src.workers.celery_app:app` y `src.workers.tasks` en pipeline.
+- Revisión del endpoint `/api/parlament/config-status` como punto de comprobación operativa.

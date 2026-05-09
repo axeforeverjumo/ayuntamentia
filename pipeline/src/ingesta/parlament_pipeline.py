@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=30))
 def _http_get(url: str) -> bytes:
     with httpx.Client(timeout=180, follow_redirects=True,
-                      headers={"User-Agent": "AyuntamentIA-Parlament/1.0"}) as c:
+                      headers={"User-Agent": config.PARLAMENT_USER_AGENT}) as c:
         r = c.get(url)
         r.raise_for_status()
         return r.content

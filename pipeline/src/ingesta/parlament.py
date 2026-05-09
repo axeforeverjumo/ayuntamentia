@@ -19,8 +19,11 @@ from ..db import get_db, get_cursor
 logger = logging.getLogger(__name__)
 
 
-PARLAMENT_BASE = "https://www.parlament.cat"
-DSPC_INDEX = f"{PARLAMENT_BASE}/web/activitat-parlamentaria/dspc/index.html"
+from ..config import config
+
+
+PARLAMENT_BASE = config.PARLAMENT_BASE_URL
+DSPC_INDEX = config.PARLAMENT_DSPC_INDEX_URL
 
 
 def discover_sesiones() -> int:
@@ -32,7 +35,7 @@ def discover_sesiones() -> int:
     inserted = 0
     try:
         r = httpx.get(DSPC_INDEX, timeout=30, follow_redirects=True,
-                      headers={"User-Agent": "AyuntamentIA-Parlament/1.0"})
+                      headers={"User-Agent": config.PARLAMENT_USER_AGENT})
         r.raise_for_status()
     except Exception as e:
         logger.warning(f"DSPC index error: {e}")

@@ -151,18 +151,22 @@ def classify_social_batch():
 @app.task(name="src.workers.tasks.discover_parlament")
 def discover_parlament():
     """Descubre nuevas sesiones del Parlament (DSPC)."""
+    if not config.PARLAMENT_ENABLED:
+        return {"enabled": False, "discovered": 0}
     from ..ingesta.parlament import discover_sesiones
     n = discover_sesiones()
-    return {"discovered": n}
+    return {"enabled": True, "discovered": n}
 
 
 @app.task(name="src.workers.tasks.process_parlament_batch")
 def process_parlament_batch():
     """Avanza el pipeline DSPC: download → extract → structure."""
+    if not config.PARLAMENT_ENABLED:
+        return {"enabled": False, "processed": 0}
     from ..ingesta.parlament_pipeline import (
         get_next_batch, download_sesion, extract_sesion, structure_sesion,
     )
-    batch = get_next_batch(batch_size=2)
+    batch = get_next_batch(batch_size=config.PARLAMENT_BATCH_SIZE)
     for sid in batch:
         if download_sesion(sid):
             if extract_sesion(sid):

@@ -1,3 +1,4 @@
+import os
 from typing import Optional
 from fastapi import APIRouter, Depends, Query
 from psycopg2.extras import RealDictCursor
@@ -6,6 +7,50 @@ from ..auth import CurrentUser, get_current_user
 from ..db import get_db
 
 router = APIRouter()
+
+
+@router.get("/config-status")
+def config_status(_: CurrentUser = Depends(get_current_user)):
+    required = {
+        "DATABASE_URL": os.getenv("DATABASE_URL"),
+        "REDIS_URL": os.getenv("REDIS_URL"),
+        "OPENCLAW_BASE_URL": os.getenv("OPENCLAW_BASE_URL"),
+        "OPENCLAW_MODEL_MINI": os.getenv("OPENCLAW_MODEL_MINI"),
+        "PDF_STORAGE_PATH": os.getenv("PDF_STORAGE_PATH"),
+        "PARLAMENT_BASE_URL": os.getenv("PARLAMENT_BASE_URL", "https://www.parlament.cat"),
+        "PARLAMENT_DSPC_INDEX_URL": os.getenv(
+            "PARLAMENT_DSPC_INDEX_URL",
+            "https://www.parlament.cat/web/activitat-parlamentaria/dspc/index.html",
+        ),
+        "PARLAMENT_USER_AGENT": os.getenv("PARLAMENT_USER_AGENT", "AyuntamentIA-Parlament/1.0"),
+        "PARLAMENT_BATCH_SIZE": os.getenv("PARLAMENT_BATCH_SIZE", "2"),
+        "PARLAMENT_DISCOVER_HOUR": os.getenv("PARLAMENT_DISCOVER_HOUR", "2"),
+        "PARLAMENT_ALLOWED_TYPES": os.getenv("PARLAMENT_ALLOWED_TYPES", "pleno"),
+        "PARLAMENT_ENABLED": os.getenv("PARLAMENT_ENABLED", "1"),
+    }
+    missing = [key for key, value in required.items() if value in (None, "")]
+
+    db = {"ok": False, "error": None}
+    try:
+        with get_db() as conn:
+            cur = conn.cursor(cursor_factory=RealDictCursor)
+            cur.execute("SELECT to_regclass('public.sesiones_parlament') AS sesiones, to_regclass('public.puntos_pleno') AS puntos, to_regclass('public.v_contradicciones_rival') AS contradicciones")
+            row = cur.fetchone()
+            db = {
+                "ok": all(row.values()),
+                "objects": row,
+                "error": None,
+            }
+    except Exception as exc:
+        db = {"ok": False, "error": str(exc)}
+
+    return {
+        "enabled": required["PARLAMENT_ENABLED"] == "1",
+        "config_ok": len(missing) == 0,
+        "missing": missing,
+        "values": required,
+        "db": db,
+    }
 
 
 @router.get("/sesiones")

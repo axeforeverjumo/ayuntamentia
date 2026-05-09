@@ -49,7 +49,7 @@ app.conf.update(
         },
         "discover-parlament": {
             "task": "src.workers.tasks.discover_parlament",
-            "schedule": crontab(minute=0, hour=2),  # 2am diario
+            "schedule": crontab(minute=0, hour=config.PARLAMENT_DISCOVER_HOUR),
         },
         "process-parlament-batch": {
             "task": "src.workers.tasks.process_parlament_batch",
