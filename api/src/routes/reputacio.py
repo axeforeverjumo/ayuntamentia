@@ -14,7 +14,7 @@ from typing import Optional
 
 import feedparser
 import psycopg2
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Response
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/reputacio", tags=["reputacio"])
@@ -330,6 +330,7 @@ def ingest_rss_feeds():
 
 @router.get("/latest")
 def reputacio_latest(
+    response: Response,
     limit: int = Query(50, ge=1, le=200),
     dies: int = Query(30, ge=1, le=365),
 ):
@@ -358,11 +359,14 @@ def reputacio_latest(
     } for r in cur.fetchall()]
 
     conn.close()
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
     return {"articles": articles}
 
 
 @router.get("/stats")
-def reputacio_stats(dies: int = Query(30)):
+def reputacio_stats(response: Response, dies: int = Query(30)):
     conn = _get_conn()
     cur = conn.cursor()
     _ensure_table()
@@ -395,6 +399,9 @@ def reputacio_stats(dies: int = Query(30)):
     per_font = [{"font": r[0], "articles": r[1]} for r in cur.fetchall()]
 
     conn.close()
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
     return {
         "total_articles": total,
         "positius": sentiments.get("positiu", 0),
@@ -407,7 +414,7 @@ def reputacio_stats(dies: int = Query(30)):
 
 
 @router.get("/sentiment-partit")
-def sentiment_per_partit(partit: str = Query("AC"), dies: int = Query(30)):
+def sentiment_per_partit(response: Response, partit: str = Query("AC"), dies: int = Query(30)):
     conn = _get_conn()
     cur = conn.cursor()
     _ensure_table()
@@ -442,6 +449,9 @@ def sentiment_per_partit(partit: str = Query("AC"), dies: int = Query(30)):
     articles = [{"titol": r[0], "font": r[1], "url": r[2], "sentiment": r[3], "score": r[4], "data": str(r[5])[:10] if r[5] else None} for r in cur.fetchall()]
 
     conn.close()
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
     return {
         "partit": partit,
         "positius": sentiments.get("positiu", 0),
@@ -453,7 +463,7 @@ def sentiment_per_partit(partit: str = Query("AC"), dies: int = Query(30)):
 
 
 @router.get("/temes-negatius")
-def temes_negatius(partit: str = Query("AC"), dies: int = Query(30)):
+def temes_negatius(response: Response, partit: str = Query("AC"), dies: int = Query(30)):
     """Temes on el partit té mala premsa — candidats per 'neteja'."""
     conn = _get_conn()
     cur = conn.cursor()
@@ -469,6 +479,9 @@ def temes_negatius(partit: str = Query("AC"), dies: int = Query(30)):
     articles = [{"titol": r[0], "resum": r[1], "font": r[2], "score": r[3], "data": str(r[4])[:10] if r[4] else None, "url": r[5]} for r in cur.fetchall()]
 
     conn.close()
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
     return {"partit": partit, "articles": articles}
 
 
