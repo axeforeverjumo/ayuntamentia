@@ -357,6 +357,638 @@ Esto queda como trabajo posterior de implementación.
 
 ---
 
+## 2026-05-10 — Módulo `limpiar reputación` (exploración)
+
+### Objetivo
+Definir el submódulo de reputación orientado a **apagar fuegos, minimizar errores y corregir impacto negativo**, con comportamiento equivalente al de un **departamento de prensa de alto nivel**. La función principal no es solo detectar menciones negativas, sino convertir señal reputacional verificada en una respuesta disciplinada, rápida y útil para preservar imagen, contener crisis y recuperar iniciativa.
+
+### Alcance de esta iteración
+- **Tipo de tarea:** exploración/documentación.
+- **Sin cambios de código de producción**.
+- Se cubre el checklist pedido en el brief:
+  - objetivos, entradas y salidas del módulo
+  - flujos de detección de crisis y propuesta de respuesta
+  - métricas de severidad y prioridad de actuación
+
+---
+
+## 1) Contexto revisado en el repositorio
+
+Archivos auditados para esta definición:
+- `README.md`
+- `api/src/routes/reputacio.py`
+- `api/src/services/reputacio_sources.py`
+- `specs/reputacio/SPEC.md`
+- `docs/reputacio-diagnostic-2025-02-14.md`
+
+Conclusiones del estado actual:
+- El backend actual de reputación ya dispone de una base de **ingesta, catálogo de fuentes y clasificación simple de sentimiento**, pero todavía no existe una capa operativa explícita para gestión de crisis y contención reputacional.
+- El sistema ya separa fuentes de `premsa` y `xarxes`, y la documentación previa ya definió filtros de ruido, comprobación de realidad y cobertura social/local.
+- Falta todavía la traducción de esa señal filtrada a un flujo tipo **war room de prensa**: qué constituye crisis, cómo se prioriza, cómo se decide responder, con qué tono y con qué controles para no empeorar el incendio.
+- El principal riesgo del módulo no es detectar poco, sino **actuar mal**: responder demasiado pronto, responder con datos incompletos, amplificar una crítica pequeña, negar un hecho verdadero o entrar en conflicto con una comunidad local cuando conviene corregir y cerrar.
+
+---
+
+## 2) Propósito del módulo `limpiar reputación`
+
+### 2.1 Definición funcional
+
+`limpiar reputación` es el submódulo encargado de:
+- detectar deterioro reputacional verificable
+- distinguir entre **crítica legítima**, **error real**, **narrativa adversa**, **rumor** y **ataque coordinado**
+- recomendar la mejor respuesta posible para **reducir daño, evitar errores de comunicación y recuperar control del relato**
+- convertir hallazgos en acciones de prensa, argumentario, contraste, rectificación o silencio estratégico
+
+### 2.2 Filosofía operativa
+
+El módulo debe comportarse como un **departamento de prensa de alto nivel con disciplina americana de crisis**:
+- rapidez sin improvisación
+- respuesta basada en hechos
+- control del framing
+- priorización de daño electoral y legitimidad pública
+- máxima aversión al error evitable
+- separación estricta entre lo verificado, lo plausible y lo no comprobado
+
+### 2.3 Resultado esperado
+
+No basta con “ver noticias negativas”.
+El resultado esperado es:
+1. saber **qué fuego existe realmente**
+2. saber **si merece respuesta**
+3. saber **cómo responder sin empeorar**
+4. saber **qué mensaje, qué portavoz y qué canal** convienen
+5. saber **cuándo cerrar el caso o seguir monitorizando**
+
+---
+
+## 3) Objetivos del módulo
+
+### 3.1 Objetivos primarios
+
+1. **Minimizar errores de respuesta**
+   - evitar responder sobre rumores, piezas incompletas o contenido manipulado
+
+2. **Apagar fuegos con rapidez y precisión**
+   - detectar incidentes que pueden dañar imagen, agenda o voto y priorizarlos correctamente
+
+3. **Reducir impacto negativo acumulado**
+   - limitar escalada mediática, legitimación social y repetición de narrativa adversa
+
+4. **Convertir crisis en control narrativo cuando sea posible**
+   - pasar de reacción defensiva a corrección, contextualización o contraencuadre creíble
+
+5. **Proteger credibilidad del cliente y de sus portavoces**
+   - impedir respuestas impulsivas, exageradas o inconsistentes con hechos verificables
+
+### 3.2 Objetivos secundarios
+
+- generar argumentarios defensivos reutilizables
+- detectar patrones repetidos por territorio, tema o emisor
+- aprender qué respuestas funcionan mejor por tipo de crisis
+- dejar trazabilidad editorial de por qué se respondió, cómo y con qué evidencia
+
+### 3.3 Anti-objetivos
+
+El módulo no debe:
+- responder a todo
+- convertir cualquier crítica en guerra política
+- amplificar ruido marginal
+- fabricar relatos sin sustento factual
+- recomendar desmentidos cuando los hechos son ciertos
+- confundir volumen social con gravedad real
+
+---
+
+## 4) Entradas del módulo
+
+### 4.1 Entradas de señal reputacional
+
+1. **Artículos de prensa**
+   - nacionales, regionales, comarcales y locales
+   - especial prioridad a cobertura local por municipio
+
+2. **Señales sociales filtradas**
+   - cuentas institucionales
+   - medios locales en redes
+   - periodistas y entidades territoriales verificables
+   - influencers o perfiles con influencia local real y trazabilidad suficiente
+
+3. **Eventos de contexto político**
+   - plenos, votaciones, comparecencias, notas oficiales, protestas, incidencias de gestión, polémicas de campaña
+
+4. **Memoria reputacional previa**
+   - incidentes recurrentes
+   - actores hostiles conocidos
+   - temas sensibles históricos del municipio o del partido
+
+### 4.2 Entradas de validación
+
+Cada hallazgo debe llegar, como mínimo, con estos metadatos o equivalentes:
+- fuente
+- tipo de fuente
+- enlace/origen
+- fecha y territorio
+- actor afectado
+- tono aparente
+- evidencia disponible
+- nivel de corroboración
+- `confidence_score`
+- `reality_check_status`
+- flags de ruido o integridad narrativa
+
+### 4.3 Entradas de negocio/editoriales
+
+Para decidir respuesta no basta con la mención. También deben considerarse:
+- sensibilidad del tema
+- relevancia electoral del municipio/territorio
+- perfil del actor afectado (partido, alcalde, concejal, portavoz, candidatura)
+- momento político (campaña, pleno, crisis social, negociación)
+- historial reciente de ataques o errores similares
+
+---
+
+## 5) Salidas del módulo
+
+### 5.1 Salidas operativas principales
+
+1. **Alerta reputacional priorizada**
+   - incidente resumido
+   - nivel de severidad
+   - urgencia
+   - confianza
+   - recomendación inicial
+
+2. **Diagnóstico de crisis**
+   - qué hecho está verificado
+   - qué parte está en duda
+   - qué narrativa está circulando
+   - qué actores la empujan
+   - riesgo de escalada
+
+3. **Propuesta de respuesta**
+   - responder / contrastar / rectificar / contextualizar / derivar / no responder
+   - mensaje sugerido
+   - tono recomendado
+   - evidencia a usar
+   - canal sugerido
+   - portavoz sugerido
+
+4. **Argumentario defensivo breve**
+   - 3-5 puntos utilizables por cargo público, equipo de prensa o community manager
+
+5. **Plan de seguimiento**
+   - ventana de observación
+   - señales que confirmarían mejora o empeoramiento
+   - condiciones de cierre
+
+### 5.2 Posibles estados de salida
+
+- `ignore`
+- `monitor`
+- `verify_first`
+- `respond_light`
+- `respond_full`
+- `rectify`
+- `escalate_human`
+- `close_case`
+
+---
+
+## 6) Tipología de incidentes que debe reconocer
+
+### 6.1 Tipos básicos
+
+1. **Crítica legítima por gestión**
+   - existe un problema real y visible
+   - normalmente conviene corrección, empatía y plan de solución
+
+2. **Error propio verificable**
+   - declaración desafortunada, dato incorrecto, conducta impropia, incoherencia documental
+   - puede requerir rectificación o repliegue rápido
+
+3. **Narrativa adversa amplificada**
+   - hay framing negativo sobre un hecho real o semirreal
+   - exige control de relato y contextualización
+
+4. **Rumor o acusación no verificada**
+   - no debe activar respuesta fuerte sin contraste
+
+5. **Ataque coordinado / ruido artificial**
+   - volumen alto con baja credibilidad o patrones de coordinación
+   - normalmente conviene contención sin sobrerreaccionar
+
+6. **Crisis institucional o social real**
+   - protesta, conflicto vecinal, polémica grave, incidente de seguridad, discriminación, corrupción, servicios esenciales
+   - máxima prioridad
+
+### 6.2 Etiquetas analíticas recomendadas
+
+Cada incidente debería poder etiquetarse por:
+- `incident_type`
+- `truth_status`: verificado / parcialmente verificado / no verificado / falso probable
+- `narrative_direction`: gestión / ética / legal / identitaria / convivencia / incompetencia / corrupción / trato ciudadano
+- `recommended_posture`: negar / matizar / corregir / explicar / compensar / silenciar / contraatacar
+
+---
+
+## 7) Flujo operativo de detección de crisis y respuesta
+
+### 7.1 Flujo extremo a extremo
+
+1. **Captura de señal**
+   - entra una mención de prensa o redes
+
+2. **Filtro de ruido y reality check**
+   - se descarta basura o se deja en observación
+   - solo pasan a crisis las señales con confianza suficiente o impacto potencial alto
+
+3. **Agrupación de incidente**
+   - se unen menciones relacionadas sobre el mismo hecho/narrativa
+   - se evita tratar cada post o artículo como crisis separada
+
+4. **Clasificación de crisis**
+   - tipo de incidente
+   - tema
+   - territorio
+   - actor afectado
+   - tono
+   - etapa: emergente / activa / escalada / residual
+
+5. **Scoring de severidad y prioridad**
+   - impacto, alcance, velocidad, confianza, sensibilidad, capacidad de contagio
+
+6. **Decisión de actuación**
+   - ignorar, monitorizar, verificar, responder, rectificar o escalar a humano
+
+7. **Propuesta de respuesta**
+   - mensaje, tono, portavoz, canal, pruebas, objetivo táctico
+
+8. **Seguimiento post-respuesta**
+   - observar si cae intensidad, si se desplaza el framing o si aparecen réplicas nuevas
+
+9. **Cierre o reapertura**
+   - el incidente se cierra cuando deja de ser dañino o reaparece si escala de nuevo
+
+### 7.2 Regla central del flujo
+
+No se responde por defecto al primer impacto.
+Primero se decide:
+- **¿es verdad?**
+- **¿importa?**
+- **¿está creciendo?**
+- **¿responder ayuda o empeora?**
+
+---
+
+## 8) Árbol de decisión para propuesta de respuesta
+
+### 8.1 Caso A — Falso, débil o ruidoso
+
+Condiciones típicas:
+- baja confianza
+- fuente débil
+- poca difusión
+- sin corroboración
+
+Salida recomendada:
+- `ignore` o `monitor`
+- no legitimar el contenido con respuesta pública
+
+### 8.2 Caso B — Verdadero pero acotado
+
+Condiciones típicas:
+- hecho real
+- alcance bajo o medio
+- sensibilidad moderada
+
+Salida recomendada:
+- `respond_light` o `verify_first`
+- mensaje factual y corto
+- evitar dramatización
+
+### 8.3 Caso C — Verdadero y dañino
+
+Condiciones típicas:
+- hecho verificado
+- riesgo reputacional alto
+- legitimación por medio local, protesta, actor institucional o repetición
+
+Salida recomendada:
+- `respond_full` o `rectify`
+- respuesta estructurada con tono disciplinado
+- posible reconocimiento parcial, contexto y plan de acción
+
+### 8.4 Caso D — Narrativa adversa sobre hecho ambiguo
+
+Condiciones típicas:
+- parte del contenido es real pero el framing es exagerado o incompleto
+
+Salida recomendada:
+- `verify_first` + `respond_light/respond_full` según evolución
+- reenmarcar con hechos y contraste, sin negar lo evidente
+
+### 8.5 Caso E — Crisis grave con dimensión ética, legal o social
+
+Condiciones típicas:
+- discriminación, seguridad, violencia, corrupción, trato institucional grave, movilización vecinal fuerte
+
+Salida recomendada:
+- `escalate_human`
+- revisión humana obligatoria antes de emisión
+- posible combinación de comunicado, portavoz principal y plan de seguimiento intensivo
+
+---
+
+## 9) Diseño de la propuesta de respuesta
+
+### 9.1 Componentes mínimos de la respuesta sugerida
+
+Toda propuesta del módulo debe incluir:
+- **objetivo táctico**: desmentir, bajar temperatura, reconocer, corregir, contextualizar, cortar escalada, preservar credibilidad
+- **mensaje núcleo**: una frase central clara
+- **hechos utilizables**: solo evidencia verificada
+- **puntos de apoyo**: 3-5 bullets para portavoz
+- **riesgos de respuesta**: qué no decir, qué puede volverse en contra
+- **canal recomendado**: nota, tuit, declaración, llamada a medio, mensaje interno, silencio táctico
+- **portavoz recomendado**: cuenta institucional, portavoz local, alcalde, partido, tercero validado
+- **ventana temporal**: inmediato / hoy / 24h / monitorizar primero
+
+### 9.2 Tipos de respuesta admitidos
+
+1. **Silencio táctico**
+   - cuando responder amplificaría basura o daría oxígeno a un actor marginal
+
+2. **Contraste discreto**
+   - cuando falta verificar y conviene recabar datos antes de salir
+
+3. **Desmentido factual**
+   - cuando el contenido es falso y la prueba es sólida
+
+4. **Contextualización / matiz**
+   - cuando el hecho existe pero se está deformando
+
+5. **Reconocimiento + corrección**
+   - cuando hay error real y la mejor opción es reparar rápido
+
+6. **Respuesta empática**
+   - cuando la dimensión humana/social pesa más que la pelea política
+
+7. **Contraencuadre disciplinado**
+   - cuando existe oportunidad de mover el foco a gestión, datos o incoherencia del atacante
+
+### 9.3 Reglas para minimizar errores
+
+- no negar un hecho ya verificado
+- no usar tono agresivo ante crítica ciudadana legítima
+- no responder con triunfalismo ante daño real
+- no basar la salida en un dato no contrastado
+- no escalar un conflicto pequeño a crisis mayor por sobreexposición
+
+---
+
+## 10) Métricas de severidad
+
+### 10.1 Dimensiones del score de severidad
+
+Se propone puntuar cada incidente de 0 a 100 con estas dimensiones:
+
+1. **Impacto reputacional intrínseco (`0-25`)**
+   - cuánto daño puede hacer a imagen, legitimidad o confianza
+
+2. **Alcance actual (`0-15`)**
+   - tamaño y calidad de la difusión actual
+
+3. **Velocidad de propagación (`0-10`)**
+   - rapidez con la que gana eco
+
+4. **Autoridad de los emisores (`0-15`)**
+   - peso de medios, entidades, periodistas, actores institucionales o perfiles influyentes implicados
+
+5. **Sensibilidad del tema (`0-15`)**
+   - corrupción, discriminación, seguridad, convivencia, infancia, servicios básicos, etc.
+
+6. **Proximidad electoral/territorial (`0-10`)**
+   - cuánto afecta al municipio, demarcación o actor políticamente prioritario
+
+7. **Persistencia / recurrencia (`0-10`)**
+   - si el tema reaparece y acumula desgaste
+
+### 10.2 Interpretación sugerida
+
+- `0-24` → ruido o incidencia menor
+- `25-49` → incidente manejable
+- `50-69` → crisis relevante
+- `70-84` → crisis alta
+- `85-100` → crisis crítica
+
+---
+
+## 11) Métricas de prioridad de actuación
+
+La severidad sola no basta. La prioridad final debe combinar:
+- severidad
+- confianza factual
+- urgencia temporal
+- posibilidad de intervención útil
+
+### 11.1 Factores de prioridad
+
+1. **Severidad (`0-40`)**
+2. **Confianza factual (`0-20`)**
+3. **Urgencia temporal (`0-20`)**
+   - si una hora de espera empeora mucho el daño
+4. **Capacidad de corrección (`0-10`)**
+   - si una respuesta bien hecha puede mejorar claramente el escenario
+5. **Riesgo de error de respuesta (`0-10`, inverso)**
+   - a mayor riesgo de equivocarse, menor automatismo y más revisión humana
+
+### 11.2 Bandas de prioridad
+
+- `P4` — baja
+  - monitorizar
+- `P3` — media
+  - revisar hoy
+- `P2` — alta
+  - preparar respuesta el mismo día
+- `P1` — crítica
+  - activar revisión inmediata y propuesta de salida en minutos/horas
+
+### 11.3 SLA orientativo
+
+- `P1`: primera propuesta en 15-30 min si la evidencia base existe
+- `P2`: propuesta en <2 h
+- `P3`: propuesta dentro del día
+- `P4`: seguimiento pasivo
+
+---
+
+## 12) Matriz severidad × acción recomendada
+
+| Severidad | Confianza | Acción base |
+|---|---:|---|
+| Baja | Baja | `ignore` / `monitor` |
+| Baja | Alta | `monitor` o `respond_light` si conviene cerrar rápido |
+| Media | Baja | `verify_first` |
+| Media | Alta | `respond_light` o `respond_full` según difusión |
+| Alta | Baja | `escalate_human` + verificación urgente |
+| Alta | Alta | `respond_full`, `rectify` o `escalate_human` |
+| Crítica | Cualquiera | revisión humana obligatoria + war room |
+
+Regla clave:
+- **crítica + baja confianza** no significa ignorar; significa **verificar urgentemente sin disparar comunicación prematura**.
+
+---
+
+## 13) Señales de mejora y criterios de cierre
+
+### 13.1 Indicadores de mejora
+
+- cae volumen de menciones negativas cualificadas
+- baja participación de emisores con autoridad
+- desaparece la repetición del claim central
+- la cobertura pasa de acusatoria a contextualizada/neutra
+- actores locales relevantes dejan de empujar el tema
+- la conversación se desplaza a hechos favorables o neutros
+
+### 13.2 Cierre de incidente
+
+Un caso puede cerrarse cuando:
+- no hay nueva escalada durante una ventana definida
+- el núcleo del hecho ya fue aclarado, corregido o absorbido
+- el coste de seguir respondiendo supera el beneficio
+- el tema se ha degradado a ruido residual
+
+---
+
+## 14) KPIs del módulo
+
+### 14.1 KPIs de calidad
+
+- ratio de alertas útiles vs falsos positivos
+- porcentaje de incidentes respondidos con evidencia suficiente
+- porcentaje de respuestas que requirieron rectificación posterior
+- ratio de crisis mal clasificadas por exceso o defecto
+
+### 14.2 KPIs de velocidad
+
+- tiempo desde detección a clasificación
+- tiempo desde clasificación a propuesta de respuesta
+- tiempo desde propuesta a decisión humana
+
+### 14.3 KPIs de eficacia reputacional
+
+- reducción de intensidad narrativa tras respuesta
+- porcentaje de incidentes contenidos sin escalada adicional
+- porcentaje de casos donde el framing mejora tras intervención
+- recurrencia de un mismo tipo de crisis por municipio/tema/actor
+
+### 14.4 KPI rector
+
+El KPI principal no es “responder mucho”, sino:
+- **reducir daño reputacional verificable con el mínimo número de errores de comunicación**
+
+---
+
+## 15) Integración con el resto del sistema reputacional
+
+### 15.1 Dependencias conceptuales
+
+Este módulo se apoya en las definiciones previas ya documentadas en este SPEC:
+- ampliación de fuentes de prensa y redes
+- priorización de prensa local
+- filtro de ruido
+- comprobación de realidad
+- `confidence_score`
+
+### 15.2 Relación con `altaveu`
+
+- `limpiar reputación` se orienta a **contener daño y corregir percepción negativa**
+- `altaveu` se orienta a **amplificar oportunidades favorables**
+- ambos deben compartir catálogo de fuentes y reglas de verificabilidad, pero divergen en:
+  - scoring táctico
+  - tono recomendado
+  - umbrales de intervención
+
+---
+
+## 16) Recomendaciones de implementación futura
+
+Sin tocar producción en esta tarea, una implementación posterior debería introducir:
+
+1. **Modelo de incidente reputacional**
+   - `incident_id`
+   - `incident_type`
+   - `severity_score`
+   - `priority_level`
+   - `truth_status`
+   - `recommended_action`
+   - `recommended_tone`
+   - `recommended_channel`
+   - `recommended_spokesperson`
+   - `follow_up_status`
+
+2. **Agrupación de menciones por incidente**
+   - no trabajar solo por artículo/post individual
+
+3. **Plantillas de respuesta por tipo de crisis**
+   - error real
+   - rumor
+   - crítica vecinal
+   - framing adverso
+   - crisis ética/legal
+
+4. **Cola de revisión humana**
+   - obligatoria para P1 y casos de baja confianza con alta severidad
+
+5. **Panel operativo futuro**
+   - incidentes abiertos
+   - timeline de escalada
+   - respuesta sugerida
+   - evidencia y fuentes
+   - estado de seguimiento
+
+---
+
+## 17) Decisiones técnicas y editoriales tomadas
+
+1. `limpiar reputación` se define como módulo de **gestión de crisis reputacional**, no solo de escucha.
+2. La unidad operativa principal debe ser el **incidente**, no la mención aislada.
+3. La respuesta solo es válida si distingue hecho verificado, narrativa circulante y margen de duda.
+4. El sistema debe poder recomendar también **no responder**.
+5. La prioridad de actuación debe combinar daño, urgencia y confianza factual.
+6. Los temas socialmente sensibles exigen revisión humana más estricta.
+7. La prensa local y los actores territoriales con legitimidad siguen teniendo más valor táctico en municipios pequeños que el ruido viral genérico.
+
+---
+
+## 18) Archivos modificados
+
+- `specs/reputacio/SPEC.md`
+
+Cambios realizados en esta iteración:
+- se añade una nueva sección específica para el submódulo `limpiar reputación`
+- se definen objetivos, entradas y salidas operativas
+- se especifica el flujo de detección de crisis, clasificación y propuesta de respuesta
+- se documentan tipologías de incidentes y árbol de decisión de actuación
+- se añade una matriz de severidad, prioridad y SLA orientativo
+- se conectan las decisiones con el catálogo de fuentes y el filtro de ruido ya documentados
+
+---
+
+## 19) Límites de esta iteración
+
+No se implementa en esta tarea:
+- persistencia de incidentes reputacionales en base de datos
+- endpoints nuevos FastAPI
+- scoring automático en backend
+- interfaz de crisis en frontend
+- automatización de portavoces o canales
+- generación automática final de comunicados
+
+Se entrega únicamente la especificación operativa solicitada.
+
+---
+
 ## 2026-05-09 — Filtro de ruido y comprobación de realidad en reputació
 
 ### Objetivo
