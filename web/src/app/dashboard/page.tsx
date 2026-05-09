@@ -6,10 +6,10 @@ import dynamic from 'next/dynamic';
 import { PageHeader } from '@/components/warroom/PageHeader';
 import { KPICard, KPIGrid } from '@/components/warroom/KPICard';
 import { PanelBox } from '@/components/warroom/PanelBox';
-import { StatusLine, StatusBadge } from '@/components/warroom/StatusBadge';
+import { StatusLine } from '@/components/warroom/StatusBadge';
 import { TrendingBar } from '@/components/warroom/AlertFeed';
 import { traduirTema } from '@/lib/temesCatala';
-import { APP_ROUTES, buildRoute } from '@/lib/routes';
+import { buildRoute } from '@/lib/routes';
 const API = process.env.NEXT_PUBLIC_API_URL || '';
 
 const MapaCatalunyaLeaflet = dynamic(
@@ -179,53 +179,7 @@ export default function DashboardPage() {
           </PanelBox>
         </div>
 
-        {/* Row 3: Sala d'Intel·ligència CTA — full width */}
-        <div style={{
-          background: 'var(--bg-surface)', border: '.5px solid var(--border)',
-          borderRadius: 'var(--r-lg)', padding: '24px 28px',
-          display: 'grid', gridTemplateColumns: '1fr auto', gap: 24, alignItems: 'center',
-        }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-              <StatusBadge tone="red">SALA D&apos;INTEL·LIGÈNCIA</StatusBadge>
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-meta)', letterSpacing: '.08em', textTransform: 'uppercase' }}>5 modes d&apos;anàlisi</span>
-            </div>
-            <h2 style={{
-              fontFamily: 'var(--font-sans)', fontSize: 22, fontWeight: 500,
-              color: 'var(--text-primary)', margin: '0 0 6px', letterSpacing: '-.01em',
-            }}>
-              Pregunta. <span style={{ color: 'var(--brand-l)' }}>Dispara.</span>
-            </h2>
-            <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0, maxWidth: 520 }}>
-              Monitor · Atacar · Defensar · Comparar · Oportunitat. IA amb cita literal de les actes processades.
-            </p>
-            <div style={{ display: 'flex', gap: 8, marginTop: 14, flexWrap: 'wrap' }}>
-              {[
-                'Què han dit sobre habitatge?',
-                'Dossier contradiccions PP',
-                'Speech pel ple de Vic',
-              ].map((q, i) => (
-                <Link key={i} href={`${APP_ROUTES.xat}?q=${encodeURIComponent(q)}`} style={{
-                  padding: '6px 12px', textDecoration: 'none', borderRadius: 'var(--r-full)',
-                  background: 'var(--bg-elevated)', border: '.5px solid var(--border)',
-                  color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', fontSize: 12,
-                }}>
-                  {q}
-                </Link>
-              ))}
-            </div>
-          </div>
-          <Link href={APP_ROUTES.xat} style={{
-            display: 'inline-flex', alignItems: 'center', gap: 8,
-            background: 'var(--brand)', color: '#E8F1F9', border: '1px solid var(--brand)',
-            padding: '14px 24px', fontFamily: 'var(--font-mono)', fontSize: 13,
-            letterSpacing: '.08em', textTransform: 'uppercase', fontWeight: 500,
-            textDecoration: 'none', borderRadius: 'var(--r-md)',
-            whiteSpace: 'nowrap',
-          }}>
-            Obrir Sala d&apos;Intel·ligència →
-          </Link>
-        </div>
+
       </div>
     </div>
   );
