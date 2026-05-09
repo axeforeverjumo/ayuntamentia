@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { formatDate, cn } from "@/lib/utils";
 import { ContextualChat } from "@/components/ui/ContextualChat";
+import { APP_ROUTES, buildRoute } from "@/lib/routes";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "";
 
@@ -41,7 +42,7 @@ export default function ActaDetailPage() {
   if (error || !acta) {
     return (
       <div className="p-6">
-        <Link href="/buscar" className="flex items-center gap-1.5 text-sm text-[#8b949e] hover:text-[#e6edf3] transition-colors mb-6">
+        <Link href={APP_ROUTES.cercar} className="flex items-center gap-1.5 text-sm text-[#8b949e] hover:text-[#e6edf3] transition-colors mb-6">
           <ChevronLeft className="w-4 h-4" /> Tornar a la cerca
         </Link>
         <div className="flex flex-col items-center justify-center py-20 bg-[#161b22] border border-[#30363d] rounded-lg">
@@ -57,7 +58,7 @@ export default function ActaDetailPage() {
 
   return (
     <div className="p-6 space-y-6 max-w-4xl">
-      <Link href="/buscar" className="flex items-center gap-1.5 text-sm text-[#8b949e] hover:text-[#e6edf3] transition-colors">
+      <Link href={APP_ROUTES.cercar} className="flex items-center gap-1.5 text-sm text-[#8b949e] hover:text-[#e6edf3] transition-colors">
         <ChevronLeft className="w-4 h-4" /> Tornar a la cerca
       </Link>
 

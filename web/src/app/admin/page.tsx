@@ -83,7 +83,7 @@ const tdStyle: React.CSSProperties = {
   padding: '10px 12px', fontSize: 13, borderTop: '.5px solid var(--border)', color: 'var(--text-primary)',
 };
 
-export default function AdminPage() {
+export default function AdministracioPage() {
   const [tab, setTab] = useState<(typeof TABS)[number]>('Resum');
   const [users, setUsers] = useState<User[]>([]);
   const [usage, setUsage] = useState<UsageRow[]>([]);

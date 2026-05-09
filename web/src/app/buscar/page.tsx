@@ -9,6 +9,7 @@ import {
 import { SearchInput } from '@/components/ui/SearchInput';
 import { apiClient } from '@/lib/ApiClient';
 import type { SearchResponse, SearchResult } from '@/lib/types';
+import { APP_ROUTES, buildRoute } from '@/lib/routes';
 import { formatDate } from '@/lib/utils';
 
 const RESULTS_PER_PAGE = 10;
@@ -295,7 +296,9 @@ export default function BuscarPage() {
 }
 
 function SearchResultCard({ result }: { result: SearchResult }) {
-  const href = result.tipo === 'municipio' ? `/municipios/${result.id}` : `/actas/${result.id}`;
+  const href = result.tipo === 'municipio'
+    ? buildRoute('municipis', result.id)
+    : buildRoute('actes', result.id);
   return (
     <Link href={href} style={{
       display: 'block', background: 'var(--bg-surface)', border: '.5px solid var(--border)',

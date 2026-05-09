@@ -75,3 +75,18 @@ export const PUBLIC_ROUTES = [
   '/legal',
   APP_ROUTES.aterrada,
 ] as const;
+
+export const LEGACY_VISIBLE_ROUTE_SEGMENTS = [
+  'login',
+  'dashboard',
+  'chat',
+  'workspace',
+  'buscar',
+  'admin',
+  'landing',
+  'settings',
+  'suscripciones',
+  'recepcion',
+  'municipios',
+  'actas',
+] as const;

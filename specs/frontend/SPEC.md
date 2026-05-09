@@ -85,3 +85,31 @@
 - S'ha prioritzat una correcció quirúrgica sobre la base existent per no reobrir l'abast de la migració anterior.
 - La validació de rutes queda centralitzada a `web/src/lib/routes.ts`, que actua com a criteri únic de segments vàlids en català.
 - Els aliases antics continuen existint com a estructura interna de l'App Router, però la navegació visible i la canonicalització externa passen per les rutes catalanes del mapa centralitzat.
+
+## 2025-02-14 — Auditoria intermèdia i reforç de validació de rutes visibles
+
+### Canvis realitzats
+- S'ha afegit el script `validate:routes` a `web/package.json` perquè la comprovació de rutes catalanes es pugui executar explícitament des de npm.
+- S'ha creat `web/scripts/validate-catalan-routes.mjs` per auditar literals de rutes visibles i detectar regressions amb segments antics com `login`, `dashboard`, `chat`, `buscar`, `admin`, `municipios` o `actas`.
+- S'han corregit enllaços visibles que encara apuntaven a slugs no catalans en `dashboard`, `buscar`, `municipios`, `actas`, `regidors`, `AlertaDetailModal`, `SourceCard` i `MapaCatalunyaLeaflet`, substituint-los per `APP_ROUTES` i `buildRoute`.
+- S'ha mantingut `proxy.ts` com a capa de compatibilitat per redirigir rutes antigues, però el validador encara la marca com a pendent perquè conté literals legacy explícits.
+
+### Arxius modificats
+- `web/package.json`
+- `web/scripts/validate-catalan-routes.mjs`
+- `web/src/app/dashboard/page.tsx`
+- `web/src/app/buscar/page.tsx`
+- `web/src/app/municipios/page.tsx`
+- `web/src/app/municipios/[id]/page.tsx`
+- `web/src/app/actas/[id]/page.tsx`
+- `web/src/app/regidors/[id]/page.tsx`
+- `web/src/components/ui/AlertaDetailModal.tsx`
+- `web/src/components/ui/SourceCard.tsx`
+- `web/src/components/features/MapaCatalunyaLeaflet.tsx`
+- `web/eslint.config.mjs`
+- `specs/frontend/SPEC.md`
+
+### Decisions tècniques
+- El control automàtic s'ha implementat en forma de script dedicat per no dependre només de convencions manuals.
+- La validació se centra en rutes visibles del frontend i ignora endpoints `/api/*`, però encara necessita una excepció o modelatge específic per a `proxy.ts` perquè allà les rutes legacy són intencionades com a redireccions.
+- No s'han eliminat els alias antics de l'App Router en aquesta iteració; s'ha prioritzat limitar l'abast i corregir els enllaços visibles reals.

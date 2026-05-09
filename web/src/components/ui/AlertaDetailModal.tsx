@@ -9,6 +9,7 @@ import {
 import { apiClient } from '@/lib/ApiClient';
 import type { Alerta, AlertSeverity } from '@/lib/types';
 import { PartidoChip } from './PartidoChip';
+import { APP_ROUTES, buildRoute } from '@/lib/routes';
 import { cn } from '@/lib/utils';
 
 const SEV_META: Record<AlertSeverity, { icon: typeof AlertTriangle; text: string; bg: string; border: string }> = {
@@ -301,7 +302,7 @@ export function AlertaDetailModal({ alertaId, onClose, onUpdated }: Props) {
               {/* Footer actions */}
               <div style={{ padding: '12px 20px', borderTop: '.5px solid var(--border-em)', background: 'var(--bg-surface)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                 <a
-                  href={`/buscar?q=${encodeURIComponent(alerta.municipio || alerta.punto_titulo || '')}`}
+                  href={`${APP_ROUTES.cercar}?q=${encodeURIComponent(alerta.municipio || alerta.punto_titulo || '')}`}
                   style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', fontSize: 11, borderRadius: 'var(--r-md)', border: '.5px solid var(--border-em)', color: 'var(--text-meta)', textDecoration: 'none' }}
                 >
                   <ExternalLink className="w-3 h-3" />

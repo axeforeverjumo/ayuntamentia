@@ -9,6 +9,7 @@ import { PanelBox } from '@/components/warroom/PanelBox';
 import { StatusBadge, StatusLine } from '@/components/warroom/StatusBadge';
 import { Gauge } from '@/components/landing/primitives';
 import { traduirTema } from '@/lib/temesCatala';
+import { APP_ROUTES } from '@/lib/routes';
 
 const API = process.env.NEXT_PUBLIC_API_URL || '';
 
@@ -43,7 +44,7 @@ export default function RegidorPerfilPage() {
         <PageHeader crumb="Operacions / Regidors" title="Regidor no trobat" />
         <div style={{ padding: '60px 26px', textAlign: 'center' }}>
           <p style={{ color: 'var(--fog)', fontSize: 14 }}>No s&apos;ha trobat el perfil d&apos;aquest regidor.</p>
-          <Link href="/regidors" style={{ color: 'var(--brand)', fontFamily: 'var(--font-mono)', fontSize: 12, marginTop: 16, display: 'inline-block' }}>
+          <Link href={APP_ROUTES.regidors} style={{ color: 'var(--brand)', fontFamily: 'var(--font-mono)', fontSize: 12, marginTop: 16, display: 'inline-block' }}>
             ← Tornar al llistat
           </Link>
         </div>
@@ -164,7 +165,7 @@ export default function RegidorPerfilPage() {
         </PanelBox>
 
         <div style={{ padding: '10px 0' }}>
-          <Link href="/regidors" style={{
+          <Link href={APP_ROUTES.regidors} style={{
             fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--bone)',
             letterSpacing: '.08em', textTransform: 'uppercase',
           }}>

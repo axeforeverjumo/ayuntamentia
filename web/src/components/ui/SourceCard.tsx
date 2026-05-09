@@ -7,6 +7,7 @@ import {
   Euro, Palette, Briefcase, Scale, Users,
 } from 'lucide-react';
 import type { Source } from '@/lib/types';
+import { APP_ROUTES } from '@/lib/routes';
 import { cn } from '@/lib/utils';
 
 const TEMA_STYLES: Record<string, { icon: typeof Building2; color: string; bg: string; border: string }> = {
@@ -48,7 +49,7 @@ export function SourceCard({ source }: SourceCardProps) {
   const Icon = style.icon;
 
   const titulo = source.titulo || source.tema || 'Acta';
-  const href = `/buscar?q=${encodeURIComponent(source.municipio || titulo || '')}`;
+  const href = `${APP_ROUTES.cercar}?q=${encodeURIComponent(source.municipio || titulo || '')}`;
 
   return (
     <Link
