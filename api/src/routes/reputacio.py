@@ -226,7 +226,8 @@ def ingest_rss_feeds():
                         pub_date = datetime.now()
 
                 text = f"{title} {summary}"
-                h = hashlib.md5(f"{feed_cfg['nom']}:{link or title}".encode()).hexdigest()
+                stable_key = (link or title).strip().lower()
+                h = hashlib.md5(stable_key.encode()).hexdigest()
 
                 partits = _detect_partits(text)
                 sentiment, score = _detect_sentiment(title, summary, partits)
