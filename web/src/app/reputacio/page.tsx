@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { PageHeader } from '@/components/warroom/PageHeader';
 import { KPICard, KPIGrid } from '@/components/warroom/KPICard';
@@ -149,18 +149,43 @@ export default function ReputacioPage() {
   const [sentimentFilter, setSentimentFilter] = useState<'tots' | 'positiu' | 'neutre' | 'negatiu'>('tots');
   const [latestArticles, setLatestArticles] = useState<any[]>([]);
 
-  useEffect(() => {
-    fetch(`${API}/api/reputacio/stats?dies=30`).then(r => r.ok ? r.json() : null).then(setStats).catch(() => {});
-    fetch(`${API}/api/reputacio/latest?limit=8`)
+  const fetchOverview = useCallback(() => {
+    fetch(`${API}/api/reputacio/stats?dies=30`, { cache: 'no-store' })
+      .then(r => r.ok ? r.json() : null)
+      .then(setStats)
+      .catch(() => {});
+
+    fetch(`${API}/api/reputacio/latest?limit=8`, { cache: 'no-store' })
       .then(r => r.ok ? r.json() : null)
       .then(d => setLatestArticles(d?.articles || []))
       .catch(() => {});
   }, []);
 
+  const fetchPartitData = useCallback((currentPartit: string) => {
+    fetch(`${API}/api/reputacio/sentiment-partit?partit=${currentPartit}&dies=30`, { cache: 'no-store' })
+      .then(r => r.ok ? r.json() : null)
+      .then(setDetall)
+      .catch(() => {});
+
+    fetch(`${API}/api/reputacio/temes-negatius?partit=${currentPartit}&dies=30`, { cache: 'no-store' })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => setNegatius(d?.articles || []))
+      .catch(() => {});
+  }, []);
+
   useEffect(() => {
-    fetch(`${API}/api/reputacio/sentiment-partit?partit=${partit}&dies=30`).then(r => r.ok ? r.json() : null).then(setDetall).catch(() => {});
-    fetch(`${API}/api/reputacio/temes-negatius?partit=${partit}&dies=30`).then(r => r.ok ? r.json() : null).then(d => setNegatius(d?.articles || [])).catch(() => {});
-  }, [partit]);
+    fetchOverview();
+    fetchPartitData(partit);
+  }, [fetchOverview, fetchPartitData, partit]);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      fetchOverview();
+      fetchPartitData(partit);
+    }, 30000);
+
+    return () => window.clearInterval(interval);
+  }, [fetchOverview, fetchPartitData, partit]);
 
   const TABS = [
     { id: 'overview' as const, label: 'Panorama general', color: 'var(--wr-phosphor)' },
@@ -188,7 +213,7 @@ export default function ReputacioPage() {
             <StatusLine color="var(--wr-phosphor)">
               {stats?.total_articles || 0} articles · 30d
             </StatusLine>
-            <button onClick={() => fetch(`${API}/api/reputacio/ingest`, { method: 'POST' }).then(() => window.location.reload())} style={{
+            <button onClick={() => fetch(`${API}/api/reputacio/ingest`, { method: 'POST', cache: 'no-store' }).then(() => { fetchOverview(); fetchPartitData(partit); })} style={{
               padding: '6px 12px', background: 'transparent', border: '1px solid var(--line)',
               color: 'var(--bone)', fontFamily: 'var(--font-mono)', fontSize: 10,
               letterSpacing: '.08em', textTransform: 'uppercase', cursor: 'pointer',
