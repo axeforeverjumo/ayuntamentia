@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
 import { PageHeader } from '@/components/warroom/PageHeader';
 import { KPICard, KPIGrid } from '@/components/warroom/KPICard';
 import { PanelBox } from '@/components/warroom/PanelBox';
@@ -11,6 +10,8 @@ import { Gauge } from '@/components/landing/primitives';
 import { traduirTema } from '@/lib/temesCatala';
 
 const API = process.env.NEXT_PUBLIC_API_URL || '';
+const LOADER_DELAY_MS = 350;
+const LOADER_MIN_VISIBLE_MS = 900;
 
 type Ranking = {
   nombre: string; cargo: string | null; partido: string; municipio: string; comarca: string | null;
@@ -41,19 +42,31 @@ export default function IntelPage() {
   const loaderTimerRef = useRef<NodeJS.Timeout | null>(null);
   const minVisibleTimerRef = useRef<NodeJS.Timeout | null>(null);
   const loaderShownAtRef = useRef<number | null>(null);
+  const showLoaderRef = useRef(false);
+
+  useEffect(() => {
+    showLoaderRef.current = showLoader;
+  }, [showLoader]);
 
   useEffect(() => {
     let isMounted = true;
     setIsLoading(true);
 
-    if (loaderTimerRef.current) clearTimeout(loaderTimerRef.current);
-    if (minVisibleTimerRef.current) clearTimeout(minVisibleTimerRef.current);
+    if (loaderTimerRef.current) {
+      clearTimeout(loaderTimerRef.current);
+      loaderTimerRef.current = null;
+    }
+
+    if (minVisibleTimerRef.current) {
+      clearTimeout(minVisibleTimerRef.current);
+      minVisibleTimerRef.current = null;
+    }
 
     loaderTimerRef.current = setTimeout(() => {
       if (!isMounted) return;
-      setShowLoader(true);
       loaderShownAtRef.current = Date.now();
-    }, 250);
+      setShowLoader(true);
+    }, LOADER_DELAY_MS);
 
     const q = new URLSearchParams({ order, limit: '50' });
     if (partido) q.set('partido', partido);
@@ -87,23 +100,27 @@ export default function IntelPage() {
         loaderTimerRef.current = null;
       }
 
-      if (!showLoader) return;
+      if (!showLoaderRef.current) {
+        loaderShownAtRef.current = null;
+        return;
+      }
 
       const shownAt = loaderShownAtRef.current;
-      const elapsed = shownAt ? Date.now() - shownAt : 0;
-      const minVisibleMs = 700;
-      const remaining = Math.max(0, minVisibleMs - elapsed);
+      const elapsed = shownAt ? Date.now() - shownAt : LOADER_MIN_VISIBLE_MS;
+      const remaining = Math.max(0, LOADER_MIN_VISIBLE_MS - elapsed);
 
       if (remaining === 0) {
         setShowLoader(false);
         loaderShownAtRef.current = null;
-      } else {
-        minVisibleTimerRef.current = setTimeout(() => {
-          if (!isMounted) return;
-          setShowLoader(false);
-          loaderShownAtRef.current = null;
-        }, remaining);
+        return;
       }
+
+      minVisibleTimerRef.current = setTimeout(() => {
+        if (!isMounted) return;
+        setShowLoader(false);
+        loaderShownAtRef.current = null;
+        minVisibleTimerRef.current = null;
+      }, remaining);
     });
 
     return () => {
@@ -111,7 +128,7 @@ export default function IntelPage() {
       if (loaderTimerRef.current) clearTimeout(loaderTimerRef.current);
       if (minVisibleTimerRef.current) clearTimeout(minVisibleTimerRef.current);
     };
-  }, [partido, order, showLoader]);
+  }, [partido, order]);
 
   const maxTend = tend.length > 0 ? Math.max(...tend.map(t => t.actual)) : 1;
 
@@ -167,38 +184,52 @@ export default function IntelPage() {
         <div
           role="status"
           aria-live="polite"
+          aria-atomic="true"
           aria-busy={isLoading}
           aria-label="Carregant intel·ligència estratègica"
           style={{
-          margin: '12px 26px 0',
-          padding: '16px 18px',
-          border: '1px solid var(--line)',
-          background: 'linear-gradient(90deg, rgba(255,255,255,.02), rgba(255,255,255,.06), rgba(255,255,255,.02))',
-          backgroundSize: '200% 100%',
-          animation: 'intelPulseLoad 1.4s ease-in-out infinite',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 12,
-        }}>
+            margin: '12px 26px 0',
+            padding: '16px 18px',
+            border: '1px solid var(--line)',
+            background: 'linear-gradient(90deg, rgba(255,255,255,.02), rgba(255,255,255,.06), rgba(255,255,255,.02))',
+            backgroundSize: '200% 100%',
+            animation: 'intelPulseLoad 1.4s ease-in-out infinite',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 12,
+          }}
+        >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{
-              width: 10,
-              height: 10,
-              borderRadius: '50%',
-              background: 'var(--brand-l)',
-              boxShadow: '0 0 0 0 rgba(95,169,235,.6)',
-              animation: 'intelPulseDot 1.1s ease-out infinite',
-            }} />
-            <span style={{
-              fontFamily: 'var(--font-mono)',
-              fontSize: 10,
-              letterSpacing: '.12em',
-              textTransform: 'uppercase',
-              color: 'var(--paper)',
-            }}>
-              Carregant intel·ligència estratègica…
-            </span>
+            <span
+              aria-hidden="true"
+              style={{
+                width: 10,
+                height: 10,
+                borderRadius: '50%',
+                background: 'var(--brand-l)',
+                boxShadow: '0 0 0 0 rgba(95,169,235,.6)',
+                animation: 'intelPulseDot 1.1s ease-out infinite',
+              }}
+            />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <span style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: 10,
+                letterSpacing: '.12em',
+                textTransform: 'uppercase',
+                color: 'var(--paper)',
+              }}>
+                Carregant intel·ligència estratègica…
+              </span>
+              <span style={{
+                fontFamily: 'var(--font-sans)',
+                fontSize: 12,
+                color: 'var(--fog)',
+              }}>
+                Recuperant rànquings, tendències i promeses per mostrar l&apos;anàlisi completa.
+              </span>
+            </div>
           </div>
           <StatusBadge tone="phos">PROCESSANT DADES</StatusBadge>
         </div>
