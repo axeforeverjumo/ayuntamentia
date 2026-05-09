@@ -34,3 +34,22 @@
   - en red lenta aparece tras ~350ms,
   - una vez visible no desaparece antes de ~900ms,
   - el texto accesible del estado sigue presente mientras `aria-busy` está activo.
+
+## 2026-05-09 — Validación funcional final de `/intel`
+
+### Cambios realizados
+- No fue necesario modificar de nuevo la UI de `/intel`; se validó el estado actual como cierre funcional de la incidencia.
+- Se documentó evidencia técnica y funcional conjunta con `/reputacio` en `docs/qa-validacion-reputacio-intel-2026-05-09.md`.
+
+### Archivos modificados
+- `docs/qa-validacion-reputacio-intel-2026-05-09.md`
+- `specs/intel/SPEC.md`
+
+### Decisiones técnicas
+- Se mantuvo la implementación existente del loader porque ya cumple el objetivo del brief: feedback visible, animado y accesible durante cargas perceptibles.
+- No se amplió alcance a refactors del resto de la pantalla, pese a existir avisos de lint en otros puntos del archivo.
+
+### Evidencia
+- `web/src/app/intel/page.tsx` conserva `LOADER_DELAY_MS = 350` y `LOADER_MIN_VISIBLE_MS = 900`.
+- El loader usa `role="status"`, `aria-live="polite"`, `aria-atomic="true"` y `aria-busy`.
+- `npm --prefix web run build` completó correctamente e incluyó la ruta `/intel` en la salida generada.

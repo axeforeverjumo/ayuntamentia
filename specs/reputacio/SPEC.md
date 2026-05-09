@@ -93,3 +93,27 @@
 - Antes: el hash incluía `data_publicacio`, así que la identidad del artículo dependía de un dato mutable del feed. Eso impedía reconciliar correctamente items equivalentes y dejaba la tabla acumulando/arrastrando registros viejos en vez de refrescar los artículos actuales.
 - Ahora: la identidad del artículo se basa en `font + url normalizada + título normalizado`, y además la ingesta migra hashes legacy al nuevo formato antes del `upsert`.
 - Validación end-to-end local: tras ejecutar la ingesta y consultar `reputacio_latest(limit=8)`, la página ya devuelve noticias con fecha `2026-05-09 12:08:07`, `2026-05-09 12:07:12`, etc., posteriores a `2026-04-28`.
+
+## 2026-05-09 — Validación funcional final y limpieza de noticias antiguas en `/reputacio`
+
+### Cambios realizados
+- Se añadió limpieza física de noticias antiguas al final de `ingest_rss_feeds()`.
+- La limpieza elimina registros de `premsa_articles` con `data_publicacio` fuera de la ventana de 30 días, alineando almacenamiento y criterio visual de la pantalla.
+- Se adaptó `POST /api/reputacio/ingest` para devolver tanto `nous_articles` como `articles_eliminats`, facilitando validación operativa del refresco y del pruning.
+- Se registró evidencia funcional y técnica de cierre en `docs/qa-validacion-reputacio-intel-2026-05-09.md`.
+
+### Archivos modificados
+- `api/src/routes/reputacio.py`
+- `docs/qa-validacion-reputacio-intel-2026-05-09.md`
+- `specs/reputacio/SPEC.md`
+
+### Decisiones técnicas
+- Se aplicó la limpieza dentro de la propia ingesta para no introducir nuevos schedulers ni ampliar el alcance de la incidencia.
+- Se preservó el criterio temporal ya usado por los endpoints (`30 días`) para que no exista discrepancia entre lo que se consulta y lo que se conserva.
+- Se mantuvo el enfoque quirúrgico: sin migraciones nuevas y sin tocar la estructura de tabla existente.
+
+### Evidencia
+- `web/src/app/reputacio/page.tsx` ya hacía auto-refresh cada 30s con `cache: 'no-store'`.
+- `api/src/routes/reputacio.py` ya devolvía respuestas no cacheables y ahora además ejecuta `DELETE FROM premsa_articles WHERE data_publicacio < cutoff`.
+- `npm --prefix web run build` completó correctamente con rutas `/reputacio` y `/intel` generadas.
+- La sintaxis Python global se verificó con éxito.

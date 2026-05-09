@@ -247,6 +247,14 @@ def _legacy_article_hash(font: str, link: str, title: str, pub_date: Optional[da
     return hashlib.md5(stable_key.encode()).hexdigest()
 
 
+def _prune_old_articles(cur, max_age_days: int = 30) -> int:
+    cutoff = datetime.now(timezone.utc) - timedelta(days=max_age_days)
+    cur.execute(
+        "DELETE FROM premsa_articles WHERE data_publicacio IS NOT NULL AND data_publicacio < %s",
+        (cutoff,),
+    )
+    return cur.rowcount or 0
+
 
 def ingest_rss_feeds():
     """Ingest all RSS feeds — called by celery beat."""
@@ -254,6 +262,7 @@ def ingest_rss_feeds():
     conn = _get_conn()
     cur = conn.cursor()
     total_new = 0
+    total_pruned = 0
 
     for feed_cfg in RSS_FEEDS:
         try:
@@ -321,9 +330,16 @@ def ingest_rss_feeds():
             logger.warning(f"Error ingesting {feed_cfg['nom']}: {e}")
             continue
 
+    try:
+        total_pruned = _prune_old_articles(cur, max_age_days=30)
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        logger.warning("Error pruning old premsa articles", exc_info=True)
+
     conn.close()
-    logger.info(f"Premsa: {total_new} articles nous ingestats")
-    return total_new
+    logger.info("Premsa: %s articles nous ingestats · %s antics eliminats", total_new, total_pruned)
+    return {"nous_articles": total_new, "articles_eliminats": total_pruned}
 
 
 # ── API Endpoints ──
@@ -488,8 +504,8 @@ def temes_negatius(response: Response, partit: str = Query("AC"), dies: int = Qu
 @router.post("/ingest")
 def trigger_ingest():
     """Manual trigger for RSS ingestion."""
-    n = ingest_rss_feeds()
-    return {"ok": True, "nous_articles": n}
+    result = ingest_rss_feeds()
+    return {"ok": True, **result}
 
 
 @router.post("/reclassify")
