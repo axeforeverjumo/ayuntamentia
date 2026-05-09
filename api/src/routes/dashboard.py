@@ -1,4 +1,6 @@
 from fastapi import APIRouter
+from psycopg2 import errors
+
 from ..db import get_cursor
 
 router = APIRouter()
@@ -25,57 +27,76 @@ def get_pipeline_status():
 def get_temas_trending():
     with get_cursor() as cur:
         # Strategic trend score = weighted mentions + normalized media level.
-        # This query keeps backward compatibility when media signals are still null.
-        cur.execute("""
-            WITH tema_actas AS (
+        # If temas_trend_signals does not exist yet, degrade gracefully to acta mentions only.
+        try:
+            cur.execute("""
+                WITH tema_actas AS (
+                    SELECT
+                        LOWER(TRIM(tema)) AS tema,
+                        COUNT(*)::float AS actas_menciones
+                    FROM puntos_pleno
+                    WHERE tema IS NOT NULL
+                      AND TRIM(tema) != ''
+                      AND LOWER(TRIM(tema)) != 'procedimiento'
+                    GROUP BY LOWER(TRIM(tema))
+                ),
+                tema_media AS (
+                    SELECT
+                        ta.tema,
+                        ta.actas_menciones,
+                        COALESCE(t.nivel_mediatico_prensa, 0)::float AS media_prensa,
+                        COALESCE(t.nivel_mediatico_redes, 0)::float AS media_redes,
+                        COALESCE(t.nivel_mediatico_otras, 0)::float AS media_otras
+                    FROM tema_actas ta
+                    LEFT JOIN temas_trend_signals t ON t.tema = ta.tema
+                ),
+                maxima AS (
+                    SELECT
+                        GREATEST(MAX(actas_menciones), 1) AS max_actas,
+                        GREATEST(MAX(media_prensa), 1) AS max_prensa,
+                        GREATEST(MAX(media_redes), 1) AS max_redes,
+                        GREATEST(MAX(media_otras), 1) AS max_otras
+                    FROM tema_media
+                )
+                SELECT
+                    tm.tema,
+                    ROUND(tm.actas_menciones)::int AS count,
+                    ROUND(
+                        (
+                            0.45 * (tm.actas_menciones / m.max_actas) +
+                            0.30 * (tm.media_prensa / m.max_prensa) +
+                            0.20 * (tm.media_redes / m.max_redes) +
+                            0.05 * (tm.media_otras / m.max_otras)
+                        ) * 100,
+                        2
+                    ) AS trend_score,
+                    ROUND((tm.media_prensa / m.max_prensa) * 100, 2) AS media_prensa_norm,
+                    ROUND((tm.media_redes / m.max_redes) * 100, 2) AS media_redes_norm,
+                    ROUND((tm.media_otras / m.max_otras) * 100, 2) AS media_otras_norm
+                FROM tema_media tm
+                CROSS JOIN maxima m
+                ORDER BY trend_score DESC, tm.actas_menciones DESC
+                LIMIT 10
+            """)
+            return cur.fetchall()
+        except errors.UndefinedTable:
+            cur.execute("""
                 SELECT
                     LOWER(TRIM(tema)) AS tema,
-                    COUNT(*)::float AS actas_menciones
+                    COUNT(*)::int AS count,
+                    ROUND(COUNT(*)::numeric, 2) AS trend_score,
+                    0::numeric AS media_prensa_norm,
+                    0::numeric AS media_redes_norm,
+                    0::numeric AS media_otras_norm
                 FROM puntos_pleno
                 WHERE tema IS NOT NULL
                   AND TRIM(tema) != ''
                   AND LOWER(TRIM(tema)) != 'procedimiento'
                 GROUP BY LOWER(TRIM(tema))
-            ),
-            tema_media AS (
-                SELECT
-                    ta.tema,
-                    ta.actas_menciones,
-                    COALESCE(t.nivel_mediatico_prensa, 0)::float AS media_prensa,
-                    COALESCE(t.nivel_mediatico_redes, 0)::float AS media_redes,
-                    COALESCE(t.nivel_mediatico_otras, 0)::float AS media_otras
-                FROM tema_actas ta
-                LEFT JOIN temas_trend_signals t ON t.tema = ta.tema
-            ),
-            maxima AS (
-                SELECT
-                    GREATEST(MAX(actas_menciones), 1) AS max_actas,
-                    GREATEST(MAX(media_prensa), 1) AS max_prensa,
-                    GREATEST(MAX(media_redes), 1) AS max_redes,
-                    GREATEST(MAX(media_otras), 1) AS max_otras
-                FROM tema_media
-            )
-            SELECT
-                tm.tema,
-                ROUND(tm.actas_menciones)::int AS count,
-                ROUND(
-                    (
-                        0.45 * (tm.actas_menciones / m.max_actas) +
-                        0.30 * (tm.media_prensa / m.max_prensa) +
-                        0.20 * (tm.media_redes / m.max_redes) +
-                        0.05 * (tm.media_otras / m.max_otras)
-                    ) * 100,
-                    2
-                ) AS trend_score,
-                ROUND((tm.media_prensa / m.max_prensa) * 100, 2) AS media_prensa_norm,
-                ROUND((tm.media_redes / m.max_redes) * 100, 2) AS media_redes_norm,
-                ROUND((tm.media_otras / m.max_otras) * 100, 2) AS media_otras_norm
-            FROM tema_media tm
-            CROSS JOIN maxima m
-            ORDER BY trend_score DESC, tm.actas_menciones DESC
-            LIMIT 10
-        """)
-        return cur.fetchall()
+                ORDER BY COUNT(*) DESC, LOWER(TRIM(tema)) ASC
+                LIMIT 10
+            """)
+            return cur.fetchall()
 
 
 @router.get("/coherencia")

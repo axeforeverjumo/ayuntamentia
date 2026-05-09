@@ -67,8 +67,7 @@ def list_alertas(
     return {"total": total, "page": page, "results": results}
 
 
-@router.get("/stats/resumen")
-def alertas_stats():
+def _get_alertas_stats():
     with get_cursor() as cur:
         cur.execute("""
             SELECT
@@ -81,6 +80,16 @@ def alertas_stats():
             FROM alertas
         """)
         return cur.fetchone()
+
+
+@router.get("/stats")
+def alertas_stats_legacy():
+    return _get_alertas_stats()
+
+
+@router.get("/stats/resumen")
+def alertas_stats():
+    return _get_alertas_stats()
 
 
 @router.get("/{alerta_id}")
