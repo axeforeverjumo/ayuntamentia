@@ -147,9 +147,14 @@ export default function ReputacioPage() {
   const [negatius, setNegatius] = useState<any[]>([]);
   const [tab, setTab] = useState<'overview' | 'detall' | 'neteja'>('overview');
   const [sentimentFilter, setSentimentFilter] = useState<'tots' | 'positiu' | 'neutre' | 'negatiu'>('tots');
+  const [latestArticles, setLatestArticles] = useState<any[]>([]);
 
   useEffect(() => {
     fetch(`${API}/api/reputacio/stats?dies=30`).then(r => r.ok ? r.json() : null).then(setStats).catch(() => {});
+    fetch(`${API}/api/reputacio/latest?limit=8`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => setLatestArticles(d?.articles || []))
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -288,6 +293,20 @@ export default function ReputacioPage() {
                   </div>
                 ) : (
                   <EmptyState text="Cap font activa" />
+                )}
+              </PanelBox>
+            </div>
+
+            <div style={{ marginTop: 16 }}>
+              <PanelBox title="Últimes notícies ingestades" subtitle="ordre real per data de publicació" tone="default">
+                {latestArticles.length > 0 ? (
+                  <div>
+                    {latestArticles.map((a: any, i: number) => (
+                      <ArticleCard key={i} article={a} compact />
+                    ))}
+                  </div>
+                ) : (
+                  <EmptyState text="Encara no hi ha notícies recents ingestades" />
                 )}
               </PanelBox>
             </div>

@@ -7,7 +7,8 @@ import os
 import json
 import hashlib
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+from email.utils import parsedate_to_datetime
 from typing import Optional
 
 import feedparser
@@ -24,12 +25,10 @@ RSS_FEEDS = [
     {"nom": "Vilaweb", "url": "https://www.vilaweb.cat/feed/", "idioma": "ca"},
     {"nom": "NacióDigital", "url": "https://www.naciodigital.cat/rss", "idioma": "ca"},
     {"nom": "ARA", "url": "https://www.ara.cat/rss/", "idioma": "ca"},
-    {"nom": "El Punt Avui", "url": "https://www.elpuntavui.cat/rss.html", "idioma": "ca"},
-    {"nom": "ACN", "url": "https://www.acn.cat/rss", "idioma": "ca"},
+    {"nom": "El Punt Avui", "url": "https://www.elpuntavui.cat/?format=feed&type=rss", "idioma": "ca"},
     {"nom": "Betevé", "url": "https://beteve.cat/feed/", "idioma": "ca"},
     {"nom": "La Vanguardia", "url": "https://www.lavanguardia.com/rss/politica.xml", "idioma": "es"},
     {"nom": "El Periódico", "url": "https://www.elperiodico.com/es/rss/politica/rss.xml", "idioma": "es"},
-    {"nom": "Catalunya Press", "url": "https://www.catalunyapress.cat/rss", "idioma": "ca"},
 ]
 
 PARTITS_KEYWORDS = {
@@ -197,6 +196,37 @@ def _detect_partits(text: str) -> list[str]:
     return found
 
 
+def _parse_entry_datetime(entry) -> Optional[datetime]:
+    """Extreu la millor data disponible del feed i la normalitza a UTC naive."""
+    for attr in ("published_parsed", "updated_parsed", "created_parsed"):
+        parsed = entry.get(attr)
+        if parsed:
+            try:
+                return datetime(*parsed[:6])
+            except Exception:
+                logger.debug("Invalid %s in RSS entry", attr, exc_info=True)
+
+    for attr in ("published", "updated", "created"):
+        value = entry.get(attr)
+        if not value:
+            continue
+        try:
+            parsed_dt = parsedate_to_datetime(value)
+            if parsed_dt.tzinfo is not None:
+                parsed_dt = parsed_dt.astimezone(timezone.utc).replace(tzinfo=None)
+            return parsed_dt
+        except Exception:
+            try:
+                normalized = str(value).replace("Z", "+00:00")
+                parsed_dt = datetime.fromisoformat(normalized)
+                if parsed_dt.tzinfo is not None:
+                    parsed_dt = parsed_dt.astimezone(timezone.utc).replace(tzinfo=None)
+                return parsed_dt
+            except Exception:
+                logger.debug("Invalid textual RSS date: %s", value, exc_info=True)
+
+    return None
+
 
 
 def ingest_rss_feeds():
@@ -213,20 +243,18 @@ def ingest_rss_feeds():
                 title = entry.get("title", "")
                 summary = entry.get("summary", entry.get("description", ""))
                 link = entry.get("link", "")
-                published = entry.get("published_parsed") or entry.get("updated_parsed")
-
                 if not title:
                     continue
 
-                pub_date = None
-                if published:
-                    try:
-                        pub_date = datetime(*published[:6])
-                    except Exception:
-                        pub_date = datetime.now()
+                pub_date = _parse_entry_datetime(entry)
 
                 text = f"{title} {summary}"
-                stable_key = (link or title).strip().lower()
+                stable_key = "|".join([
+                    feed_cfg["nom"].strip().lower(),
+                    (link or "").strip().lower(),
+                    title.strip().lower(),
+                    pub_date.isoformat() if pub_date else "",
+                ])
                 h = hashlib.md5(stable_key.encode()).hexdigest()
 
                 partits = _detect_partits(text)
@@ -256,6 +284,34 @@ def ingest_rss_feeds():
 
 
 # ── API Endpoints ──
+
+@router.get("/latest")
+def reputacio_latest(limit: int = Query(50, ge=1, le=200)):
+    conn = _get_conn()
+    cur = conn.cursor()
+    _ensure_table()
+
+    cur.execute("""
+    SELECT titol, resum, font, url, sentiment, sentiment_score, data_publicacio, partits
+    FROM premsa_articles
+    WHERE data_publicacio IS NOT NULL
+    ORDER BY data_publicacio DESC, id DESC
+    LIMIT %s
+    """, (limit,))
+    articles = [{
+        "titol": r[0],
+        "resum": r[1],
+        "font": r[2],
+        "url": r[3],
+        "sentiment": r[4],
+        "score": r[5],
+        "data": str(r[6])[:19] if r[6] else None,
+        "partits": list(r[7] or []),
+    } for r in cur.fetchall()]
+
+    conn.close()
+    return {"articles": articles}
+
 
 @router.get("/stats")
 def reputacio_stats(dies: int = Query(30)):
