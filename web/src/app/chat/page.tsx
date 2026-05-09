@@ -8,12 +8,12 @@ import { ChatMessage } from '@/components/ui/ChatMessage';
 import { ProgressiveLoader } from '@/components/ui/ProgressiveLoader';
 import { SaveToWorkspaceModal } from '@/components/ui/SaveToWorkspaceModal';
 import { apiClient } from '@/lib/ApiClient';
-import { CLIENT_CONFIG } from '@/lib/clientConfig';
 import type { ChatMessage as ChatMessageType, ChatResponse } from '@/lib/types';
 import type { WorkspaceMode } from '@/lib/workspaceStorage';
 import { PageHeader } from '@/components/warroom/PageHeader';
-import { StatusBadge, LiveDot, StatusLine } from '@/components/warroom/StatusBadge';
+import { StatusBadge, StatusLine } from '@/components/warroom/StatusBadge';
 import { Gauge } from '@/components/landing/primitives';
+import { APP_ROUTES } from '@/lib/routes';
 
 const MODES = [
   { id: 'monitor', label: 'Monitor', color: 'var(--wr-phosphor)', hint: 'Què es diu de...', icon: '◉' },
@@ -160,7 +160,7 @@ function ChatPageInner() {
     sendMessage(q);
     // Clean the URL so a refresh doesn't re-trigger.
     if (typeof window !== 'undefined') {
-      window.history.replaceState({}, '', '/chat');
+      window.history.replaceState({}, '', APP_ROUTES.xat);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
@@ -213,10 +213,10 @@ function ChatPageInner() {
       {/* Main war room area */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         <PageHeader
-          crumb="Operacions / Sala d'Intel·ligència"
+          crumb="Operacions / Sala d’Intel·ligència"
           title={<>Sala d'Intel·ligència. <em style={{ color: 'var(--fog)', fontWeight: 400 }}>{modeDef.label.toLowerCase()}</em></>}
           info={{
-            title: "Sala d'Intel·ligència",
+            title: "Sala d’Intel·ligència",
             description: "El cor de la plataforma. Pregunta com un polític i rep respostes amb cites literals, fonts verificables i accions concretes. Tria un dels 5 modes segons el que necessitis: vigilar, atacar, defensar, comparar o detectar oportunitats.",
             dataSource: 'Cerca en 54.410 actes, 228.124 votacions, DSPC del Parlament i premsa catalana',
             tips: [
@@ -246,7 +246,7 @@ function ChatPageInner() {
               </button>
             );
           })}
-          <Link href="/chat/workspace" style={{
+          <Link href={APP_ROUTES.workspace} style={{
             marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6,
             padding: '7px 11px', border: '1px solid var(--line)', color: 'var(--bone)',
             fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '.06em',
@@ -383,7 +383,10 @@ function ChatPageInner() {
           defaultMode={mode}
           content={saveTarget.message.content}
           query={saveTarget.query}
-          sources={(saveTarget.message.sources || []).map((s: any) => s.url || s.titulo || String(s))}
+          sources={(saveTarget.message.sources || []).map((s) => {
+            if (typeof s === 'string') return s;
+            return s.url || s.titulo || String(s);
+          })}
           onClose={() => setSaveTarget(null)}
           onSaved={(savedMode: WorkspaceMode) => {
             setSaveTarget(null);

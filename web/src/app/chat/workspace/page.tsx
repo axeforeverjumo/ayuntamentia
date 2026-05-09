@@ -2,13 +2,14 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { RefreshCw, Plus, Loader2 } from 'lucide-react';
+import { RefreshCw, Plus } from 'lucide-react';
 import { PageHeader } from '@/components/warroom/PageHeader';
 import { StatusLine } from '@/components/warroom/StatusBadge';
 import { WorkspaceCard } from '@/components/ui/WorkspaceCard';
 import { SpeechBuilder } from '@/components/ui/SpeechBuilder';
 import { loadWorkspace, getItemsByMode, updateWorkspaceItem } from '@/lib/workspaceStorage';
 import type { WorkspaceMode, WorkspaceItem } from '@/lib/workspaceStorage';
+import { APP_ROUTES } from '@/lib/routes';
 
 const API = process.env.NEXT_PUBLIC_API_URL || '';
 
@@ -64,11 +65,11 @@ export default function WorkspacePage() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--ink)' }}>
       <PageHeader
-        crumb="Sala d'Intel·ligència / Workspace"
+        crumb="Sala d’Intel·ligència / Workspace"
         title={<>Workspace. <em style={{ color: tab.color, fontWeight: 400 }}>{tab.label.toLowerCase()}</em></>}
         subtitle={`${total} element${total !== 1 ? 's' : ''} guardats · ${tab.hint}`}
         actions={
-          <Link href="/chat" style={{
+          <Link href={APP_ROUTES.xat} style={{
             display: 'inline-flex', alignItems: 'center', gap: 7,
             padding: '8px 14px', border: '1px solid var(--line)', color: 'var(--bone)',
             fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '.1em',
@@ -145,10 +146,10 @@ export default function WorkspacePage() {
                 Encara no tens <em style={{ color: tab.color }}>{tab.emptyLabel}.</em>
               </p>
               <p style={{ fontFamily: 'var(--font-sans)', fontSize: 14, color: 'var(--fog)', margin: '0 0 28px' }}>
-                Ves a la Sala d'Intel·ligència, fes una recerca en mode {tab.label} i guarda-la aquí.
+                Ves a la Sala d’Intel·ligència, fes una recerca en mode {tab.label} i guarda-la aquí.
               </p>
               <Link
-                href={`/chat?mode=${activeTab}`}
+                href={`${APP_ROUTES.xat}?mode=${activeTab}`}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 8,
                   padding: '10px 20px', background: tab.color,
@@ -202,7 +203,7 @@ export default function WorkspacePage() {
             ))}
 
             <div style={{ paddingTop: 12, borderTop: '1px solid var(--line-soft)', textAlign: 'center' }}>
-              <Link href={`/chat?mode=${activeTab}`} style={{
+              <Link href={`${APP_ROUTES.xat}?mode=${activeTab}`} style={{
                 display: 'inline-flex', alignItems: 'center', gap: 6,
                 fontFamily: 'var(--font-mono)', fontSize: 10, color: tab.color,
                 letterSpacing: '.1em', textTransform: 'uppercase', textDecoration: 'none',

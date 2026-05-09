@@ -2,45 +2,49 @@ export const CATALAN_ROUTE_RULE = 'Totes les rutes, slugs i enllaços visibles h
 
 export const APP_ROUTES = {
   inici: '/',
-  entrada: '/login',
-  tauler: '/dashboard',
-  xat: '/chat',
-  cercar: '/buscar',
+  entrada: '/acces',
+  tauler: '/tauler',
+  xat: '/sala-intelligencia',
+  workspace: '/sala-intelligencia/espai-treball',
+  cercar: '/cercar',
   alertes: '/alertes',
   municipis: '/municipis',
   regidors: '/regidors',
   reputacio: '/reputacio',
-  intelLigencia: '/intel',
+  intelLigencia: '/intel-ligencia',
   parlament: '/parlament',
   informes: '/informes',
-  administracio: '/admin',
+  administracio: '/administracio',
   configuracio: '/configuracio',
   recepcio: '/recepcio',
-  aterrada: '/landing',
+  subscripcions: '/subscripcions',
+  aterrada: '/aterratge',
+  actes: '/actes',
 } as const;
 
 export type AppRoute = (typeof APP_ROUTES)[keyof typeof APP_ROUTES];
 
 const CATALAN_SEGMENTS = new Set<string>([
   '',
-  'login',
-  'dashboard',
-  'chat',
-  'buscar',
+  'acces',
+  'tauler',
+  'sala-intelligencia',
+  'espai-treball',
+  'cercar',
   'alertes',
   'municipis',
   'regidors',
   'reputacio',
-  'intel',
+  'intel-ligencia',
   'parlament',
   'informes',
-  'admin',
+  'administracio',
   'configuracio',
   'recepcio',
-  'landing',
+  'subscripcions',
+  'aterratge',
   'actes',
   '[id]',
-  'workspace',
 ]);
 
 export function buildRoute(...segments: Array<string | number>): string {
@@ -60,7 +64,6 @@ export function assertCatalanRoute(route: string): void {
   for (const segment of segments) {
     if (/^\d+$/.test(segment)) continue;
     if (CATALAN_SEGMENTS.has(segment)) continue;
-    if (/^[a-z0-9-]+$/.test(segment)) continue;
 
     throw new Error(`Ruta fora de la convenció catalana: ${route}`);
   }

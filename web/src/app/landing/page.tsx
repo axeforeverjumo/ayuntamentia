@@ -8,10 +8,11 @@ import {
   TacticalFooter,
 } from '@/components/landing/LandingSections';
 import { OpsWall, CapabilitiesGrid, MissionCTA } from '@/components/landing/PentagonSections';
+import { APP_ROUTES } from '@/lib/routes';
 
 export default function LandingPage() {
   const router = useRouter();
-  const enter = () => router.push('/login');
+  const enter = () => router.push(APP_ROUTES.entrada);
 
   return (
     <div className="grain" style={{ minHeight: '100vh', background: 'var(--ink)' }}>
