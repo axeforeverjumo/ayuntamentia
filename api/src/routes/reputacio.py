@@ -9,6 +9,7 @@ import hashlib
 import logging
 from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
+from html import unescape
 from typing import Optional
 
 import feedparser
@@ -228,6 +229,24 @@ def _parse_entry_datetime(entry) -> Optional[datetime]:
     return None
 
 
+def _normalize_article_url(url: str) -> str:
+    return (url or "").strip().lower().rstrip("/")
+
+
+def _normalize_title(title: str) -> str:
+    return " ".join(unescape(title or "").strip().lower().split())
+
+
+def _legacy_article_hash(font: str, link: str, title: str, pub_date: Optional[datetime]) -> str:
+    stable_key = "|".join([
+        font.strip().lower(),
+        _normalize_article_url(link),
+        title.strip().lower(),
+        pub_date.isoformat() if pub_date else "",
+    ])
+    return hashlib.md5(stable_key.encode()).hexdigest()
+
+
 
 def ingest_rss_feeds():
     """Ingest all RSS feeds — called by celery beat."""
@@ -246,25 +265,49 @@ def ingest_rss_feeds():
                 if not title:
                     continue
 
+                normalized_title = _normalize_title(title)
+                normalized_link = _normalize_article_url(link)
                 pub_date = _parse_entry_datetime(entry)
 
                 text = f"{title} {summary}"
                 stable_key = "|".join([
                     feed_cfg["nom"].strip().lower(),
-                    (link or "").strip().lower(),
-                    title.strip().lower(),
-                    pub_date.isoformat() if pub_date else "",
+                    normalized_link,
+                    normalized_title,
                 ])
                 h = hashlib.md5(stable_key.encode()).hexdigest()
+                legacy_hash = _legacy_article_hash(feed_cfg["nom"], link, title, pub_date)
 
                 partits = _detect_partits(text)
                 sentiment, score = _detect_sentiment(title, summary, partits)
 
                 try:
                     cur.execute("""
+                    UPDATE premsa_articles
+                    SET hash = %s
+                    WHERE hash = %s AND hash <> %s
+                    """, (h, legacy_hash, h))
+
+                    cur.execute("""
                     INSERT INTO premsa_articles (hash, font, titol, resum, url, data_publicacio, partits, sentiment, sentiment_score)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    ON CONFLICT (hash) DO NOTHING
+                    ON CONFLICT (hash) DO UPDATE
+                    SET titol = EXCLUDED.titol,
+                        resum = EXCLUDED.resum,
+                        url = EXCLUDED.url,
+                        data_publicacio = COALESCE(EXCLUDED.data_publicacio, premsa_articles.data_publicacio),
+                        partits = EXCLUDED.partits,
+                        sentiment = EXCLUDED.sentiment,
+                        sentiment_score = EXCLUDED.sentiment_score
+                    WHERE (
+                        premsa_articles.data_publicacio IS DISTINCT FROM EXCLUDED.data_publicacio
+                        OR premsa_articles.titol IS DISTINCT FROM EXCLUDED.titol
+                        OR premsa_articles.resum IS DISTINCT FROM EXCLUDED.resum
+                        OR premsa_articles.url IS DISTINCT FROM EXCLUDED.url
+                        OR premsa_articles.partits IS DISTINCT FROM EXCLUDED.partits
+                        OR premsa_articles.sentiment IS DISTINCT FROM EXCLUDED.sentiment
+                        OR premsa_articles.sentiment_score IS DISTINCT FROM EXCLUDED.sentiment_score
+                    )
                     """, (h, feed_cfg["nom"], title, summary[:500] if summary else None,
                           link, pub_date, partits, sentiment, score))
                     if cur.rowcount > 0:
