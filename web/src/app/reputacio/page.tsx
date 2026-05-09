@@ -8,6 +8,7 @@ import { PanelBox } from '@/components/warroom/PanelBox';
 import { StatusLine, StatusBadge } from '@/components/warroom/StatusBadge';
 import { TrendingBar } from '@/components/warroom/AlertFeed';
 import { Gauge } from '@/components/landing/primitives';
+import { APP_ROUTES } from '@/lib/routes';
 
 const API = process.env.NEXT_PUBLIC_API_URL || '';
 
@@ -81,7 +82,7 @@ function ArticleCard({ article, partit, compact }: { article: any; partit?: stri
             }}>Llegir →</a>
           )}
           {partit && (
-            <Link href={`/chat?mode=monitor&q=${encodeURIComponent(buildAnalitzaPrompt(partit, article))}`} style={{
+            <Link href={`${APP_ROUTES.xat}?mode=monitor&q=${encodeURIComponent(buildAnalitzaPrompt(partit, article))}`} style={{
               padding: '4px 8px', background: 'rgba(212,58,31,.08)', border: '1px solid rgba(212,58,31,.3)',
               color: 'var(--wr-red-2)', fontFamily: 'var(--font-mono)', fontSize: 9,
               textDecoration: 'none', textAlign: 'center',
@@ -482,7 +483,7 @@ export default function ReputacioPage() {
                           textDecoration: 'none', textAlign: 'center',
                         }}>Llegir →</a>
                       )}
-                      <Link href={`/chat?mode=netejar&q=${encodeURIComponent(buildNetejaPrompt(partit, a))}`} style={{
+                      <Link href={`${APP_ROUTES.xat}?mode=netejar&q=${encodeURIComponent(buildNetejaPrompt(partit, a))}`} style={{
                         padding: '6px 12px', background: 'var(--brand)', color: '#E8F1F9',
                         border: '1px solid var(--brand)', borderRadius: 'var(--r-md)', fontFamily: 'var(--font-mono)', fontSize: 10,
                         letterSpacing: '.08em', textTransform: 'uppercase', fontWeight: 700,

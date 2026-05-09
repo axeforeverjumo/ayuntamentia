@@ -1,7 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
+import { APP_ROUTES, PUBLIC_ROUTES } from '@/lib/routes';
 
-const PUBLIC_PATHS = ['/', '/login', '/legal', '/landing'];
+const PUBLIC_PATHS = [...PUBLIC_ROUTES];
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -35,14 +36,14 @@ export async function proxy(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
 
   // Logged in user on login page → go to dashboard
-  if (user && pathname === '/login') {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
+  if (user && pathname === APP_ROUTES.entrada) {
+    return NextResponse.redirect(new URL(APP_ROUTES.tauler, request.url));
   }
 
   // Not logged in on private route → login
   if (!user && !isPublic) {
     const url = request.nextUrl.clone();
-    url.pathname = '/login';
+    url.pathname = APP_ROUTES.entrada;
     url.searchParams.set('next', pathname);
     return NextResponse.redirect(url);
   }
