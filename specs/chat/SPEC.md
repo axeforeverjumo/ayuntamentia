@@ -34,3 +34,22 @@
 - `response.veracity.status = grounded` només si hi ha cobertura documental suficient.
 - `response.veracity.status = caution` quan hi ha base parcial però insuficient per fer afirmacions agressives.
 - `response.veracity.status = reject` quan no hi ha suport verificable per construir un argumentari o proposta pública segura.
+
+## 2026-05-09 — Verificació de l'estat actual després de la iteració prèvia
+
+### Canvis realitzats
+- S'ha revisat l'estat real del repositori per confirmar que el blindatge de veracitat del xat ja estava implementat a backend i cobert amb proves.
+- S'ha verificat que `api/src/routes/chat.py` ja incorpora el protocol de cites obligatòries, l'avaluació `_assess_veracity(...)`, el bloqueig de respostes `reject` i la inclusió del bloc `veracity` a la resposta API.
+- S'ha verificat que `api/tests/test_chat_veracity.py` cobreix els casos crítics: rebuig sense suport documental, cas grounded amb cites + votacions, resposta d'emergència segura i bloqueig de sortides al·lucinatòries a l'endpoint.
+- En aquesta iteració només s'ha actualitzat aquesta especificació per deixar constància de la validació executada i de l'absència de treball pendent immediat.
+
+### Arxius modificats
+- `specs/chat/SPEC.md`
+
+### Decisions tècniques
+- Com que la tasca venia d'una iteració anterior i el codi ja existia, s'ha limitat l'abast a validar l'estat actual i a actualitzar la spec amb evidència documental, evitant canvis innecessaris de producció.
+- Es considera que el backend actual ja compleix el checklist funcional del brief: cites obligatòries per argumentaris, polítiques de cautela/rebuig i validació post-tool abans de respondre.
+
+### Verificacions executades
+- `python3 -m pytest api/tests/test_chat_veracity.py -q` → `4 passed`
+- `python3 -c "import ast, pathlib; [ast.parse(p.read_text()) for p in pathlib.Path('.').rglob('*.py') if '.git' not in str(p)]"` → sense output, exit 0
