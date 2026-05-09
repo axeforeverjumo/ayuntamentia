@@ -13,6 +13,60 @@ import { APP_ROUTES, buildRoute } from '@/lib/routes';
 import { formatDate } from '@/lib/utils';
 
 const RESULTS_PER_PAGE = 10;
+const MIN_RESULTS_FOR_CONFIDENT_SEARCH = 3;
+const MAX_SUGGESTIONS = 5;
+const STOP_WORDS = new Set([
+  'de', 'del', 'la', 'el', 'els', 'les', 'i', 'a', 'en', 'amb', 'per', 'al', 'que',
+]);
+
+function normalizeToken(token: string): string {
+  return token
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
+
+function tokenizeQuery(value: string): string[] {
+  return value
+    .split(/\s+/)
+    .map(token => token.trim())
+    .filter(Boolean)
+    .map(normalizeToken)
+    .filter(token => token.length > 2 && !STOP_WORDS.has(token));
+}
+
+function buildSuggestedQueries(query: string, currentFilters: Filters): string[] {
+  const suggestions = new Set<string>();
+  const cleanQuery = query.trim();
+  const compactQuery = cleanQuery.replace(/\s+/g, ' ');
+
+  if (compactQuery && compactQuery !== cleanQuery) {
+    suggestions.add(compactQuery);
+  }
+
+  const queryTokens = tokenizeQuery(cleanQuery);
+
+  if (queryTokens.length > 1) {
+    suggestions.add(queryTokens.join(' '));
+  }
+
+  if (queryTokens.length > 1) {
+    suggestions.add(queryTokens.slice(0, 2).join(' '));
+  }
+
+  if (queryTokens.length > 2) {
+    suggestions.add(queryTokens[queryTokens.length - 1]);
+  }
+
+  if (Object.values(currentFilters).some(Boolean)) {
+    suggestions.add(cleanQuery);
+  }
+
+  return Array.from(suggestions)
+    .map(suggestion => suggestion.trim())
+    .filter(suggestion => suggestion && suggestion.toLowerCase() !== cleanQuery.toLowerCase())
+    .slice(0, MAX_SUGGESTIONS);
+}
 
 interface Filters {
   municipio: string;
@@ -58,6 +112,8 @@ function BuscarPageInner() {
   const [total, setTotal] = useState(0);
   const [hasSearched, setHasSearched] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [suggestedQueries, setSuggestedQueries] = useState<string[]>([]);
+  const [isVagueResult, setIsVagueResult] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const performSearch = useCallback(async (q: string, f: Filters, p: number) => {
@@ -67,13 +123,21 @@ function BuscarPageInner() {
       try {
         const qs = buildQueryString(q, f, p);
         const data = await apiClient.get<SearchResponse>(`/api/search/?${qs}`);
+        const totalResults = data.total ?? data.results.length;
+        const vagueSearch = totalResults > 0 && totalResults < MIN_RESULTS_FOR_CONFIDENT_SEARCH;
+        const noResults = totalResults === 0;
+
         setResults(data.results);
-        setTotal(data.total);
+        setTotal(totalResults);
+        setIsVagueResult(vagueSearch);
+        setSuggestedQueries((noResults || vagueSearch) ? buildSuggestedQueries(q, f) : []);
         setHasSearched(true);
       } catch {
         setError('Error en la cerca. Torna-ho a intentar.');
         setResults([]);
         setTotal(0);
+        setIsVagueResult(false);
+        setSuggestedQueries([]);
         setHasSearched(true);
       }
     });
@@ -222,8 +286,39 @@ function BuscarPageInner() {
                 <p style={{ fontSize: 12, color: 'var(--text-meta)', margin: 0 }}>Prova amb altres paraules clau o menys filtres</p>
               </div>
             ) : (
+              <>
+                {isVagueResult && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '12px 14px', borderRadius: 'var(--r-lg)', background: 'rgba(245,158,11,.08)', border: '.5px solid rgba(245,158,11,.35)' }}>
+                    <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: 0 }}>
+                      Resultat <strong style={{ color: 'var(--text-primary)' }}>vague</strong>: hem trobat només {total} coincidències.
+                    </p>
+                    <p style={{ fontSize: 12, color: 'var(--text-meta)', margin: 0 }}>
+                      Prova una cerca més general o una de les següents suggerències.
+                    </p>
+                  </div>
+                )}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {results.map(result => <SearchResultCard key={result.id} result={result} />)}
+              </div>
+              </>
+            )}
+
+            {suggestedQueries.length > 0 && (
+              <div style={{ padding: '12px 14px', background: 'var(--bg-surface)', border: '.5px solid var(--border)', borderRadius: 'var(--r-lg)' }}>
+                <p style={{ fontSize: 11, color: 'var(--text-meta)', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: '.08em' }}>
+                  Suggerència de cerca
+                </p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {suggestedQueries.map(suggestion => (
+                    <button
+                      key={suggestion}
+                      onClick={() => { setQuery(suggestion); setPage(1); performSearch(suggestion, filters, 1); }}
+                      style={{ padding: '6px 10px', fontSize: 12, borderRadius: 'var(--r-full)', border: '.5px solid var(--border)', background: 'var(--bg-elevated)', color: 'var(--text-secondary)', cursor: 'pointer' }}
+                    >
+                      {suggestion}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
 
