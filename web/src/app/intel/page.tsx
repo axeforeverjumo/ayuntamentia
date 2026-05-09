@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { PageHeader } from '@/components/warroom/PageHeader';
 import { KPICard, KPIGrid } from '@/components/warroom/KPICard';
@@ -36,11 +36,24 @@ export default function IntelPage() {
   const [prom, setProm] = useState<Promesa[]>([]);
   const [partido, setPartido] = useState('');
   const [order, setOrder] = useState<'divergencia' | 'alineacion'>('divergencia');
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showLoader, setShowLoader] = useState(false);
+  const loaderTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const minVisibleTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const loaderShownAtRef = useRef<number | null>(null);
 
   useEffect(() => {
     let isMounted = true;
     setIsLoading(true);
+
+    if (loaderTimerRef.current) clearTimeout(loaderTimerRef.current);
+    if (minVisibleTimerRef.current) clearTimeout(minVisibleTimerRef.current);
+
+    loaderTimerRef.current = setTimeout(() => {
+      if (!isMounted) return;
+      setShowLoader(true);
+      loaderShownAtRef.current = Date.now();
+    }, 250);
 
     const q = new URLSearchParams({ order, limit: '50' });
     if (partido) q.set('partido', partido);
@@ -65,13 +78,40 @@ export default function IntelPage() {
           setProm(Array.isArray(d) ? d : []);
         }),
     ]).finally(() => {
-      if (isMounted) setIsLoading(false);
+      if (!isMounted) return;
+
+      setIsLoading(false);
+
+      if (loaderTimerRef.current) {
+        clearTimeout(loaderTimerRef.current);
+        loaderTimerRef.current = null;
+      }
+
+      if (!showLoader) return;
+
+      const shownAt = loaderShownAtRef.current;
+      const elapsed = shownAt ? Date.now() - shownAt : 0;
+      const minVisibleMs = 700;
+      const remaining = Math.max(0, minVisibleMs - elapsed);
+
+      if (remaining === 0) {
+        setShowLoader(false);
+        loaderShownAtRef.current = null;
+      } else {
+        minVisibleTimerRef.current = setTimeout(() => {
+          if (!isMounted) return;
+          setShowLoader(false);
+          loaderShownAtRef.current = null;
+        }, remaining);
+      }
     });
 
     return () => {
       isMounted = false;
+      if (loaderTimerRef.current) clearTimeout(loaderTimerRef.current);
+      if (minVisibleTimerRef.current) clearTimeout(minVisibleTimerRef.current);
     };
-  }, [partido, order]);
+  }, [partido, order, showLoader]);
 
   const maxTend = tend.length > 0 ? Math.max(...tend.map(t => t.actual)) : 1;
 
@@ -123,8 +163,13 @@ export default function IntelPage() {
         actions={<StatusLine color="var(--wr-phosphor)">947 municipis · anàlisi continu</StatusLine>}
       />
 
-      {isLoading && (
-        <div style={{
+      {showLoader && (
+        <div
+          role="status"
+          aria-live="polite"
+          aria-busy={isLoading}
+          aria-label="Carregant intel·ligència estratègica"
+          style={{
           margin: '12px 26px 0',
           padding: '16px 18px',
           border: '1px solid var(--line)',
