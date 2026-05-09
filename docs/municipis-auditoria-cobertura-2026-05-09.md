@@ -7,27 +7,29 @@ URL objetivo: https://politica.factoriaia.com/municipios
 ## Objetivo
 Verificar si el módulo/catálogo de municipios contiene todos los municipios necesarios y dejar trazable:
 1. Fuente oficial de referencia.
-2. Método de comparación con el catálogo actual.
+2. Comparación con el catálogo actual disponible en este entorno.
 3. Listado de faltantes o inconsistencias.
+4. Criterio operativo de completitud del catálogo.
 
-## Resultado de la exploración en repositorio
-La exploración inicial por texto libre con `search_code(pattern="municip", glob="**/*")` devolvió `No matches found.`, pero una inspección más amplia del repositorio sí permitió localizar el catálogo y su flujo operativo real.
+## Resultado de la exploración del repositorio
+Se revisaron los componentes que materializan el módulo de municipios:
 
-### Evidencia del catálogo real localizado
-Archivos encontrados y revisados:
 - `supabase/migrations/001_schema.sql`
   - Define la tabla `municipios`.
 - `api/src/routes/municipios.py`
-  - Expone el módulo/endpoint `/api/municipios` y consulta la tabla `municipios`.
+  - Expone el módulo `/api/municipios` y consulta la tabla `municipios`.
 - `pipeline/src/ingesta/socrata_client.py`
-  - Implementa `sync_municipios()` y descarga el catálogo desde Socrata/Municat.
+  - Implementa `sync_municipios()` y descarga el catálogo desde Socrata.
+- `pipeline/src/config.py`
+  - Declara `SOCRATA_BASE_URL` y `SOCRATA_ENTES_DATASET`.
+- `.env.example`
+  - Documenta los valores por defecto de la fuente remota.
 - `scripts/seed_data.py`
-  - Invoca `sync_all()` para sincronizar `municipios` + `cargos electos`.
-- `pipeline/src/config.py` y `.env.example`
-  - Documentan la fuente remota vía `SOCRATA_BASE_URL=https://analisi.transparenciacatalunya.cat` y `SOCRATA_ENTES_DATASET=6nei-4b44`.
+  - Usa `sync_all()` para poblar municipios y cargos electos.
 
-### Qué existe hoy en datos/código
-Según `supabase/migrations/001_schema.sql`, el catálogo local esperado vive en:
+## Catálogo actual del proyecto
+### Esquema local
+Según `supabase/migrations/001_schema.sql`, el catálogo local esperado vive en la tabla:
 
 ```sql
 CREATE TABLE IF NOT EXISTS municipios (
@@ -46,108 +48,134 @@ CREATE TABLE IF NOT EXISTS municipios (
 );
 ```
 
-Y según `pipeline/src/ingesta/socrata_client.py`, la carga actual del catálogo hace:
-- consulta a Socrata con `SOCRATA_ENTES_DATASET=6nei-4b44`
-- filtro `nomtipus='Municipis'`
-- upsert por `codi_ens`
-- rellena `nombre`, `nombre_oficial`, `comarca`, `provincia`, `poblacion`, `url_sede`, `external_data`
+### Mecanismo de carga real
+Según `pipeline/src/ingesta/socrata_client.py`, el sistema sincroniza municipios así:
+
+- usa `SOCRATA_BASE_URL=https://analisi.transparenciacatalunya.cat`
+- usa `SOCRATA_ENTES_DATASET=6nei-4b44`
+- filtra con `nomtipus='Municipis'`
+- hace upsert por `codi_ens`
+- persiste `nombre`, `nombre_oficial`, `comarca`, `provincia`, `poblacion`, `url_sede`, `external_data`
 
 ## Fuente de referencia oficial
-### Fuente operativa que ya usa el sistema
-La fuente de referencia que **ya está integrada en el proyecto** es:
-- **Transparència Catalunya / Socrata — dataset de ens locales**
+### Referencia operativa primaria
+La referencia oficial ya integrada en el proyecto es:
+
+- **Transparència Catalunya / Socrata**
 - Base URL: `https://analisi.transparenciacatalunya.cat`
-- Dataset configurado: `6nei-4b44`
-- Filtro aplicado por el pipeline: `nomtipus='Municipis'`
+- Dataset: `6nei-4b44`
+- Filtro operativo del pipeline: `nomtipus='Municipis'`
 
-Esta es la referencia más consistente para la auditoría inmediata, porque:
-1. es la fuente realmente usada por el pipeline actual,
-2. ya aporta `codi_ens` y metadatos territoriales,
-3. evita comparar el catálogo local contra una fuente distinta a la que alimenta producción.
+### Evidencia ejecutada contra la fuente oficial
+Se ejecutó una consulta real al dataset remoto para validar el universo esperado:
 
-### Fuente oficial de contraste recomendada
-Como doble validación institucional, se recomienda contrastar además con:
+```python
+base='https://analisi.transparenciacatalunya.cat/resource/6nei-4b44.json'
+$params={'$select':'count(*)', '$where': "nomtipus='Municipis'"}
+```
+
+Salida real:
+
+```text
+[{'count': '947'}]
+```
+
+Conclusión: la referencia operativa oficial devuelve **947 municipios**.
+
+### Muestra real de registros de referencia
+Se consultaron también registros de muestra ordenados por `codi_ens`:
+
+```text
+{'codi_ens': '0800180001', 'nom_complert': "Ajuntament d'Abrera", 'nom_curt': None, 'comarca': 'Baix Llobregat', 'provincia': 'Barcelona', 'nomtipus': 'Municipis'}
+{'codi_ens': '0800230008', 'nom_complert': "Ajuntament d'Aguilar de Segarra", 'nom_curt': None, 'comarca': 'Bages', 'provincia': 'Barcelona', 'nomtipus': 'Municipis'}
+{'codi_ens': '0800390004', 'nom_complert': "Ajuntament d'Alella", 'nom_curt': None, 'comarca': 'Maresme', 'provincia': 'Barcelona', 'nomtipus': 'Municipis'}
+{'codi_ens': '0800440003', 'nom_complert': "Ajuntament d'Alpens", 'nom_curt': None, 'comarca': 'Lluçanès', 'provincia': 'Barcelona', 'nomtipus': 'Municipis'}
+{'codi_ens': '0800570005', 'nom_complert': "Ajuntament de l'Ametlla del Vallès", 'nom_curt': None, 'comarca': 'Vallès Oriental', 'provincia': 'Barcelona', 'nomtipus': 'Municipis'}
+```
+
+### Referencia secundaria recomendada
+Como control institucional adicional, se recomienda contrastar también con:
+
 - **IDESCAT / Nomenclàtor oficial de municipis de Catalunya**
 
 Uso recomendado:
-- **Referencia primaria de auditoría operativa**: dataset Socrata/Municat configurado en el proyecto.
-- **Referencia secundaria de control**: nomenclátor oficial de IDESCAT/Gencat para validar vigencia y denominación oficial.
+- auditoría operativa: Socrata (`6nei-4b44`)
+- validación institucional de denominación/vigencia: IDESCAT/Nomenclàtor
+
+## Comparación con el catálogo actual disponible en este entorno
+### Estado del catálogo local en esta iteración
+Se ejecutó una comprobación real para determinar si este entorno local dispone de acceso a la base de datos actual:
+
+Salida real:
+
+```text
+DATABASE_URL_SET= False
+```
+
+Conclusión:
+- en este entorno **no hay `DATABASE_URL` configurada**;
+- por tanto, **no se puede leer la tabla `municipios` real**;
+- en consecuencia, no es posible calcular aquí el diff nominal entre catálogo local y referencia oficial.
+
+### Qué sí queda verificado
+1. El módulo de municipios existe en esquema, API y pipeline.
+2. La fuente oficial integrada devuelve un universo de **947** municipios.
+3. La clave de correspondencia correcta es **`codi_ens`**.
+4. El pipeline está preparado para hacer upsert del catálogo oficial en `municipios`.
 
 ## Criterio de completitud del catálogo
-Se considera que el catálogo de municipios está “completo” cuando se cumplen todos estos puntos:
+Se considera que el catálogo está completo cuando se cumplen todos estos puntos:
 
-1. **Cobertura 100%** de todos los registros devueltos por la fuente de referencia operativa (`SOCRATA_ENTES_DATASET=6nei-4b44`, filtrado por `nomtipus='Municipis'`).
-2. Cada municipio local tiene **`codi_ens` único y no nulo**.
-3. No existen **duplicados por `codi_ens`** en la tabla local.
-4. Cada municipio local contiene como mínimo:
+1. La tabla `municipios` contiene **947 registros vigentes** o exactamente el total que devuelva la referencia oficial al momento de la auditoría.
+2. Todos los registros de referencia `nomtipus='Municipis'` están presentes en local.
+3. Cada municipio tiene `codi_ens` único y no nulo.
+4. No hay duplicados por `codi_ens`.
+5. Cada registro local mantiene, como mínimo:
    - `codi_ens`
    - `nombre`
-   - `nombre_oficial` (si la fuente lo proporciona)
+   - `nombre_oficial` cuando la fuente lo informe
    - `comarca`
    - `provincia`
-5. Si un municipio existe en referencia pero no en local, se considera **faltante**.
-6. Si un municipio existe en local pero no en referencia operativa, se considera **sobrante o desactualizado** hasta validar si es histórico/alias.
-7. Si el `codi_ens` coincide pero el nombre o metadatos territoriales difieren, se considera **inconsistencia**.
-8. Para efectos del módulo `/municipios`, el criterio funcional mínimo es que el endpoint API y el frontend puedan cubrir el **universo completo de municipios vigentes de Catalunya** que la fuente integrada clasifica como `Municipis`.
+6. Si un `codi_ens` está en referencia y no en local, es **faltante**.
+7. Si un `codi_ens` está en local y no en referencia, es **sobrante o desactualizado**.
+8. Si coincide `codi_ens` pero difieren nombre/comarca/provincia, es **inconsistencia**.
 
-## Comparación catálogo actual vs referencia
-### Estado de la comparación
-La comparación **no puede cerrarse en esta iteración local** porque el repositorio contiene:
-- el esquema,
-- el endpoint,
-- el pipeline de carga,
+## Listado de faltantes o inconsistencias
+### Resultado real de esta iteración
+No se puede emitir todavía un listado nominal de faltantes, sobrantes o inconsistencias porque el entorno no expone la base de datos actual del proyecto.
 
-pero **no contiene un volcado de datos actual** de la tabla `municipios`, ni una exportación versionada del dataset remoto ya sincronizado.
+### Resultado documental entregado
+Sí queda entregado y verificado:
+- la fuente oficial operativa,
+- el total esperado de municipios en referencia (**947**),
+- la clave de comparación (`codi_ens`),
+- el criterio formal de completitud,
+- la evidencia concreta del bloqueo local (`DATABASE_URL_SET= False`).
 
-En otras palabras: sí se ha localizado la fuente y el mecanismo de carga, pero no hay evidencia local en el repo del contenido efectivo actual de la tabla para calcular el diff final de cobertura.
+## Procedimiento exacto para cerrar el diff nominal
+Cuando se disponga de acceso al catálogo actual, ejecutar:
 
-### Qué sí queda demostrado
-1. El proyecto **sí tiene** módulo de municipios.
-2. El catálogo local esperado vive en la tabla `municipios`.
-3. El catálogo se alimenta desde **Socrata/Municat** mediante `sync_municipios()`.
-4. La clave de comparación correcta es **`codi_ens`**.
-5. El criterio de completitud puede formalizarse con precisión aunque falte el snapshot de datos local.
-
-## Procedimiento exacto para cerrar la auditoría de cobertura
-Para obtener el listado real de faltantes/inconsistencias en siguiente iteración u entorno con datos:
-
-1. Extraer la referencia remota oficial usada por el sistema:
-   - dataset `6nei-4b44`
-   - filtro `nomtipus='Municipis'`
-2. Extraer el catálogo local actual de Postgres:
+1. Extraer referencia oficial:
+   ```sql
+   referencia = dataset 6nei-4b44 filtrado por nomtipus='Municipis'
+   ```
+2. Extraer catálogo local:
    ```sql
    SELECT codi_ens, nombre, nombre_oficial, comarca, provincia
    FROM municipios
    ORDER BY codi_ens;
    ```
-3. Cruce primario por `codi_ens`.
+3. Cruzar por `codi_ens`.
 4. Generar tres listas:
-   - **faltantes**: presentes en referencia y ausentes en local
-   - **sobrantes**: presentes en local y ausentes en referencia
-   - **inconsistencias**: `codi_ens` presente en ambos pero con diferencias relevantes en nombre/comarca/provincia
-5. Verificar el total final esperado frente al universo de municipios vigentes de Catalunya que entregue la referencia remota en ese momento.
-
-## Listado de faltantes o inconsistencias
-### Resultado en esta iteración
-No se puede emitir todavía un listado nominal de faltantes/inconsistencias porque el repositorio local no incluye el contenido actual de la tabla `municipios` ni se ha consultado una base de datos poblada desde este entorno.
-
-### Resultado documental sí disponible
-Queda preparado y documentado:
-- la **fuente de referencia**,
-- la **fuente local real del catálogo**,
-- la **clave de comparación**,
-- el **criterio de completitud**,
-- el **procedimiento exacto** para generar el diff cuando se disponga del snapshot real.
+   - faltantes
+   - sobrantes
+   - inconsistencias
+5. Confirmar que el total local coincide con el total de referencia vigente.
 
 ## Checklist del brief
 - [x] Obtener la fuente de referencia oficial de municipios.
-- [ ] Comparar el catálogo actual con la referencia. *(pendiente de disponer del contenido actual de la tabla `municipios` en un entorno con datos)*
+- [ ] Comparar el catálogo actual con la referencia. *(bloqueado en este entorno por ausencia de `DATABASE_URL` y, por tanto, sin acceso al catálogo real)*
 - [ ] Generar listado de municipios faltantes o inconsistentes. *(depende de la comparación real anterior)*
-
-## Bloqueos y preguntas abiertas
-1. ¿Se puede acceder al Postgres/Supabase local o de staging para exportar el contenido actual de `municipios`?
-2. ¿La auditoría debe considerar solo municipios vigentes o también históricos/fusionados?
-3. ¿La referencia contractual final debe ser exclusivamente Socrata/Municat o también nomenclátor IDESCAT como validación obligatoria?
 
 ## Archivos afectados por esta tarea
 - `docs/municipis-auditoria-cobertura-2026-05-09.md`

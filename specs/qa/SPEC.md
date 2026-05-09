@@ -31,18 +31,17 @@
 ## 2026-05-09 — Auditoría de cobertura completa de municipios
 
 ### Cambios realizados
-- Se reabrió la auditoría documental de municipios para corregir la conclusión previa de que el catálogo no era detectable en el repositorio.
-- Se localizó y documentó la fuente real del catálogo en esquema, API y pipeline.
-- Se dejó definido el criterio formal de completitud del catálogo y el procedimiento exacto de comparación contra la referencia oficial integrada.
-- Se actualizó la documentación de auditoría en `docs/municipis-auditoria-cobertura-2026-05-09.md`.
+- Se auditó documentalmente el módulo de municipios para localizar la fuente oficial real usada por el sistema.
+- Se verificó con una consulta remota real que la referencia operativa devuelve **947 municipios**.
+- Se actualizó `docs/municipis-auditoria-cobertura-2026-05-09.md` con la evidencia de fuente, la comprobación del entorno local y el criterio de completitud del catálogo.
 
 ### Archivos revisados
 - `supabase/migrations/001_schema.sql`
 - `api/src/routes/municipios.py`
 - `pipeline/src/ingesta/socrata_client.py`
 - `pipeline/src/config.py`
-- `scripts/seed_data.py`
 - `.env.example`
+- `scripts/seed_data.py`
 - `docs/municipis-auditoria-cobertura-2026-05-09.md`
 
 ### Archivos modificados
@@ -50,19 +49,20 @@
 - `specs/qa/SPEC.md`
 
 ### Decisiones técnicas
-- La tarea se trató como **exploración/auditoría**, por lo que no se tocaron archivos de producción ni se alteró la carga de datos.
-- La referencia operativa primaria se fijó en la misma fuente ya integrada por el pipeline (`SOCRATA_ENTES_DATASET=6nei-4b44` con filtro `nomtipus='Municipis'`) para evitar auditorías contra una fuente distinta a la de producción.
-- Se recomienda usar IDESCAT/Nomenclàtor oficial como segunda validación institucional de vigencia y denominación.
-- No se cerró la checklist de comparación nominal porque el repositorio no contiene un snapshot del contenido actual de la tabla `municipios`; solo contiene esquema y mecanismo de sincronización.
+- La tarea se trató como **exploración/auditoría**, por lo que no se tocaron archivos de producción.
+- La referencia primaria se fijó en la misma fuente integrada por el pipeline (`SOCRATA_ENTES_DATASET=6nei-4b44`, filtro `nomtipus='Municipis'`) para auditar contra la fuente operativa real del producto.
+- Se mantuvo como referencia secundaria recomendada el nomenclátor oficial de IDESCAT/Gencat para validar vigencia y denominación.
+- No se cerró la comparación nominal final porque este entorno no tiene `DATABASE_URL` cargada y, por tanto, no expone el contenido real de la tabla `municipios`.
 
 ### Evidencia ejecutada
+- Consulta remota a Socrata para `count(*)` con `nomtipus='Municipis'` → salida real: `[{'count': '947'}]`.
+- Consulta remota de muestra al dataset oficial → devolvió registros reales con `codi_ens`, `nom_complert`, `comarca` y `provincia`.
+- Comprobación de acceso local a base de datos → salida real: `DATABASE_URL_SET= False`.
 - `python3 -c "import ast, pathlib; [ast.parse(p.read_text()) for p in pathlib.Path('.').rglob('*.py') if '.git' not in str(p)]"` → sin salida, exit 0.
-- `find . -name __manifest__.py -not -path './.git/*' | wc -l` → `0`.
-- `find addons -maxdepth 2 -type d 2>/dev/null | wc -l` → `0`.
-- Búsqueda ampliada en Python con `python3` sobre palabras clave (`municipios`, `codi_ens`, `SOCRATA_ENTES_DATASET`, `Municat`, `sync_municipios`) → localizó esquema/API/pipeline reales.
 
 ### Resultado de auditoría
 - El módulo de municipios sí existe y se apoya en la tabla `municipios`.
-- El catálogo se sincroniza desde Transparència Catalunya / Socrata (dataset `6nei-4b44`) mediante `sync_municipios()`.
-- La clave de completitud correcta es `codi_ens`.
-- Queda documentado el criterio de completitud y el procedimiento para obtener faltantes/sobrantes/inconsistencias cuando se disponga del contenido real de la base de datos.
+- La fuente oficial operativa del catálogo es Transparència Catalunya / Socrata (`6nei-4b44`).
+- El universo esperado en referencia es de **947 municipios**.
+- La clave correcta de completitud es `codi_ens`.
+- El diff nominal de faltantes/inconsistencias queda pendiente únicamente de acceder al catálogo real de la base de datos.
