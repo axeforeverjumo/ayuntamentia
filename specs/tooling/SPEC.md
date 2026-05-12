@@ -48,35 +48,50 @@ En ese bloque no aparecen errores adicionales: solo el mensaje de éxito, la adi
 ### Archivos modificados
 - `specs/tooling/SPEC.md`: añadido registro de verificación con comandos ejecutados, evidencia literal y conclusión por checklist.
 
-### Self-Review (con evidencia ejecutada)
-- A) Sintaxis Python:
+## 2025-02-14 — Revalidación local de Bun en el entorno actual
 
-```text
-(no output)
+### Objetivo
+Recomprobar en el entorno local actual si Bun existe en la ruta indicada por el instalador (`~/.bun/bin/bun`) y dejar evidencia persistente del estado real, sin tocar código de aplicación.
+
+### Comandos ejecutados
+```bash
+ls -l ~/.bun/bin/bun
+python3 -c "import os, pathlib, stat, subprocess; p=pathlib.Path.home()/'.bun/bin/bun'; print(f'path={p}'); print(f'exists={p.exists()}'); print(f'is_file={p.is_file()}'); print(f'executable={os.access(p, os.X_OK)}'); print(f'path_in_env={str(pathlib.Path.home()/'.bun/bin') in os.environ.get('PATH','').split(':')}');"
+echo "$PATH"
 ```
 
-- B) Manifest coherente:
+### Evidencia literal
+Salida real de `ls -l ~/.bun/bin/bun`:
 
 ```text
-(no output)
+Exit code 2
+ls: cannot access '/root/.bun/bin/bun': No such file or directory
 ```
 
-- C) Campos del brief presentes:
+Salida real del chequeo estructurado con Python:
 
 ```text
-No aplicable. El brief no pide modelos ni campos.
+path=/root/.bun/bin/bun
+exists=False
+is_file=False
+executable=False
+path_in_env=False
 ```
 
-- D) @api.depends completos:
+Salida real de `echo "$PATH"`:
 
 ```text
-No aplicable. El brief no pide computes.
+/opt/pulse/core-api/.venv/bin:/usr/local/bin:/usr/bin
 ```
 
-- E) __init__.py:
+### Resultado de la verificación
+- `Confirmar que el archivo ejecutable existe en ~/.bun/bin/bun`: **No verificado / FAIL en este entorno**. La ruta expandida para el usuario actual es `/root/.bun/bin/bun` y el archivo no existe.
+- `Validar que el instalador reportó éxito sin errores adicionales`: **Sí, según el bloque literal del brief**. El texto aportado muestra `bun was installed successfully to ~/.bun/bin/bun` y no incluye errores adicionales.
+- `Validar que el binario responde correctamente`: **No verificable positivamente en esta sesión** porque el binario no existe en la ruta esperada y además la herramienta de shell permitida no autoriza ejecutar `~/.bun/bin/bun --help` directamente.
+- `Validar si ~/.bun/bin ya está en PATH`: **No**. La sesión actual no contiene `/root/.bun/bin` en `PATH`.
 
-```text
-find: ‘addons’: No such file or directory
-```
+### Archivos modificados
+- `specs/tooling/SPEC.md`: añadida sección de revalidación local con comandos ejecutados, salidas reales, resultado por checklist y decisión técnica de no tocar código de aplicación.
 
-Interpretación de B y E: no aplican al proyecto actual porque no es Odoo y no existe carpeta `addons`.
+### Decisión técnica
+No se modificó ninguna parte de `api/`, `web/`, `pipeline/`, `telegram/` ni `supabase/` porque el alcance del brief es exclusivamente documental/de verificación del entorno.
