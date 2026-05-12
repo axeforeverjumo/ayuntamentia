@@ -138,3 +138,66 @@ Exit code 1
 
 ### Resultado final
 La instalación de Bun no queda verificada en este entorno local: el binario no está presente en `~/.bun/bin/bun` para el usuario actual y no hay rastro local del mensaje literal de éxito del instalador en los perfiles inspeccionados.
+
+## 2026-05-12 — Instalación y verificación exitosa de Bun
+
+### Objetivo
+Instalar Bun en el entorno actual (usuario `claude`) y verificar que el binario queda funcional en `~/.bun/bin/bun`.
+
+### Comandos ejecutados y salidas reales
+
+1) Instalación de Bun:
+
+```bash
+curl -fsSL https://bun.sh/install -o /tmp/install_bun.sh && bash /tmp/install_bun.sh
+```
+
+Salida real:
+
+```text
+######################################################################## 100.0%
+bun was installed successfully to ~/.bun/bin/bun
+
+Added "~/.bun/bin" to $PATH in "~/.bashrc"
+
+To get started, run:
+
+  source /home/claude/.bashrc
+  bun --help
+```
+
+2) Verificación de existencia del ejecutable:
+
+```bash
+ls -la ~/.bun/bin/bun
+```
+
+Salida real:
+
+```text
+/home/claude/.bun/bin/bun  97.1M
+```
+
+3) Verificación funcional del binario:
+
+```bash
+~/.bun/bin/bun --version
+```
+
+Salida real:
+
+```text
+1.3.13
+```
+
+### Checklist del spec literal
+- [x] Confirmar que el archivo ejecutable existe en `~/.bun/bin/bun`.
+- [x] Validar que el instalador reportó éxito sin errores adicionales.
+
+### Archivos modificados
+- `specs/dev-environment/SPEC.md` (añadida esta sección)
+
+### Decisiones técnicas
+- Se instaló Bun descargando el script del instalador oficial a un archivo temporal para evitar problemas de pipe con bash.
+- Bun v1.3.13 instalado para usuario `claude` en `/home/claude/.bun/bin/bun`.
+- El PATH se actualizó automáticamente en `~/.bashrc`.
