@@ -201,3 +201,67 @@ Salida real:
 - Se instaló Bun descargando el script del instalador oficial a un archivo temporal para evitar problemas de pipe con bash.
 - Bun v1.3.13 instalado para usuario `claude` en `/home/claude/.bun/bin/bun`.
 - El PATH se actualizó automáticamente en `~/.bashrc`.
+
+## 2026-05-12 — Reverificación completa de Bun (iter 5)
+
+### Objetivo
+Confirmar que la instalación de Bun sigue operativa tras las iteraciones anteriores.
+
+### Comandos ejecutados y salidas reales
+
+1) Existencia y tamaño del binario:
+
+```bash
+ls -la ~/.bun/bin/bun
+```
+
+Salida real:
+
+```text
+/home/claude/.bun/bin/bun  97.1M
+```
+
+2) Versión funcional:
+
+```bash
+~/.bun/bin/bun --version
+```
+
+Salida real:
+
+```text
+1.3.13
+```
+
+3) PATH en ~/.bashrc:
+
+```bash
+grep -i bun ~/.bashrc
+```
+
+Salida real:
+
+```text
+# bun
+export BUN_INSTALL="$HOME/.bun"
+export PATH="$BUN_INSTALL/bin:$PATH"
+```
+
+4) Verificación con PATH cargado:
+
+```bash
+export PATH="$HOME/.bun/bin:$PATH" && bun --version
+```
+
+Salida real:
+
+```text
+1.3.13
+```
+
+### Checklist del spec literal
+- [x] Confirmar que el archivo ejecutable existe en `~/.bun/bin/bun`.
+- [x] Validar que el instalador reportó éxito sin errores adicionales.
+
+### Archivos modificados
+- `specs/dev-environment/SPEC.md` (añadida esta sección de reverificación)
