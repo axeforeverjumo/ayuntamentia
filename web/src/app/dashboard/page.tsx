@@ -7,10 +7,20 @@ import { PageHeader } from '@/components/warroom/PageHeader';
 import { KPICard, KPIGrid } from '@/components/warroom/KPICard';
 import { PanelBox } from '@/components/warroom/PanelBox';
 import { StatusLine } from '@/components/warroom/StatusBadge';
-import { TrendingBar } from '@/components/warroom/AlertFeed';
-import { traduirTema } from '@/lib/temesCatala';
+import { TrendingTopicsWidget } from '@/components/dashboard/TrendingTopicsWidget';
+import { fetchTrendingTopics } from '@/lib/api/dashboard';
 import { buildRoute } from '@/lib/routes';
+import type { AlertasStats, DashboardStats } from '@/lib/types';
+import type { TrendingTopic } from '@/types/dashboard';
 const API = process.env.NEXT_PUBLIC_API_URL || '';
+
+interface DashboardActivityItem {
+  id: string | number;
+  municipio: string;
+  tipo?: string | null;
+  num_puntos?: number | null;
+  fecha: string;
+}
 
 const MapaCatalunyaLeaflet = dynamic(
   () => import('@/components/features/MapaCatalunyaLeaflet').then(m => m.MapaCatalunyaLeaflet),
@@ -28,28 +38,33 @@ const MapaCatalunyaLeaflet = dynamic(
 );
 
 export default function DashboardPage() {
-  const [stats, setStats] = useState<any>({});
-  const [temas, setTemas] = useState<any[]>([]);
-  const [actividad, setActividad] = useState<any[]>([]);
-  const [alertas, setAlertas] = useState<any>({ total: 0, nuevas: 0, altas_nuevas: 0 });
+  const [stats, setStats] = useState<Partial<DashboardStats>>({});
+  const [temas, setTemas] = useState<TrendingTopic[]>([]);
+  const [temasError, setTemasError] = useState<string | null>(null);
+  const [actividad, setActividad] = useState<DashboardActivityItem[]>([]);
+  const [alertas, setAlertas] = useState<Partial<AlertasStats>>({ total: 0, nuevas: 0, altas_nuevas: 0 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     Promise.allSettled([
       fetch(`${API}/api/dashboard/stats`).then(r => r.json()),
-      fetch(`${API}/api/dashboard/temas`).then(r => r.json()),
+      fetchTrendingTopics(),
       fetch(`${API}/api/dashboard/actividad-reciente`).then(r => r.json()),
       fetch(`${API}/api/alertas/stats`).then(r => r.json()),
     ]).then(([s, t, a, al]) => {
       if (s.status === 'fulfilled') setStats(s.value);
-      if (t.status === 'fulfilled') setTemas(Array.isArray(t.value) ? t.value : []);
+      if (t.status === 'fulfilled') {
+        setTemas(t.value);
+        setTemasError(null);
+      } else {
+        setTemas([]);
+        setTemasError('No s’han pogut carregar els temes');
+      }
       if (a.status === 'fulfilled') setActividad(Array.isArray(a.value) ? a.value : []);
       if (al.status === 'fulfilled') setAlertas(al.value);
       setLoading(false);
     });
   }, []);
-
-  const maxMenciones = temas.length > 0 ? Math.max(...temas.map((t: any) => t.count || t.menciones || 1)) : 1;
 
   if (loading) {
     return (
@@ -121,25 +136,11 @@ export default function DashboardPage() {
         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 12 }}>
           <MapaCatalunyaLeaflet />
 
-          <PanelBox title="Temes en tendència" subtitle={`top ${Math.min(temas.length, 8)}`} tone="amber">
-            {temas.length > 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                {temas.slice(0, 8).map((tema: any, i: number) => (
-                  <TrendingBar
-                    key={i}
-                    label={traduirTema(tema.tema || tema.nombre || '—')}
-                    value={tema.count || tema.menciones || 0}
-                    max={maxMenciones}
-                    tone={i < 2 ? 'red' : i < 5 ? 'amber' : 'phos'}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div style={{ padding: '30px 0', textAlign: 'center', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--fog)', letterSpacing: '.1em', textTransform: 'uppercase' }}>
-                Processant temes...
-              </div>
-            )}
-          </PanelBox>
+          <TrendingTopicsWidget
+            topics={temas}
+            loading={loading}
+            error={temasError}
+          />
         </div>
 
         {/* Row 2: Últims plens */}
@@ -147,7 +148,7 @@ export default function DashboardPage() {
           <PanelBox title="Últims plens processats" subtitle={`${actividad.length} recents`} tone="phos">
             {actividad.length > 0 ? (
               <div>
-                {actividad.slice(0, 6).map((acta: any, i: number) => (
+                {actividad.slice(0, 6).map((acta, i: number) => (
                   <Link key={i} href={buildRoute('actes', acta.id)} style={{
                     display: 'grid', gridTemplateColumns: '1fr auto',
                     gap: 10, padding: '10px 0',

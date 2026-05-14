@@ -253,6 +253,46 @@ Aquesta prioritat permet reutilitzar agregats si ja existeixen i mantenir un fal
 - Sintaxi Python global executada:
   - `python3 -c "import ast, pathlib; [ast.parse(p.read_text()) for p in pathlib.Path('.').rglob('*.py') if '.git' not in str(p)]"`
 
+## 2026-05-16 — Adaptació del widget de "Temes en tendència" al nou payload de momentum
+
+### Canvis realitzats
+- S'ha desacoblat el consum de dades de tendències del `dashboard/page.tsx` cap a una capa petita d'API frontend (`web/src/lib/api/dashboard.ts`) per consumir directament `GET /api/dashboard/tendencias`.
+- S'han creat tipus frontend específics per al widget amb compatibilitat parcial del payload: es mantenen camps antics (`tema`, `nombre`, `count`, `menciones`) i s'hi afegeixen camps opcionals de momentum (`trending_score`) i d'explicabilitat (`score`, `principal_signal`, `principal_source`, `penalty_applied`, `penalty_label`, `explanation_text`).
+- El widget visual s'ha extret a `web/src/components/dashboard/TrendingTopicsWidget.tsx` per mantenir l'estil existent però eliminar la lògica antiga de render inline i qualsevol reordenació client-side per volum.
+- La llista es mostra exactament en l'ordre rebut del backend, limitant-se només a tallar visualment a `top 8` sense recalcular ni resortar.
+- S'han afegit textos visibles en català per als estats de càrrega, buit i error.
+- Si arriben camps explicatius opcionals, el widget mostra una pista discreta en català amb score, senyal principal i penalització aplicada només quan hi ha dades disponibles.
+
+### Arxius modificats
+1. `web/src/app/dashboard/page.tsx`
+   - Substituït el render inline de tendències per `TrendingTopicsWidget`.
+   - La càrrega de temes passa a usar `fetchTrendingTopics()`.
+   - Afegit estat d'error específic per al widget de tendències.
+2. `web/src/components/dashboard/TrendingTopicsWidget.tsx`
+   - Nou component específic del widget.
+   - Render sense ordenació client-side.
+   - Pistes opcionals d'explicabilitat en català.
+3. `web/src/lib/api/dashboard.ts`
+   - Nova funció `fetchTrendingTopics()`.
+   - Mapatge null-safe del payload de `GET /api/dashboard/tendencias`.
+   - Fallback a array buit si la resposta no és una llista.
+4. `web/src/types/dashboard.ts`
+   - Nous tipus `TrendingTopic` i `TrendingTopicExplanation` per reflectir el contracte nou amb compatibilitat parcial.
+5. `specs/dashboard/SPEC.md`
+   - Afegit aquest registre tècnic.
+
+### Decisions tècniques
+- **Ajust de pla per estructura real del repo**: el pla esmentava `frontend/src/...`, però el repositori real usa `web/src/...` i no disposava encara dels fitxers separats per `dashboard` al frontend. S'han creat en la ubicació equivalent dins `web/` mantenint l'abast funcional demanat.
+- **Sense reordenació client-side**: no es fa cap `sort()` ni càlcul basat en volum acumulat. El widget només renderitza l'ordre retornat pel backend.
+- **Compatibilitat parcial**: si encara arriben respostes incompletes o mixtes, el frontend continua mostrant el tema usant camps antics i només ensenya metadades addicionals quan existeixen.
+- **Canvi visual mínim**: es manté `PanelBox` i `TrendingBar` existents per evitar una alteració dràstica del layout.
+
+### Verificació
+- Lint frontend executat:
+  - `npm --prefix web run lint`
+- Build frontend executada:
+  - `npm --prefix web run build`
+
 ## 2026-05-14 — Task Celery beat diària per recalcular i persistir tendències
 
 ### Canvis realitzats
