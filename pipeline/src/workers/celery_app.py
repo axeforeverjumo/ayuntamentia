@@ -6,7 +6,7 @@ app = Celery(
     "ayuntamentia",
     broker=config.REDIS_URL,
     backend=config.REDIS_URL,
-    include=["src.workers.tasks"],
+    include=["src.workers.tasks", "src.workers.trending_tasks"],
 )
 
 app.conf.update(
@@ -66,6 +66,10 @@ app.conf.update(
         "ingest-premsa": {
             "task": "src.workers.tasks.ingest_premsa",
             "schedule": crontab(minute="*/30"),  # cada 30 minutos
+        },
+        "recalculate-daily-trending-scores": {
+            "task": "src.workers.trending_tasks.recalculate_daily_trending_scores",
+            "schedule": crontab(minute=15, hour=2),  # diaria 02:15 UTC para MVP
         },
     },
 )

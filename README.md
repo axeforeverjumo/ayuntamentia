@@ -90,6 +90,59 @@ Requisits: SSH com a `root@85.215.105.45`, repo `/opt/ayuntamentia/`, nginx conf
 - [`docs/MULTI_TENANT.md`](docs/MULTI_TENANT.md) — ⚠️ desactivat en el focus actual · només referència futura
 - [`specs/dades/SPEC.md`](specs/dades/SPEC.md) — font tècnica de veritat per a la configuració auditable de `trending_score` a BD
 
+## Task diària de recalcul de tendències
+
+La persistència diària del `trending_score` del dashboard es fa amb una task de Celery del pipeline:
+
+- Task registrada: `src.workers.trending_tasks.recalculate_daily_trending_scores`
+- Beat schedule MVP: cada dia a les `02:15` amb `enable_utc=true` al worker/beat
+
+Execució manual en local/staging:
+
+```bash
+python -m pipeline.src.workers.trending_tasks
+```
+
+O bé via Celery shell/client:
+
+```bash
+python -c "from pipeline.src.workers.trending_tasks import recalculate_daily_trending_scores; print(recalculate_daily_trending_scores())"
+```
+
+Execució real dins la infraestructura Docker del projecte:
+
+```bash
+docker compose up -d redis pipeline-worker pipeline-beat
+docker compose logs --tail=100 pipeline-beat
+docker compose logs --tail=100 pipeline-worker
+```
+
+Comprovació manual de la task registrada via worker Docker:
+
+```bash
+docker compose exec pipeline-worker celery -A src.workers.celery_app inspect registered | grep recalculate_daily_trending_scores
+docker compose exec pipeline-worker celery -A src.workers.celery_app call src.workers.trending_tasks.recalculate_daily_trending_scores
+```
+
+Comprovació del beat schedule carregat:
+
+```bash
+docker compose exec pipeline-beat celery -A src.workers.celery_app beat --loglevel=info
+```
+
+> Nota: el runner local d'aquesta tasca no té el paquet `celery` instal·lat al Python host, però el contenidor `pipeline` sí que el declara a `pipeline/requirements.txt` i `docker-compose.yml` ja arrenca `pipeline-worker` i `pipeline-beat` amb `celery -A src.workers.celery_app ...`.
+
+Què fa:
+- reutilitza `api/src/services/trending_score_service.py`
+- recalcula scores sobre les dades actuals
+- actualitza només columnes compatibles que ja existeixin a `temas_trend_signals`
+- si l'esquema no té cap columna de score compatible, no crea res nou i deixa traça a logs
+
+Com verificar-ho:
+- revisar els logs del worker/execució manual per veure el resum `processed / attempted / updated`
+- consultar `temas_trend_signals` i comprovar si s'han actualitzat els camps existents compatibles (`trend_score`, `trending_score`, `widget_trending_score`, `base_score`, `score_premsa`, `score_xarxes`, `delta_plens`)
+- tornar a executar la task: el recompte de files actualitzades pot repetir-se, però no s'han de crear duplicats perquè només es fan `UPDATE` sobre files existents
+
 ## Notes de foc
 
 - **Focus ara**: millorar la profunditat política del xat per a AC — narratives cruzades, deteccions de titulacions falses, contradiccions de rivals, eco temàtic.

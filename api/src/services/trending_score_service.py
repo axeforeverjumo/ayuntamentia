@@ -5,6 +5,8 @@ from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from typing import Any, Optional
 
+from psycopg2 import sql
+
 from psycopg2.extras import RealDictCursor
 
 from ..db import get_db
@@ -272,6 +274,85 @@ class TrendingScoreService:
             "config_meta": config_payload["meta"],
             "windows": windows_payload["windows"],
         }
+
+    def persist_scores(self, items: list[dict[str, Any]]) -> dict[str, int]:
+        if not items:
+            return {"attempted": 0, "updated": 0}
+
+        updateable_columns = self._get_existing_signal_columns(
+            [
+                "trend_score",
+                "trending_score",
+                "widget_trending_score",
+                "base_score",
+                "score_premsa",
+                "score_xarxes",
+                "delta_plens",
+            ]
+        )
+        if not updateable_columns:
+            self.logger.warning(
+                "No compatible score columns found in temas_trend_signals; skipping persistence and relying on logs"
+            )
+            return {"attempted": len(items), "updated": 0}
+
+        updated = 0
+        with get_db() as conn:
+            cur = conn.cursor(cursor_factory=RealDictCursor)
+            for item in items:
+                tema = (item.get("tema") or "").strip()
+                if not tema:
+                    continue
+
+                assignments: list[sql.Composed] = []
+                values: list[Any] = []
+                for column in updateable_columns:
+                    assignments.append(sql.SQL("{} = %s").format(sql.Identifier(column)))
+                    values.append(self._value_for_signal_column(column, item))
+
+                query = sql.SQL(
+                    "UPDATE temas_trend_signals SET {assignments} WHERE LOWER(TRIM(tema)) = LOWER(TRIM(%s))"
+                ).format(assignments=sql.SQL(", ").join(assignments))
+                values.append(tema)
+                cur.execute(query, values)
+                updated += cur.rowcount
+
+        return {"attempted": len(items), "updated": updated}
+
+    def calculate_and_persist_from_existing_data(self, *, today: Optional[date] = None) -> dict[str, Any]:
+        payload = self.calculate_from_existing_data(today=today)
+        persistence = self.persist_scores(payload["items"])
+        payload["persistence"] = persistence
+        return payload
+
+    def _get_existing_signal_columns(self, candidate_columns: list[str]) -> list[str]:
+        with get_db() as conn:
+            cur = conn.cursor(cursor_factory=RealDictCursor)
+            cur.execute(
+                """
+                SELECT column_name
+                FROM information_schema.columns
+                WHERE table_schema = 'public'
+                  AND table_name = 'temas_trend_signals'
+                  AND column_name = ANY(%s)
+                ORDER BY ordinal_position
+                """,
+                (candidate_columns,),
+            )
+            rows = cur.fetchall()
+        return [row["column_name"] for row in rows]
+
+    def _value_for_signal_column(self, column: str, item: dict[str, Any]) -> float:
+        mapping = {
+            "trend_score": item.get("widget_trending_score", 0.0),
+            "trending_score": item.get("widget_trending_score", 0.0),
+            "widget_trending_score": item.get("widget_trending_score", 0.0),
+            "base_score": item.get("base_score", 0.0),
+            "score_premsa": item.get("score_premsa", 0.0),
+            "score_xarxes": item.get("score_xarxes", 0.0),
+            "delta_plens": item.get("delta_plens", 0.0),
+        }
+        return self.clamp_non_negative(mapping.get(column, 0.0))
 
 
 trending_score_service = TrendingScoreService()

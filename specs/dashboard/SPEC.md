@@ -196,3 +196,67 @@ Aquesta prioritat permet reutilitzar agregats si ja existeixen i mantenir un fal
   - `pytest api/tests/test_dashboard.py`
 - Sintaxi Python global executada:
   - `python3 -c "import ast, pathlib; [ast.parse(p.read_text()) for p in pathlib.Path('.').rglob('*.py') if '.git' not in str(p)]"`
+
+## 2026-05-14 — Task Celery beat diària per recalcular i persistir tendències
+
+### Canvis realitzats
+- S'ha afegit una task Celery explícita al pipeline per recalcular diàriament el `trending_score` del dashboard reutilitzant el servei comú existent de `api/src/services/trending_score_service.py`.
+- La task persisteix de forma retrocompatible només sobre `temas_trend_signals` i només actualitza columnes de score compatibles si ja existeixen a l'esquema actual.
+- No s'ha creat cap taula nova ni s'han tocat migracions SQL.
+- S'ha afegit entrada de `beat_schedule` diària amb nom estable per a execució manual i programada.
+- S'ha documentat l'execució manual i la verificació d'idempotència/logs al `README.md`.
+
+### Arxius modificats
+1. `api/src/services/trending_score_service.py`
+   - Ampliat mínimament per afegir persistència retrocompatible via `UPDATE` sobre `temas_trend_signals`.
+   - Descobriment dinàmic de columnes compatibles a `information_schema.columns`.
+   - Nou helper `calculate_and_persist_from_existing_data()` per encapsular càlcul + persistència.
+   - Sense canvis d'esquema: si no existeix cap columna compatible, el servei retorna resum amb `updated=0` i la task es recolza en logs.
+2. `pipeline/src/workers/trending_tasks.py`
+   - Nova task `src.workers.trending_tasks.recalculate_daily_trending_scores`.
+   - Import diferit/preparat del servei del backend API.
+   - Logs per tema amb `widget_trending_score`, `base_score`, `delta_plens`, `score_premsa` i `score_xarxes`.
+   - Resum final amb `processed`, `attempted`, `updated` i errors de logging parcials.
+3. `pipeline/src/workers/celery_app.py`
+   - Registre del mòdul nou a `include`.
+   - Nova entrada de beat diària a les `02:15`.
+4. `README.md`
+   - Runbook curt per llançar la task manualment i verificar persistència/idempotència.
+5. `specs/dashboard/SPEC.md`
+   - Afegit aquest registre tècnic.
+
+### Decisions tècniques
+- **Ajust de pla per estructura real del repo**: el pla esmentava `backend/...`, però el repositori real separa `api/` i `pipeline/`. La task s'ha implementat a `pipeline/src/workers/` i el servei reutilitzat viu a `api/src/services/`.
+- **Idempotència**: la persistència fa exclusivament `UPDATE` per `tema` normalitzat sobre files ja existents a `temas_trend_signals`; per tant, un rerun no crea duplicats ni artefactes nous.
+- **Retrocompatibilitat d'esquema**: abans d'escriure, el servei consulta `information_schema.columns` i només actualitza les columnes que existeixen realment entre aquest conjunt candidat:
+  - `trend_score`
+  - `trending_score`
+  - `widget_trending_score`
+  - `base_score`
+  - `score_premsa`
+  - `score_xarxes`
+  - `delta_plens`
+- **Fallada controlada**: si no hi ha cap columna compatible, la task no inventa persistència nova; acaba amb resum i warning a logs.
+- **Atomicitat pràctica MVP**: el servei utilitza una sola connexió/context manager per a la ronda completa d'updates; si hi ha excepció real durant la persistència, la transacció es fa rollback per no deixar mitja escriptura confirmada.
+- **Metadades d'auditoria**: com que no s'ha pogut assumir l'existència de camps auditables específics a `temas_trend_signals` sense tocar esquema, la traçabilitat mínima queda al resum retornat i als logs estructurats per execució.
+
+### Execució manual documentada
+- `python -m pipeline.src.workers.trending_tasks`
+- `python -c "from pipeline.src.workers.trending_tasks import recalculate_daily_trending_scores; print(recalculate_daily_trending_scores())"`
+- `docker compose exec pipeline-worker celery -A src.workers.celery_app call src.workers.trending_tasks.recalculate_daily_trending_scores`
+
+### Integració real amb la infraestructura existent
+- No ha calgut tocar `docker-compose.yml` perquè el wiring operatiu ja existia i ja arrenca aquests processos:
+  - `pipeline-worker`: `celery -A src.workers.celery_app worker --loglevel=info --concurrency=4`
+  - `pipeline-beat`: `celery -A src.workers.celery_app beat --loglevel=info`
+- La integració efectiva s'ha resolt afegint el nou mòdul a `include` dins `pipeline/src/workers/celery_app.py` i registrant-hi la nova entrada de `beat_schedule`.
+- El contenidor `pipeline` ja inclou `celery[redis]==5.4.*` a `pipeline/requirements.txt`, de manera que el runtime correcte per provar la task és el contenidor, no el Python host del runner.
+
+### Verificació prevista / limitació observada
+- Sintaxi Python global obligatòria: executada.
+- Validació mínima d'infraestructura revisada al repo:
+  - `docker-compose.yml` ja defineix `pipeline-worker` i `pipeline-beat` amb comandes Celery reals.
+  - `pipeline/requirements.txt` ja inclou `celery[redis]`.
+- Limitació del runner d'aquesta iteració:
+  - la prova manual directa amb `python -c ...` al host falla amb `ModuleNotFoundError: No module named 'celery'` perquè el paquet no està instal·lat fora del contenidor.
+  - per això s'han documentat els comandaments exactes de validació sobre Docker, que és el mode real d'execució d'aquest projecte.
