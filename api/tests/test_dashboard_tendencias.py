@@ -201,3 +201,54 @@ def test_dashboard_service_list_tendencias_uses_latest_available_calculation_met
     items = DashboardService().list_tendencias()
 
     assert items[0]["score"]["calculated_at"] == "2026-05-15T09:30:00+00:00"
+
+
+def test_dashboard_service_list_tendencias_applies_editorial_penalty_so_hisenda_is_not_first(monkeypatch):
+    from api.src.services.dashboard_service import DashboardService
+    from api.src.services import dashboard_service as dashboard_service_module
+
+    monkeypatch.setattr(
+        dashboard_service_module.trending_score_service,
+        "calculate_from_existing_data",
+        lambda: {
+            "items": [
+                {
+                    "tema": "hisenda",
+                    "delta_plens": 12.0,
+                    "score_premsa": 0.0,
+                    "score_xarxes": 0.0,
+                    "base_score": 12.0,
+                    "widget_penalty_multiplier": 0.5,
+                    "widget_trending_score": 6.0,
+                },
+                {
+                    "tema": "habitatge",
+                    "delta_plens": 5.0,
+                    "score_premsa": 2.5,
+                    "score_xarxes": 0.0,
+                    "base_score": 7.5,
+                    "widget_penalty_multiplier": 1.0,
+                    "widget_trending_score": 7.5,
+                },
+                {
+                    "tema": "mobilitat",
+                    "delta_plens": 2.0,
+                    "score_premsa": 1.0,
+                    "score_xarxes": 0.0,
+                    "base_score": 3.0,
+                    "widget_penalty_multiplier": 1.0,
+                    "widget_trending_score": 3.0,
+                },
+            ],
+            "windows": {
+                "calculated_at": "2026-05-16T08:15:00+00:00",
+            },
+        },
+    )
+
+    items = DashboardService().list_tendencias()
+
+    assert [item["tema"] for item in items] == ["habitatge", "hisenda", "mobilitat"]
+    assert items[0]["trending_score"] > items[1]["trending_score"]
+    assert items[1]["score"]["base_score"] > items[0]["score"]["base_score"]
+    assert items[1]["score"]["penalty_applied"] == 0.5
