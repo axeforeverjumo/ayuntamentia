@@ -153,3 +153,46 @@ Aquesta prioritat permet reutilitzar agregats si ja existeixen i mantenir un fal
   - `pytest api/tests/test_trending_score_service.py`
 - Sintaxi Python global executada:
   - `python3 -c "import ast, pathlib; [ast.parse(p.read_text()) for p in pathlib.Path('.').rglob('*.py') if '.git' not in str(p)]"`
+
+## 2026-05-14 — Lectura backend del banner de reunions properes des d'`alertas_reglas`
+
+### Canvis realitzats
+- S'ha integrat la lectura del banner de reunions properes sobre l'endpoint de dashboard ja existent (`GET /api/dashboard/`) sense afegir endpoints nous innecessaris.
+- El càlcul reutilitza `alertas_reglas` a través del servei existent `api/src/services/alertas_reglas_service.py`, filtrant regles actives de tipus `meeting_upcoming` per a l'usuari actual i els seus municipis.
+- El servei de dashboard construeix un payload retrocompatible amb un camp opcional `upcoming_meetings_banner` que inclou: títol, municipi, `meeting_at`, `last_processed_at`, `status`, missatge curt en català i llistat complet de reunions afectades.
+- La degradació controlada omet només regles incompletes (per exemple, sense `meeting_at` o sense municipi resolt) i escriu `warning` a logs en lloc de provocar error 500.
+- S'han ajustat els tests perquè validin els casos `warning`, `danger`, sense alerta, degradació per dades parcials i la forma del payload servit per l'endpoint agregat.
+
+### Arxius modificats
+1. `api/src/routes/dashboard.py`
+   - Afegit `GET /api/dashboard/` sobre el router ja existent.
+   - Injecció de `CurrentUser` via `get_current_user` i delegació a `dashboard_service.get_dashboard_payload(...)`.
+2. `api/src/services/dashboard_service.py`
+   - Manteniment del servei real existent, sense crear mòduls nous no cablejats.
+   - Centralització dels llindars MVP a `MVP_MEETING_STATUS_THRESHOLDS`.
+   - Construcció del banner `upcoming_meetings_banner` amb estat `warning`/`danger`, missatges en català i ordenació per severitat i data.
+   - Degradació amb logs davant regles incompletes.
+3. `api/tests/test_dashboard.py`
+   - Tests de càlcul del banner i del payload agregat de l'endpoint.
+   - Verificació explícita dels llindars centralitzats i del camp opcional retornat.
+4. `specs/dashboard/SPEC.md`
+   - Afegit aquest registre tècnic.
+
+### Llindars MVP definits
+- `warning_hours = 72`
+- `danger_hours = 24`
+
+### Decisió de retrocompatibilitat del payload
+- El dashboard continua retornant un objecte JSON i només s'hi afegeix la clau opcional `upcoming_meetings_banner`.
+- Si no hi ha cap reunió rellevant dins dels llindars o totes les regles són invàlides/incompletes, el camp queda a `null` i no es trenquen claus existents.
+
+### Notes de degradació controlada
+- Si una regla `meeting_upcoming` no té `meeting_at`, s'omet i es registra un `warning`.
+- Si la regla no pot resoldre cap municipi usable per construir el banner, també s'omet sense interrompre la resta del dashboard.
+- Si no hi ha `last_processed_at`, el sistema encara calcula l'estat amb els llindars temporals i genera un missatge específic en català.
+
+### Verificació
+- Tests específics executats:
+  - `pytest api/tests/test_dashboard.py`
+- Sintaxi Python global executada:
+  - `python3 -c "import ast, pathlib; [ast.parse(p.read_text()) for p in pathlib.Path('.').rglob('*.py') if '.git' not in str(p)]"`

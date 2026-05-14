@@ -1,9 +1,16 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from psycopg2 import errors
 
+from ..auth import CurrentUser, get_current_user
 from ..db import get_cursor
+from ..services.dashboard_service import dashboard_service
 
 router = APIRouter()
+
+
+@router.get("/")
+def get_dashboard(user: CurrentUser = Depends(get_current_user)):
+    return dashboard_service.get_dashboard_payload(user)
 
 
 @router.get("/stats")
