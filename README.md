@@ -88,6 +88,7 @@ Requisits: SSH com a `root@85.215.105.45`, repo `/opt/ayuntamentia/`, nginx conf
 - [`docs/MANUAL_ADMIN.md`](docs/MANUAL_ADMIN.md) — guia d'administració
 - [`docs/GUIA_TESTER.md`](docs/GUIA_TESTER.md) — casos de validació
 - [`docs/MULTI_TENANT.md`](docs/MULTI_TENANT.md) — ⚠️ desactivat en el focus actual · només referència futura
+- [`specs/dades/SPEC.md`](specs/dades/SPEC.md) — font tècnica de veritat per a la configuració auditable de `trending_score` a BD
 
 ## Notes de foc
 
