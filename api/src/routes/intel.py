@@ -1,7 +1,8 @@
-"""Endpoints de inteligencia: ranking concejales, tendencias, promesas incumplidas."""
+"""Endpoints de inteligencia: ranking concejales, tendencias, promesas incumplidas y Sala d'Intel·ligència."""
 
+import json
 import logging
-from typing import Optional
+from typing import Any, Optional
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -9,6 +10,11 @@ from psycopg2.extras import RealDictCursor
 
 from ..db import get_db
 from ..services import PremsaRetrievalFilters, RetrievalContext, intelligence_retrieval_service
+from ..services.llm_proxy_client import (
+    LLMProxyRequestError,
+    LLMProxyTimeoutError,
+    llm_proxy_client,
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -26,6 +32,10 @@ class IntelligenceRetrievalRequest(BaseModel):
     sentiment: Optional[str] = Field(default=None, pattern="^(positiu|negatiu|neutre)$")
     date_from: Optional[str] = None
     date_to: Optional[str] = None
+
+
+class SalaIntelligenciaRequest(IntelligenceRetrievalRequest):
+    pass
 
 
 def _partido_filter(partido: str):
@@ -46,9 +56,8 @@ def _partido_filter(partido: str):
     )
 
 
-@router.post("/retrieval")
-async def retrieval(payload: IntelligenceRetrievalRequest):
-    context = RetrievalContext(
+def _build_retrieval_context(payload: IntelligenceRetrievalRequest) -> RetrievalContext:
+    return RetrievalContext(
         tenant=payload.tenant,
         municipio=payload.municipio,
         comarca=payload.comarca,
@@ -62,11 +71,111 @@ async def retrieval(payload: IntelligenceRetrievalRequest):
             date_to=payload.date_to,
         ),
     )
+
+
+def _source_label(item: dict[str, Any], source_type: str) -> str:
+    prefix = "📄 Ple" if source_type == "plens" else "📰 Premsa"
+    title = item.get("title") or item.get("headline") or "Sense títol"
+    date = item.get("date") or item.get("published_at") or "sense data"
+    return f"{prefix} {title} | {date}"
+
+
+def _serialize_sources(items: list[dict[str, Any]], source_type: str) -> list[dict[str, Any]]:
+    serialized: list[dict[str, Any]] = []
+    for item in items:
+        serialized.append(
+            {
+                "id": item.get("id"),
+                "label": _source_label(item, source_type),
+                "title": item.get("title") or item.get("headline"),
+                "date": item.get("date") or item.get("published_at"),
+                "summary": item.get("summary") or item.get("snippet"),
+                "municipio": item.get("municipio"),
+                "comarca": item.get("comarca"),
+                "url": item.get("url") or item.get("link"),
+                "source_type": source_type,
+            }
+        )
+    return serialized
+
+
+def _build_sala_messages(query: str, plens_sources: list[dict[str, Any]], premsa_sources: list[dict[str, Any]]) -> list[dict[str, str]]:
+    system_prompt = (
+        "Ets la Sala d'Intel·ligència política d'AjuntamentIA. "
+        "Respon sempre en català. "
+        "Separa explícitament el context oficial (plens/actes) del context mediàtic (premsa) quan existeixin. "
+        "Cita només fonts recuperades i visibles amb el format exacte de les etiquetes proporcionades. "
+        "No inventis fonts, dates, titulars ni atribucions. "
+        "Si una font no consta al context recuperat, digues que no consta."
+    )
+    user_prompt = (
+        f"Consulta de l'usuari: {query}\n\n"
+        f"Context oficial recuperat (plens):\n{json.dumps(plens_sources, ensure_ascii=False, indent=2)}\n\n"
+        f"Context mediàtic recuperat (premsa):\n{json.dumps(premsa_sources, ensure_ascii=False, indent=2)}\n\n"
+        "Redacta una resposta breu i clara en català amb atribució visible de les fonts utilitzades."
+    )
+    return [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt},
+    ]
+
+
+@router.post("/retrieval")
+async def retrieval(payload: IntelligenceRetrievalRequest):
+    context = _build_retrieval_context(payload)
     try:
         return await intelligence_retrieval_service.dual_retrieve(payload.query, context)
     except Exception as exc:
         logger.exception("intel_retrieval.endpoint_failed query=%r", payload.query)
         raise HTTPException(status_code=503, detail="intel_retrieval_unavailable") from exc
+
+
+@router.post("/sala-intelligencia")
+async def sala_intelligencia(payload: SalaIntelligenciaRequest):
+    context = _build_retrieval_context(payload)
+    try:
+        retrieval_result = await intelligence_retrieval_service.dual_retrieve(payload.query, context)
+    except Exception as exc:
+        logger.exception("sala_intelligencia.retrieval_failed query=%r", payload.query)
+        raise HTTPException(status_code=503, detail="intel_retrieval_unavailable") from exc
+
+    plens_sources = _serialize_sources(retrieval_result.get("plens_context") or [], "plens")
+    premsa_sources = _serialize_sources(retrieval_result.get("premsa_context") or [], "premsa")
+    messages = _build_sala_messages(payload.query, plens_sources, premsa_sources)
+
+    try:
+        generated_text = llm_proxy_client.generate_text(messages)
+    except LLMProxyTimeoutError as exc:
+        raise HTTPException(status_code=504, detail="llm_proxy_timeout") from exc
+    except LLMProxyRequestError as exc:
+        raise HTTPException(status_code=502, detail="llm_proxy_request_failed") from exc
+
+    response = {
+        "text": generated_text,
+        "answer": generated_text,
+        "query": payload.query,
+        "sources": {
+            "plens": plens_sources,
+            "premsa": premsa_sources,
+        },
+        "plens_context": retrieval_result.get("plens_context") or [],
+        "premsa_context": retrieval_result.get("premsa_context") or [],
+        "degraded": retrieval_result.get("degraded", False),
+        "degradation_reasons": retrieval_result.get("degradation_reasons") or [],
+        "meta": {
+            **(retrieval_result.get("meta") or {}),
+            "llm": {
+                "provider": "local_proxy",
+                "base_url": llm_proxy_client.base_url,
+                "timeout_seconds": llm_proxy_client.timeout_seconds,
+            },
+            "sources": {
+                "plens": plens_sources,
+                "premsa": premsa_sources,
+            },
+        },
+    }
+    return response
 
 
 @router.get("/ranking-concejales")

@@ -1240,3 +1240,88 @@ No se implementa en esta tarea:
 - integración runtime con `reputació`, `dashboard`, `regidors` o `alertas`
 
 Se entrega únicamente la especificación de integración solicitada.
+
+## 2026-05-10 — Integració backend de Sala d'Intel·ligència amb retrieval dual i atribució visible
+
+### Canvis realitzats
+- Es va localitzar el handler real d'`/api/intel/sala-intelligencia` dins `api/src/routes/intel.py` i es va completar el flux backend sobre el router existent d'`intel`.
+- Es va afegir construcció compartida de `RetrievalContext` per reutilitzar el servei de retrieval dual existent abans de la generació.
+- La Sala ara construeix un prompt amb instruccions estrictes perquè el model:
+  - respongui en català
+  - separi context oficial (`plens`) i mediàtic (`premsa`)
+  - citi només les fonts recuperades amb etiquetes visibles tipus `📄 Ple ... | data` i `📰 Premsa ... | data`
+  - no inventi fonts, dates ni atribucions
+- El payload del endpoint retorna:
+  - `text`
+  - `answer` (compatibilitat cap enrere)
+  - `sources.plens[]`
+  - `sources.premsa[]`
+  - `plens_context` i `premsa_context`
+  - `degraded` i `degradation_reasons`
+  - `meta.llm` i `meta.sources`
+- Es manté graceful degradation: si `premsa` falla i el servei dual ja retorna només `plens`, la Sala continua sense error fatal.
+- Es va reforçar `api/src/services/llm_proxy_client.py` perquè la generació passi pel proxy local configurat i accepti timeout explícit per crida.
+- Es va crear `api/src/services/intel_dual_retrieval.py` com a alias compatible cap al servei existent, per alinear codi i spec-007 sense refactor massiu.
+- Es van actualitzar els tests d'integració del flux amb mocks de retrieval dual i proxy LLM.
+
+### Arxius modificats
+- `api/src/routes/intel.py`
+- `api/src/services/llm_proxy_client.py`
+- `api/src/services/intel_dual_retrieval.py`
+- `api/tests/test_sala_intelligencia_dual_rag.py`
+- `specs/intel/SPEC.md`
+
+### Format del payload de fonts
+```json
+{
+  "text": "Resposta generada en català...",
+  "answer": "Resposta generada en català...",
+  "sources": {
+    "plens": [
+      {
+        "id": 1,
+        "label": "📄 Ple Pressupost 2025 | 2025-01-10",
+        "title": "Pressupost 2025",
+        "date": "2025-01-10",
+        "summary": "Debat oficial del pressupost",
+        "municipio": "Ripoll",
+        "comarca": "Ripollès",
+        "url": "https://example.com/ple-1",
+        "source_type": "plens"
+      }
+    ],
+    "premsa": [
+      {
+        "id": 2,
+        "label": "📰 Premsa La premsa destaca el debat | 2025-01-11",
+        "title": "La premsa destaca el debat",
+        "date": "2025-01-11",
+        "summary": "Crònica mediàtica",
+        "municipio": "Ripoll",
+        "comarca": "Ripollès",
+        "url": "https://example.com/premsa-1",
+        "source_type": "premsa"
+      }
+    ]
+  }
+}
+```
+
+### Decisions tècniques
+- **Compatibilitat cap enrere:** s'afegeix `answer` amb el mateix contingut que `text` i es preserven `plens_context`, `premsa_context` i `meta` per no trencar consumidors actuals.
+- **Proxy LLM únic:** la generació continua passant exclusivament per `llm_proxy_client`, que encapsula la connexió al proxy local `:10531` via `OPENCLAW_BASE_URL`.
+- **Timeout i errors controlats:**
+  - timeout del proxy → `504 llm_proxy_timeout`
+  - error controlat del proxy → `502 llm_proxy_request_failed`
+  - error del retrieval dual → `503 intel_retrieval_unavailable`
+- **Degradació parcial:** si la retrieval dual informa `premsa_unavailable`, la resposta continua amb fonts oficials i `sources.premsa = []`.
+- **Atribució visible:** les cites es precomputen al backend amb `label` perquè el frontend pugui renderitzar-les sense reconstrucció addicional.
+
+### Tests afegits
+- prompt amb fonts de `plens` + `premsa`
+- resposta estructurada amb `sources` separades per tipus
+- continuïtat quan `premsa` falla
+- timeout controlat del proxy LLM
+
+### Ajust del pla detectat
+- El pla feia referència a `backend/...`, però el repositori real usa la ruta `api/...` per al backend FastAPI. S'ha aplicat el mateix pla sobre els arxius equivalents reals (`api/src/...` i `api/tests/...`) sense alterar l'abast funcional.
