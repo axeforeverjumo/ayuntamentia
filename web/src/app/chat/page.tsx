@@ -8,6 +8,7 @@ import { ChatMessage } from '@/components/ui/ChatMessage';
 import { ProgressiveLoader } from '@/components/ui/ProgressiveLoader';
 import { SaveToWorkspaceModal } from '@/components/ui/SaveToWorkspaceModal';
 import { apiClient } from '@/lib/ApiClient';
+import { normalizeIntelResponse } from '@/lib/intel';
 import type { ChatMessage as ChatMessageType, ChatResponse } from '@/lib/types';
 import type { WorkspaceMode } from '@/lib/workspaceStorage';
 import { PageHeader } from '@/components/warroom/PageHeader';
@@ -54,7 +55,7 @@ function saveConversations(convs: Conversation[]) { localStorage.setItem('ajunta
 
 export default function ChatPage() {
   return (
-    <Suspense fallback={<div style={{ color: 'var(--fog)', padding: 24 }}>Carregant Sala d'Intel·ligència…</div>}>
+    <Suspense fallback={<div style={{ color: 'var(--fog)', padding: 24 }}>Carregant Sala d&apos;Intel·ligència…</div>}>
       <ChatPageInner />
     </Suspense>
   );
@@ -137,10 +138,18 @@ function ChatPageInner() {
     setError(null);
     try {
       const history = currentMsgs.map(m => ({ role: m.role, content: m.content }));
-      const response = await apiClient.post<ChatResponse>('/api/chat/', { message: content.trim(), history });
+      const response = await apiClient.post<ChatResponse>('/api/intel/sala-intelligencia', { message: content.trim(), history });
+      const normalized = normalizeIntelResponse(response);
       const assistantMsg: ChatMessageType = {
-        id: generateId(), role: 'assistant', content: response.answer,
-        sources: response.sources, followUps: response.follow_ups, intent: response.intent,
+        id: generateId(),
+        role: 'assistant',
+        content: normalized.answer,
+        sources: normalized.flatSources,
+        groupedSources: normalized.groupedSources,
+        premsaDegraded: normalized.premsaDegraded,
+        premsaUnavailableMessage: normalized.premsaUnavailableMessage,
+        followUps: response.follow_ups,
+        intent: response.intent,
         timestamp: new Date().toISOString(),
       };
       updateConversation(convId, [...newMsgs, assistantMsg]);
@@ -199,7 +208,7 @@ function ChatPageInner() {
             >
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: activeId === conv.id ? 700 : 400 }}>{conv.title}</div>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, opacity: .5 }}>{conv.messages.length} msg</div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, opacity: .5 }}>{conv.messages.length} missatges</div>
               </div>
               <button onClick={e => { e.stopPropagation(); deleteConversation(conv.id); }}
                 style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', padding: 2, opacity: .4 }}>
@@ -214,7 +223,7 @@ function ChatPageInner() {
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         <PageHeader
           crumb="Operacions / Sala d’Intel·ligència"
-          title={<>Sala d'Intel·ligència. <em style={{ color: 'var(--fog)', fontWeight: 400 }}>{modeDef.label.toLowerCase()}</em></>}
+          title={<>Sala d&apos;Intel·ligència. <em style={{ color: 'var(--fog)', fontWeight: 400 }}>{modeDef.label.toLowerCase()}</em></>}
           info={{
             title: "Sala d’Intel·ligència",
             description: "El cor de la plataforma. Pregunta com un polític i rep respostes amb cites literals, fonts verificables i accions concretes. Tria un dels 5 modes segons el que necessitis: vigilar, atacar, defensar, comparar o detectar oportunitats.",
@@ -321,6 +330,14 @@ function ChatPageInner() {
                   color: 'var(--wr-red-2)', marginBottom: 16,
                 }}>
                   ⚠ {error}
+                </div>
+              )}
+              {isLoading && !error && (
+                <div style={{
+                  padding: '8px 0 14px', fontFamily: 'var(--font-mono)', fontSize: 11,
+                  color: 'var(--fog)', textTransform: 'uppercase', letterSpacing: '.08em',
+                }}>
+                  Preparant resposta i fonts atribuïdes…
                 </div>
               )}
               <div ref={messagesEndRef} />

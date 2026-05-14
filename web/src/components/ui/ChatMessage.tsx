@@ -52,8 +52,17 @@ export function ChatMessage({ message, onFollowUp, followUpDisabled }: ChatMessa
       <div className="flex flex-col gap-2 w-full max-w-[min(720px,calc(100%-3rem))]">
         <AssistantAnswerCard content={message.content} intent={message.intent} />
 
-        {message.sources && message.sources.length > 0 && (
-          <SourcesGrid sources={message.sources} />
+        {message.groupedSources ? (
+          <SourcesGrid
+            sources={message.sources || []}
+            groupedSources={message.groupedSources}
+            premsaDegraded={message.premsaDegraded}
+            premsaUnavailableMessage={message.premsaUnavailableMessage}
+          />
+        ) : (
+          message.sources && message.sources.length > 0 && (
+            <SourcesGrid sources={message.sources} />
+          )
         )}
 
         {onFollowUp && message.followUps && message.followUps.length > 0 && (

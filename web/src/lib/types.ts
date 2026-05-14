@@ -58,6 +58,9 @@ export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   sources?: Source[];
+  groupedSources?: IntelSourcesGrouped;
+  premsaDegraded?: boolean;
+  premsaUnavailableMessage?: string;
   followUps?: string[];
   intent?: ChatIntent;
   timestamp: string;
@@ -71,6 +74,25 @@ export interface Source {
   municipio?: string;
   fecha?: string;
   url?: string;
+  label?: string;
+  title?: string;
+  short_title?: string;
+  date?: string;
+  source_type?: 'plens' | 'premsa' | string;
+}
+
+export interface IntelStructuredSource {
+  label?: string;
+  title?: string;
+  short_title?: string;
+  date?: string;
+  url?: string;
+  source_type?: 'plens' | 'premsa' | string;
+}
+
+export interface IntelSourcesGrouped {
+  plens: IntelStructuredSource[];
+  premsa: IntelStructuredSource[];
 }
 
 export interface ChatRequest {
@@ -80,7 +102,13 @@ export interface ChatRequest {
 
 export interface ChatResponse {
   answer: string;
-  sources?: Source[];
+  text?: string;
+  sources?: Source[] | {
+    plens?: IntelStructuredSource[];
+    premsa?: IntelStructuredSource[];
+  };
+  degraded?: boolean;
+  degradation_reasons?: string[];
   follow_ups?: string[];
   intent?: ChatIntent;
 }

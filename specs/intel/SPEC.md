@@ -1276,57 +1276,53 @@ Se entrega únicamente la especificación de integración solicitada.
 - `api/tests/test_sala_intelligencia_dual_rag.py`
 - `specs/intel/SPEC.md`
 
-### Format del payload de fonts
-```json
-{
-  "text": "Resposta generada en català...",
-  "answer": "Resposta generada en català...",
-  "sources": {
-    "plens": [
-      {
-        "id": 1,
-        "label": "📄 Ple Pressupost 2025 | 2025-01-10",
-        "title": "Pressupost 2025",
-        "date": "2025-01-10",
-        "summary": "Debat oficial del pressupost",
-        "municipio": "Ripoll",
-        "comarca": "Ripollès",
-        "url": "https://example.com/ple-1",
-        "source_type": "plens"
-      }
-    ],
-    "premsa": [
-      {
-        "id": 2,
-        "label": "📰 Premsa La premsa destaca el debat | 2025-01-11",
-        "title": "La premsa destaca el debat",
-        "date": "2025-01-11",
-        "summary": "Crònica mediàtica",
-        "municipio": "Ripoll",
-        "comarca": "Ripollès",
-        "url": "https://example.com/premsa-1",
-        "source_type": "premsa"
-      }
-    ]
-  }
-}
-```
+## 2026-05-10 — Adaptació UI de `/sala-intelligencia` al payload dual amb fonts estructurades
+
+### Objectiu
+Adaptar la UI existent de la Sala d'Intel·ligència per consumir el nou payload del backend amb resposta principal, fonts agrupades per `PLENS` i `PREMSA`, i gestió elegant de degradació o absència de premsa, sense redissenyar la pantalla ni inventar cites al frontend.
+
+### Arxius modificats
+- `web/src/app/chat/page.tsx`
+- `web/src/components/ui/ChatMessage.tsx`
+- `web/src/components/ui/SourceCard.tsx`
+- `web/src/lib/types.ts`
+- `web/src/lib/intel.ts`
+- `specs/intel/SPEC.md`
+
+### Canvis realitzats
+- Es va mantenir l'entrada `/sala-intelligencia` com a alias de la sala actual, ja que al repo real aquesta ruta reexporta `../chat/page`.
+- Es va adaptar el flux de consulta perquè la sala consumeixi `/api/intel/sala-intelligencia` en lloc del payload antic de `/api/chat/`.
+- Es van ampliar els tipus compartits per suportar:
+  - `text` a més d'`answer`
+  - `sources.plens[]` i `sources.premsa[]`
+  - fonts estructurades amb `label`, `title`/`short_title` i `date`
+  - indicador de degradació i missatge d'absència de premsa
+- Es va afegir un normalitzador tolerant (`web/src/lib/intel.ts`) que:
+  - llegeix el payload nou si arriba estructurat
+  - conserva compatibilitat amb arrays plans de `sources`
+  - genera una estructura segura encara que faltin fonts de premsa
+  - marca missatges en català quan `PREMSA` no està disponible o no hi ha resultats
+- Es va ampliar el render del missatge de resposta perquè mostri una secció de fonts atribuïdes agrupada en:
+  - `📄 PLENS`
+  - `📰 PREMSA`
+- Cada font mostra les dades rebudes pel backend sense inventar-ne de noves, reutilitzant les targetes existents i mostrant títol curt, data i etiqueta si existeixen.
+- Quan `PREMSA` no té fonts:
+  - si hi ha degradació, la UI mostra un avís breu en català indicant que només es mostren fonts disponibles
+  - si simplement no hi ha resultats, es mostra un missatge curt i no un bloc buit confús
+- Es van ajustar textos d'estat visibles en català dins la sala, incloent el missatge de preparació de resposta i l'etiqueta de recompte de missatges.
 
 ### Decisions tècniques
-- **Compatibilitat cap enrere:** s'afegeix `answer` amb el mateix contingut que `text` i es preserven `plens_context`, `premsa_context` i `meta` per no trencar consumidors actuals.
-- **Proxy LLM únic:** la generació continua passant exclusivament per `llm_proxy_client`, que encapsula la connexió al proxy local `:10531` via `OPENCLAW_BASE_URL`.
-- **Timeout i errors controlats:**
-  - timeout del proxy → `504 llm_proxy_timeout`
-  - error controlat del proxy → `502 llm_proxy_request_failed`
-  - error del retrieval dual → `503 intel_retrieval_unavailable`
-- **Degradació parcial:** si la retrieval dual informa `premsa_unavailable`, la resposta continua amb fonts oficials i `sources.premsa = []`.
-- **Atribució visible:** les cites es precomputen al backend amb `label` perquè el frontend pugui renderitzar-les sense reconstrucció addicional.
+- El pla del Tech Lead es va ajustar mínimament a l'estructura real del repo: els fitxers a tocar no existeixen sota `frontend/src/...`; l'àrea equivalent viu a `web/src/...`, i la ruta `/sala-intelligencia` comparteix implementació amb `chat/page.tsx`.
+- No s'ha creat un component nou gran ni s'ha redissenyat la pàgina; s'ha reutilitzat `ChatMessage` + `SourceCard` i s'ha afegit només el mapping necessari.
+- La compatibilitat enrere es manté perquè el normalitzador accepta tant `response.text` com `response.answer`, i també l'antic `sources[]` pla.
+- La UI no genera cites ni etiquetes artificials: només mostra els camps presents al payload i, quan falten grups, comunica l'absència/degradació amb text auxiliar en català.
 
-### Tests afegits
-- prompt amb fonts de `plens` + `premsa`
-- resposta estructurada amb `sources` separades per tipus
-- continuïtat quan `premsa` falla
-- timeout controlat del proxy LLM
-
-### Ajust del pla detectat
-- El pla feia referència a `backend/...`, però el repositori real usa la ruta `api/...` per al backend FastAPI. S'ha aplicat el mateix pla sobre els arxius equivalents reals (`api/src/...` i `api/tests/...`) sense alterar l'abast funcional.
+### Casos coberts
+1. **Resposta amb `PLENS` i `PREMSA`**
+   - es renderitza la resposta principal i les dues seccions de fonts separades.
+2. **Resposta només amb `PLENS` i degradació de premsa**
+   - es mostra `PLENS` i un missatge breu en català avisant de la degradació.
+3. **Resposta només amb `PLENS` sense degradació explícita**
+   - la UI continua estable i mostra un missatge d'absència de premsa sense bloc buit.
+4. **Loading i error**
+   - el flux existent es manté i els missatges visibles continuen en català.

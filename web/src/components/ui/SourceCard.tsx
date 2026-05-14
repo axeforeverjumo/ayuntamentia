@@ -6,7 +6,7 @@ import {
   Landmark, Home, Shield, TreePine, HeartPulse, GraduationCap, Bus,
   Euro, Palette, Briefcase, Scale, Users,
 } from 'lucide-react';
-import type { Source } from '@/lib/types';
+import type { IntelSourcesGrouped, Source } from '@/lib/types';
 import { APP_ROUTES } from '@/lib/routes';
 import { cn } from '@/lib/utils';
 
@@ -101,9 +101,76 @@ export function SourceCard({ source }: SourceCardProps) {
 
 interface SourcesGridProps {
   sources: Source[];
+  groupedSources?: IntelSourcesGrouped;
+  premsaDegraded?: boolean;
+  premsaUnavailableMessage?: string;
 }
 
-export function SourcesGrid({ sources }: SourcesGridProps) {
+function toSourceCard(source: { label?: string; title?: string; short_title?: string; date?: string; url?: string; source_type?: string }, fallbackType: string): Source {
+  return {
+    label: source.label,
+    title: source.title,
+    short_title: source.short_title,
+    date: source.date,
+    url: source.url,
+    source_type: source.source_type || fallbackType,
+    titulo: source.title || source.short_title,
+    fecha: source.date,
+    tipo: fallbackType,
+  };
+}
+
+export function SourcesGrid({ sources, groupedSources, premsaDegraded = false, premsaUnavailableMessage }: SourcesGridProps) {
+  if (groupedSources) {
+    const total = groupedSources.plens.length + groupedSources.premsa.length;
+    if (total === 0 && !premsaUnavailableMessage) return null;
+
+    return (
+      <div className="w-full mt-3 space-y-3">
+        <div className="flex items-center gap-2 mb-2">
+          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-[#30363d] to-transparent" />
+          <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#6e7681]">
+            {total} {total === 1 ? 'font atribuïda' : 'fonts atribuïdes'}
+          </span>
+          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-[#30363d] to-transparent" />
+        </div>
+
+        {groupedSources.plens.length > 0 && (
+          <div className="space-y-2">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#8b949e]">📄 PLENS</div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {groupedSources.plens.map((source, index) => (
+                <SourceCard key={`plens-${source.title}-${source.date}-${index}`} source={toSourceCard(source, 'plens')} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {groupedSources.premsa.length > 0 && (
+          <div className="space-y-2">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#8b949e]">📰 PREMSA</div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {groupedSources.premsa.map((source, index) => (
+                <SourceCard key={`premsa-${source.title}-${source.date}-${index}`} source={toSourceCard(source, 'premsa')} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {groupedSources.premsa.length === 0 && premsaUnavailableMessage && (
+          <div className={cn(
+            'rounded-xl border px-3 py-2 text-[12px]',
+            premsaDegraded
+              ? 'border-[#d97706]/30 bg-[#2a1f08] text-[#fde68a]'
+              : 'border-[#30363d] bg-[#161b22] text-[#a5b1c2]',
+          )}>
+            {premsaUnavailableMessage}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   if (!sources || sources.length === 0) return null;
 
   return (
