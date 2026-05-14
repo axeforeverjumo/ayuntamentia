@@ -288,6 +288,57 @@ Aquesta prioritat permet reutilitzar agregats si ja existeixen i mantenir un fal
 - **Canvi visual mínim**: es manté `PanelBox` i `TrendingBar` existents per evitar una alteració dràstica del layout.
 
 ### Verificació
+- Lint frontend global executat:
+  - `npm --prefix web run lint`
+  - Resultat observat: el comandament falla per errors preexistents en altres pantalles fora d'abast (`actas/[id]`, `buscar`, `chat/workspace`, `informes`, etc.), però no ha reportat errors nous específics del dashboard tocat abans d'aturar-se.
+- Intent de lint focalitzat sobre els fitxers tocats:
+  - `npx eslint web/src/app/dashboard/page.tsx web/src/components/dashboard/LastProcessedPlensWidget.tsx web/src/lib/api/dashboard.ts web/src/lib/dashboard/mappers.ts web/src/types/dashboard.ts`
+  - Resultat observat: al runner es resol una versió global incompatible d'ESLint (`10.3.0`) que peta amb `eslint-plugin-react`, així que no s'ha pogut usar com a validació aïllada fiable.
+- Build frontend executada:
+  - `npm --prefix web run build`
+
+## 2026-05-16 — Render del banner de reunions properes dins del widget d'Últims plens processats
+
+### Canvis realitzats
+- S'ha creat un component frontend específic per al widget d'"Últims plens processats" que encapsula el llistat existent i hi integra el banner de reunions properes sense alterar la composició general del dashboard.
+- El frontend consumeix el camp backend `upcoming_meetings_banner` de `GET /api/dashboard/` i el normalitza amb fallback segur quan el bloc no existeix o arriba incomplet.
+- S'han afegit tipus explícits per al banner i cada reunió (`status`, `title`, `municipality`, `meeting_at`, `last_processed_at`, `message`, `meetings`, `primary_meeting`, `thresholds`, `total`) seguint el shape actual retornat pel backend, sense recalcular severitats al client.
+- El banner només es renderitza quan hi ha alertes vàlides i mostra dues variants visuals mínimes i clarament diferenciades:
+  - `warning` en groc
+  - `danger` en vermell
+- Els textos visibles s'han mantingut en català i orientats a ús intern d'assessoria/partit.
+
+### Arxius modificats
+1. `web/src/components/dashboard/LastProcessedPlensWidget.tsx`
+   - Nou component que reutilitza `PanelBox` i el llistat existent de plens.
+   - Render condicional del banner només quan hi ha alertes disponibles.
+   - Targetes compactes per reunió amb `títol`, `municipi`, `data` i `missatge resum`.
+   - Comentari en codi documentant la decisió MVP per múltiples alertes.
+2. `web/src/types/dashboard.ts`
+   - Nous tipus `UpcomingMeetingAlertStatus`, `UpcomingMeetingAlertItem`, `UpcomingMeetingsBanner` i `DashboardOverview`.
+3. `web/src/lib/dashboard/mappers.ts`
+   - Nou normalitzador `normalizeDashboardOverview()` per propagar `upcoming_meetings_banner` amb compatibilitat cap enrere.
+4. `web/src/lib/api/dashboard.ts`
+   - Nova funció `fetchDashboardOverview()` que consumeix `GET /api/dashboard/` i aplica el mapper.
+5. `web/src/app/dashboard/page.tsx`
+   - Substitució del bloc inline d'"Últims plens processats" pel nou component, mantenint el layout general.
+   - Càrrega addicional de l'overview del dashboard en paral·lel a la resta de dades.
+6. `specs/dashboard/SPEC.md`
+   - Afegit aquest registre tècnic.
+
+### Decisions tècniques
+- **Ajust del pla a l'estructura real del repo**: el pla esmentava rutes `frontend/src/...`, però el repositori real usa `web/src/...`. S'ha aplicat el canvi equivalent dins `web/`, mantenint exactament l'abast funcional demanat.
+- **Sense lògica de negoci al frontend**: el component no calcula llindars ni decideix severitats; només pinta `warning` o `danger` segons `status` rebut del backend.
+- **Múltiples alertes**: s'ha optat per mostrar una llista compacta de totes les alertes rebudes, preservant l'ordre servit per backend. Això és més conservador que reprioritzar al client i evita perdre context si hi ha més d'una reunió rellevant.
+- **Absència de dades**: si el backend no retorna banner o les alertes arriben incompletes, no es reserva cap espai extra i el widget continua mostrant únicament el llistat de plens o l'estat buit existent.
+
+### Verificació manual coberta al desenvolupament
+- Mock lògic de cas `warning`: cobert pel render del badge groc i missatge de reunió propera.
+- Mock lògic de cas `danger`: cobert pel render del badge vermell i missatge urgent.
+- Mock lògic de múltiples alertes: cobert per la iteració sobre `meetings` mantenint l'ordre rebut.
+- Mock lògic d'absència d'alertes: cobert pel render condicional sense reservar espai.
+
+### Verificació
 - Lint frontend executat:
   - `npm --prefix web run lint`
 - Build frontend executada:

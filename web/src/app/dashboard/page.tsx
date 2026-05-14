@@ -1,17 +1,15 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { PageHeader } from '@/components/warroom/PageHeader';
 import { KPICard, KPIGrid } from '@/components/warroom/KPICard';
-import { PanelBox } from '@/components/warroom/PanelBox';
 import { StatusLine } from '@/components/warroom/StatusBadge';
+import { LastProcessedPlensWidget } from '@/components/dashboard/LastProcessedPlensWidget';
 import { TrendingTopicsWidget } from '@/components/dashboard/TrendingTopicsWidget';
-import { fetchTrendingTopics } from '@/lib/api/dashboard';
-import { buildRoute } from '@/lib/routes';
+import { fetchDashboardOverview, fetchTrendingTopics } from '@/lib/api/dashboard';
 import type { AlertasStats, DashboardStats } from '@/lib/types';
-import type { TrendingTopic } from '@/types/dashboard';
+import type { DashboardOverview, TrendingTopic } from '@/types/dashboard';
 const API = process.env.NEXT_PUBLIC_API_URL || '';
 
 interface DashboardActivityItem {
@@ -42,6 +40,7 @@ export default function DashboardPage() {
   const [temas, setTemas] = useState<TrendingTopic[]>([]);
   const [temasError, setTemasError] = useState<string | null>(null);
   const [actividad, setActividad] = useState<DashboardActivityItem[]>([]);
+  const [dashboardOverview, setDashboardOverview] = useState<DashboardOverview>({});
   const [alertas, setAlertas] = useState<Partial<AlertasStats>>({ total: 0, nuevas: 0, altas_nuevas: 0 });
   const [loading, setLoading] = useState(true);
 
@@ -50,8 +49,9 @@ export default function DashboardPage() {
       fetch(`${API}/api/dashboard/stats`).then(r => r.json()),
       fetchTrendingTopics(),
       fetch(`${API}/api/dashboard/actividad-reciente`).then(r => r.json()),
+      fetchDashboardOverview(),
       fetch(`${API}/api/alertas/stats`).then(r => r.json()),
-    ]).then(([s, t, a, al]) => {
+    ]).then(([s, t, a, d, al]) => {
       if (s.status === 'fulfilled') setStats(s.value);
       if (t.status === 'fulfilled') {
         setTemas(t.value);
@@ -61,6 +61,7 @@ export default function DashboardPage() {
         setTemasError('No s’han pogut carregar els temes');
       }
       if (a.status === 'fulfilled') setActividad(Array.isArray(a.value) ? a.value : []);
+      if (d.status === 'fulfilled') setDashboardOverview(d.value);
       if (al.status === 'fulfilled') setAlertas(al.value);
       setLoading(false);
     });
@@ -145,39 +146,7 @@ export default function DashboardPage() {
 
         {/* Row 2: Últims plens */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12 }}>
-          <PanelBox title="Últims plens processats" subtitle={`${actividad.length} recents`} tone="phos">
-            {actividad.length > 0 ? (
-              <div>
-                {actividad.slice(0, 6).map((acta, i: number) => (
-                  <Link key={i} href={buildRoute('actes', acta.id)} style={{
-                    display: 'grid', gridTemplateColumns: '1fr auto',
-                    gap: 10, padding: '10px 0',
-                    borderBottom: i < 5 ? '1px dashed var(--line-soft)' : 'none',
-                    textDecoration: 'none', color: 'inherit',
-                  }}>
-                    <div>
-                      <div style={{ fontSize: 13, color: 'var(--paper)', fontWeight: 500 }}>{acta.municipio}</div>
-                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--fog)', marginTop: 2 }}>
-                        {acta.tipo || 'Ordinària'} · {acta.num_puntos || 0} punts
-                      </div>
-                    </div>
-                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--fog)', textAlign: 'right' }}>
-                      {acta.fecha}
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <div style={{ padding: '40px 0', textAlign: 'center' }}>
-                <div style={{ fontFamily: 'var(--font-sans)', fontSize: 20, fontWeight: 500, color: 'var(--paper)', marginBottom: 8 }}>
-                  Properament
-                </div>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--fog)', letterSpacing: '.1em', textTransform: 'uppercase' }}>
-                  Els plens processats apareixeran aquí
-                </div>
-              </div>
-            )}
-          </PanelBox>
+          <LastProcessedPlensWidget activity={actividad} overview={dashboardOverview} />
         </div>
 
 

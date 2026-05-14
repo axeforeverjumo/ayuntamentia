@@ -1,5 +1,6 @@
 import apiClient from '@/lib/ApiClient';
-import type { TrendingTopic } from '@/types/dashboard';
+import { normalizeDashboardOverview } from '@/lib/dashboard/mappers';
+import type { DashboardOverview, TrendingTopic } from '@/types/dashboard';
 
 function normalizeTrendingTopic(item: unknown): TrendingTopic | null {
   if (!item || typeof item !== 'object') {
@@ -73,5 +74,17 @@ export async function fetchTrendingTopics(): Promise<TrendingTopic[]> {
       throw error;
     }
     throw new Error('No s’han pogut carregar els temes en tendència');
+  }
+}
+
+export async function fetchDashboardOverview(): Promise<DashboardOverview> {
+  try {
+    const response = await apiClient.get<unknown>('/api/dashboard/');
+    return normalizeDashboardOverview(response);
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error('No s’ha pogut carregar l’estat general del dashboard');
   }
 }
