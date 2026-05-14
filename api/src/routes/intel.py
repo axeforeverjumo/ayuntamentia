@@ -11,10 +11,13 @@ from psycopg2.extras import RealDictCursor
 from ..db import get_db
 from ..services import PremsaRetrievalFilters, RetrievalContext, intelligence_retrieval_service
 from ..services.llm_proxy_client import (
+    DEFAULT_TIMEOUT_SECONDS,
     LLMProxyRequestError,
     LLMProxyTimeoutError,
     llm_proxy_client,
 )
+
+SALA_LLM_TIMEOUT_SECONDS = DEFAULT_TIMEOUT_SECONDS
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -106,10 +109,17 @@ def _build_sala_messages(query: str, plens_sources: list[dict[str, Any]], premsa
         "Separa explícitament el context oficial (plens/actes) del context mediàtic (premsa) quan existeixin. "
         "Cita només fonts recuperades i visibles amb el format exacte de les etiquetes proporcionades. "
         "No inventis fonts, dates, titulars ni atribucions. "
-        "Si una font no consta al context recuperat, digues que no consta."
+        "Si una font no consta al context recuperat, digues que no consta. "
+        "Quan citis fonts, reutilitza exactament les etiquetes visibles lliurades al context."
     )
     user_prompt = (
         f"Consulta de l'usuari: {query}\n\n"
+        "Instruccions de resposta:\n"
+        "1. Respon en català estàndard.\n"
+        "2. Si hi ha informació suficient, separa la resposta en dos blocs: Context oficial i Context mediàtic.\n"
+        "3. Cita només fonts recuperades, fent servir les etiquetes exactes tal com apareixen.\n"
+        "4. Si només hi ha plens o només hi ha premsa, no inventis l'altre bloc.\n"
+        "5. Si falta informació, indica-ho explícitament.\n\n"
         f"Context oficial recuperat (plens):\n{json.dumps(plens_sources, ensure_ascii=False, indent=2)}\n\n"
         f"Context mediàtic recuperat (premsa):\n{json.dumps(premsa_sources, ensure_ascii=False, indent=2)}\n\n"
         "Redacta una resposta breu i clara en català amb atribució visible de les fonts utilitzades."
@@ -144,7 +154,10 @@ async def sala_intelligencia(payload: SalaIntelligenciaRequest):
     messages = _build_sala_messages(payload.query, plens_sources, premsa_sources)
 
     try:
-        generated_text = llm_proxy_client.generate_text(messages)
+        generated_text = llm_proxy_client.generate_text(
+            messages,
+            timeout_seconds=SALA_LLM_TIMEOUT_SECONDS,
+        )
     except LLMProxyTimeoutError as exc:
         raise HTTPException(status_code=504, detail="llm_proxy_timeout") from exc
     except LLMProxyRequestError as exc:

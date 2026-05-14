@@ -77,6 +77,7 @@ def test_sala_prompt_includes_dual_sources_and_returns_structured_sources(client
     assert payload["sources"]["plens"][0]["label"] == "📄 Ple Pressupost 2025 | 2025-01-10"
     assert payload["sources"]["premsa"][0]["label"] == "📰 Premsa La premsa destaca el debat | 2025-01-11"
     assert payload["meta"]["llm"]["provider"] == "local_proxy"
+    assert captured["timeout_seconds"] == intel_route.SALA_LLM_TIMEOUT_SECONDS
 
 
 def test_sala_degrades_to_plens_only_when_premsa_fails(client, monkeypatch):

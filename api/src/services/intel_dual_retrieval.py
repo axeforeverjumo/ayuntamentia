@@ -3,9 +3,11 @@ from .intelligence_retrieval_service import (
     RetrievalContext,
     intelligence_retrieval_service,
 )
+from .premsa_retrieval import PremsaRetrievalFilters
 
 __all__ = [
     "IntelligenceRetrievalService",
+    "PremsaRetrievalFilters",
     "RetrievalContext",
     "intelligence_retrieval_service",
 ]

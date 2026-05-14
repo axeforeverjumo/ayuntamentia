@@ -1243,6 +1243,11 @@ Se entrega únicamente la especificación de integración solicitada.
 
 ## 2026-05-10 — Integració backend de Sala d'Intel·ligència amb retrieval dual i atribució visible
 
+### Nota de correcció posterior
+- Es confirma que el handler real no viu a `backend/app/...` sinó a `api/src/routes/intel.py`; s'ha seguit el pla funcional adaptant-lo a l'estructura real del repo.
+- Es corregeix l'iteració anterior afegint una validació explícita del timeout cap al proxy local i revisant que no quedi cap error de sintaxi al mòdul d'`intel`.
+
+
 ### Canvis realitzats
 - Es va localitzar el handler real d'`/api/intel/sala-intelligencia` dins `api/src/routes/intel.py` i es va completar el flux backend sobre el router existent d'`intel`.
 - Es va afegir construcció compartida de `RetrievalContext` per reutilitzar el servei de retrieval dual existent abans de la generació.
