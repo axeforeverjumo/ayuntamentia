@@ -52,3 +52,30 @@
 ### Verificació
 - Es tracta d'una intervenció documental; no s'han executat build ni lint de frontend/backend perquè no s'ha modificat codi d'aplicació.
 - S'ha verificat la presència dels arxius de spec i del document de disseny dins `specs/dashboard/`.
+
+## 2026-05-14 — Ocultació temporal del watermark/attribution de Leaflet al mapa de Catalunya
+
+### Canvis realitzats
+- S'ha aplicat un canvi mínim al component del mapa de Catalunya per ocultar la marca d'aigua/attribution visible de Leaflet.
+- S'ha configurat la inicialització del mapa amb `attributionControl: false` i s'hi ha afegit un comentari tècnic curt indicant que és una decisió temporal pendent de validació legal/comercial.
+- No s'han modificat ni la càrrega de punts ni la configuració de tiles.
+
+### Arxius modificats
+1. `web/src/components/features/MapaCatalunyaLeaflet.tsx`
+   - Canvi a la creació del mapa Leaflet:
+     - de `attributionControl: true`
+     - a `attributionControl: false` amb comentari temporal legal/comercial.
+
+2. `specs/dashboard/SPEC.md`
+   - Afegida aquesta entrada de registre al final del document.
+
+### Decisions tècniques
+- Canvi estrictament local, sense tocar backend ni rutes.
+- Es manté intacte el `fetch` de punts (`/api/municipios/geo/points`) i la capa de tiles CARTO/OSM tal com estava, per evitar regressions funcionals.
+- L'ocultació d'attribution queda marcada explícitament com a temporal fins a validació legal/comercial.
+
+### Verificació
+- Validació de codi amb lint frontend (execució real):
+  - `npm --prefix web run lint`
+- Validació d'abast del canvi (execució real):
+  - `git diff -- web/src/components/features/MapaCatalunyaLeaflet.tsx specs/dashboard/SPEC.md`

@@ -58,7 +58,7 @@ export function MapaCatalunyaLeaflet() {
         minZoom: 7,
         maxZoom: 16,
         zoomControl: true,
-        attributionControl: true,
+        attributionControl: false, // Temporalment ocult per validació legal/comercial pendent.
         worldCopyJump: false,
       });
       mapRef.current = map;
