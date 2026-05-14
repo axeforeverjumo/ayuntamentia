@@ -989,6 +989,68 @@ Se entrega únicamente la especificación operativa solicitada.
 
 ---
 
+## 2026-05-10 — Configuración auditable de `trending_score`
+
+### Objetivo
+Dejar una fuente única de verdad auditable para la configuración editorial manual del `trending_score` sin crear tablas nuevas, asumiendo que **Juan** es el único administrador previsto de este ajuste.
+
+### Tabla reutilizada
+- Tabla elegida: `alertas_reglas`
+- Motivo: ya es una tabla administrativa existente del sistema, ampliada previamente con campos MVP sin romper compatibilidad, y permite añadir configuración manual auditable sin duplicar modelos ni introducir una tabla global nueva no evidenciada en el repositorio.
+
+### Columnas añadidas
+Migración: `supabase/migrations/013_add_trending_config_audit.sql`
+
+Nuevas columnas idempotentes:
+- `trending_config_json JSONB`
+- `trending_config_updated_at TIMESTAMPTZ`
+- `trending_config_updated_by TEXT`
+
+### JSON canónico esperado
+```json
+{
+  "weights": {
+    "delta_plens": 0.6,
+    "score_premsa": 0.4,
+    "score_xarxes": 0.0
+  },
+  "penalties": {
+    "Hisenda": 0.30,
+    "RRHH": 0.40,
+    "Urbanisme rutinari": 0.50,
+    "default": 0.80
+  }
+}
+```
+
+Reglas editoriales documentadas:
+- `weights` es obligatorio.
+- `penalties` es obligatorio.
+- `penalties.default` es obligatorio para cubrir temas no mapeados explícitamente.
+
+### Estrategia de auditoría
+La auditoría manual de este ajuste queda en las columnas:
+- `trending_config_updated_at`: fecha/hora de la última carga o edición manual
+- `trending_config_updated_by`: identificador textual del administrador manual
+
+En esta iteración el valor inicial queda marcado con:
+- `trending_config_updated_by = 'Juan'`
+
+### Valor inicial cargado
+La migración carga un valor inicial idempotente **solo si** la columna `trending_config_json` está vacía en el primer registro existente de `alertas_reglas`, evitando sobreescribir ediciones futuras.
+
+### Retrocompatibilidad
+- No se crean tablas nuevas.
+- No se añaden `NOT NULL` disruptivos.
+- No se renombran ni eliminan columnas existentes.
+- La obligación del esquema JSON se documenta en `COMMENT ON COLUMN` y en este SPEC, en lugar de imponer una `CHECK` que pudiera bloquear datos preexistentes o cargas manuales intermedias.
+
+### Archivos modificados
+- `supabase/migrations/013_add_trending_config_audit.sql`
+- `specs/reputacio/SPEC.md`
+
+---
+
 ## 2026-05-10 — Submódulo `amplificar difusión` / `altaveu` (exploración)
 
 ### Objetivo
