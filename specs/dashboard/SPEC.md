@@ -197,6 +197,62 @@ Aquesta prioritat permet reutilitzar agregats si ja existeixen i mantenir un fal
 - Sintaxi Python global executada:
   - `python3 -c "import ast, pathlib; [ast.parse(p.read_text()) for p in pathlib.Path('.').rglob('*.py') if '.git' not in str(p)]"`
 
+## 2026-05-15 — Actualització de `GET /api/dashboard/temas` per ranking de momentum
+
+### Canvis realitzats
+- S'ha corregit i completat la implementació de `GET /api/dashboard/temas` perquè deixi d'usar la query antiga basada en volum acumulat i delegui en el servei real de `trending_score` ja existent.
+- El ranking retornat ara es basa en `widget_trending_score`/`trending_score` en ordre descendent i filtra estrictament temes amb score positiu (`> 0`).
+- S'ha mantingut el contracte mínim retrocompatible del payload (`tema`, `count`) i s'hi han afegit camps d'explicabilitat sota la clau opcional `score`.
+- S'ha cobert el cas sense càlcul recent o sense dades disponibles retornant llista buida segura, i el cas amb últim càlcul disponible reutilitzant la marca temporal del payload del servei.
+- S'ha reparat el wiring pendent entre ruta i servei que havia quedat incomplet en la iteració anterior.
+
+### Arxius modificats
+1. `api/src/routes/dashboard.py`
+   - Afegits models Pydantic opcionals (`TendenciaItem`, `TendenciaScoreDetails`) per documentar la resposta sense trencar clients antics.
+   - Simplificada la ruta `GET /api/dashboard/temas` perquè delegui a `dashboard_service.list_tendencias()`.
+   - Manteniment de fallback segur a `[]` si una dependència de taula encara no existeix.
+2. `api/src/services/dashboard_service.py`
+   - Afegit `list_tendencias()` com a punt únic de construcció del payload del widget.
+   - Ordenació per `trending_score` descendent amb tie-breakers de score base, premsa, delta i tema.
+   - Filtre de `trending_score > 0`.
+   - Construcció retrocompatible del payload amb:
+     - `tema`
+     - `count`
+     - `trending_score`
+     - `score.trending_score`
+     - `score.base_score`
+     - `score.delta_plens`
+     - `score.score_premsa`
+     - `score.score_xarxes`
+     - `score.penalty_applied`
+     - `score.calculated_at`
+   - Resolució de `calculated_at` a partir del payload del servei (`windows.calculated_at` o darrera finestra disponible).
+3. `api/tests/test_dashboard_tendencias.py`
+   - Tests d'API per ordre, filtratge i shape mínim.
+   - Test explícit del payload opcional d'explicabilitat.
+   - Test de llista buida segura sense dades o sense càlcul recent.
+   - Tests del servei de dashboard per garantir ordenació, filtre i ús de la marca temporal de l'últim càlcul disponible.
+4. `specs/dashboard/SPEC.md`
+   - Afegida aquesta secció de registre tècnic.
+
+### Decisió de compatibilitat del payload
+- Es manté la ruta existent `GET /api/dashboard/temas`.
+- Es manté el shape mínim històric de cada element amb `tema` i `count`.
+- Els camps nous s'exposen de manera compatible:
+  - `trending_score` a nivell superior per facilitar UI nova.
+  - detall sota `score`, com a clau opcional/anidada segura per a clients antics.
+
+### Comportament sense càlcul recent
+- Si el servei de `trending_score` no retorna files, la resposta és `[]`.
+- Si hi ha un últim càlcul disponible però no una marca temporal explícita, el backend deriva `calculated_at` de la finestra més recent disponible (`windows.plens_recent.to` o `windows.premsa_recent.to`).
+- Si una taula necessària encara no existeix i es produeix `UndefinedTable`, la ruta retorna `[]` en lloc de 500.
+
+### Verificació
+- Tests específics executats:
+  - `pytest api/tests/test_dashboard_tendencias.py`
+- Sintaxi Python global executada:
+  - `python3 -c "import ast, pathlib; [ast.parse(p.read_text()) for p in pathlib.Path('.').rglob('*.py') if '.git' not in str(p)]"`
+
 ## 2026-05-14 — Task Celery beat diària per recalcular i persistir tendències
 
 ### Canvis realitzats

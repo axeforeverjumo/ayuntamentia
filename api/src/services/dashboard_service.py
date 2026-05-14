@@ -10,6 +10,7 @@ from psycopg2.extras import RealDictCursor
 from ..auth import CurrentUser
 from ..db import get_db
 from .alertas_reglas_service import alertas_reglas_service
+from .trending_score_service import trending_score_service
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +27,53 @@ class DashboardService:
         return {
             "upcoming_meetings_banner": self.build_upcoming_meetings_banner(user),
         }
+
+    def list_tendencias(self) -> list[dict[str, Any]]:
+        payload = trending_score_service.calculate_from_existing_data()
+        items = payload.get("items") or []
+        calculated_at = self._resolve_calculated_at(payload)
+
+        tendencias: list[dict[str, Any]] = []
+        for item in items:
+            trending_score = self._safe_float(item.get("widget_trending_score"))
+            if trending_score <= 0:
+                continue
+
+            delta_plens = self._safe_float(item.get("delta_plens"))
+            score_premsa = self._safe_float(item.get("score_premsa"))
+            score_xarxes = self._safe_float(item.get("score_xarxes"))
+            penalty_applied = self._safe_float(item.get("widget_penalty_multiplier"), default=1.0)
+            base_score = self._safe_float(item.get("base_score"))
+            count = max(int(round(max(delta_plens, 0.0))), 0)
+
+            tendencias.append(
+                {
+                    "tema": item.get("tema"),
+                    "count": count,
+                    "trending_score": trending_score,
+                    "score": {
+                        "trending_score": trending_score,
+                        "base_score": base_score,
+                        "delta_plens": delta_plens,
+                        "score_premsa": score_premsa,
+                        "score_xarxes": score_xarxes,
+                        "penalty_applied": penalty_applied,
+                        "calculated_at": calculated_at,
+                    },
+                }
+            )
+
+        tendencias.sort(
+            key=lambda trend: (
+                self._safe_float(trend.get("trending_score")),
+                self._safe_float((trend.get("score") or {}).get("base_score")),
+                self._safe_float((trend.get("score") or {}).get("score_premsa")),
+                self._safe_float((trend.get("score") or {}).get("delta_plens")),
+                str(trend.get("tema") or ""),
+            ),
+            reverse=True,
+        )
+        return tendencias
 
     def build_upcoming_meetings_banner(self, user: CurrentUser) -> Optional[dict[str, Any]]:
         rows = alertas_reglas_service.list_active_meeting_upcoming_rules(user.user_id, user.municipio_ids)
@@ -63,6 +111,23 @@ class DashboardService:
             "meetings": meetings,
             "total": len(meetings),
         }
+
+    def _resolve_calculated_at(self, payload: dict[str, Any]) -> Optional[str]:
+        windows = payload.get("windows") or {}
+        candidate = windows.get("calculated_at") or windows.get("computed_at")
+        if candidate:
+            return str(candidate)
+
+        end_date = ((windows.get("plens_recent") or {}).get("to") or (windows.get("premsa_recent") or {}).get("to"))
+        if end_date:
+            return f"{end_date}T00:00:00+00:00"
+        return None
+
+    def _safe_float(self, value: Any, *, default: float = 0.0) -> float:
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return default
 
     def _build_meeting_entry(self, rule: dict[str, Any], municipality_names: list[str]) -> Optional[dict[str, Any]]:
         meeting_at = self._ensure_aware_datetime(rule.get("meeting_at"))
