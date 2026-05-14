@@ -1,12 +1,25 @@
 """Endpoints de inteligencia: ranking concejales, tendencias, promesas incumplidas."""
 
+import logging
 from typing import Optional
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query
+from pydantic import BaseModel, Field
 from psycopg2.extras import RealDictCursor
 
 from ..db import get_db
+from ..services import RetrievalContext, intelligence_retrieval_service
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
+
+
+class IntelligenceRetrievalRequest(BaseModel):
+    query: str = Field(min_length=3)
+    tenant: Optional[str] = None
+    municipio: Optional[str] = None
+    comarca: Optional[str] = None
+    partido: Optional[str] = None
+    limit_per_source: int = Field(default=5, ge=1, le=10)
 
 
 def _partido_filter(partido: str):
@@ -27,6 +40,22 @@ def _partido_filter(partido: str):
         "partido ~* %s",
         [rf"\m{partido}\M"],
     )
+
+
+@router.post("/retrieval")
+async def retrieval(payload: IntelligenceRetrievalRequest):
+    context = RetrievalContext(
+        tenant=payload.tenant,
+        municipio=payload.municipio,
+        comarca=payload.comarca,
+        partido=payload.partido,
+        limit_per_source=payload.limit_per_source,
+    )
+    try:
+        return await intelligence_retrieval_service.retrieve(payload.query, context)
+    except Exception as exc:
+        logger.exception("intel_retrieval.endpoint_failed query=%r", payload.query)
+        raise HTTPException(status_code=503, detail="intel_retrieval_unavailable") from exc
 
 
 @router.get("/ranking-concejales")
