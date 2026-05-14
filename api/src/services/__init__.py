@@ -3,3 +3,8 @@ from .intelligence_retrieval_service import (
     RetrievalContext,
     intelligence_retrieval_service,
 )
+from .premsa_retrieval import (
+    PremsaRetrievalFilters,
+    PremsaRetrievalService,
+    premsa_retrieval_service,
+)

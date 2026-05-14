@@ -2,12 +2,13 @@
 
 import logging
 from typing import Optional
+
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 from psycopg2.extras import RealDictCursor
 
 from ..db import get_db
-from ..services import RetrievalContext, intelligence_retrieval_service
+from ..services import PremsaRetrievalFilters, RetrievalContext, intelligence_retrieval_service
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -20,6 +21,11 @@ class IntelligenceRetrievalRequest(BaseModel):
     comarca: Optional[str] = None
     partido: Optional[str] = None
     limit_per_source: int = Field(default=5, ge=1, le=10)
+    temes: list[str] = Field(default_factory=list)
+    partits: list[str] = Field(default_factory=list)
+    sentiment: Optional[str] = Field(default=None, pattern="^(positiu|negatiu|neutre)$")
+    date_from: Optional[str] = None
+    date_to: Optional[str] = None
 
 
 def _partido_filter(partido: str):
@@ -30,12 +36,10 @@ def _partido_filter(partido: str):
     Also matches ALIANÇA.CAT and known coalition patterns.
     """
     if partido.upper() == "AC":
-        # Word-boundary match for AC + known Aliança variants
         return (
             "(partido ~* %s OR partido ILIKE %s OR partido ILIKE %s)",
             [r"\mAC\M", "%ALIANÇA%", "%ALIAN%"],
         )
-    # General case: word-boundary regex
     return (
         "partido ~* %s",
         [rf"\m{partido}\M"],
@@ -50,9 +54,16 @@ async def retrieval(payload: IntelligenceRetrievalRequest):
         comarca=payload.comarca,
         partido=payload.partido,
         limit_per_source=payload.limit_per_source,
+        premsa_filters=PremsaRetrievalFilters(
+            temes=payload.temes,
+            partits=payload.partits,
+            sentiment=payload.sentiment,
+            date_from=payload.date_from,
+            date_to=payload.date_to,
+        ),
     )
     try:
-        return await intelligence_retrieval_service.retrieve(payload.query, context)
+        return await intelligence_retrieval_service.dual_retrieve(payload.query, context)
     except Exception as exc:
         logger.exception("intel_retrieval.endpoint_failed query=%r", payload.query)
         raise HTTPException(status_code=503, detail="intel_retrieval_unavailable") from exc
@@ -84,8 +95,6 @@ def ranking(
         cur.execute(sql, params)
         rows = cur.fetchall()
 
-        # Merge: always add cargos_electos not already in ranking results
-        # (for party members without individual vote tracking)
         if partido:
             existing_names = {r["nombre"] for r in rows}
             clause, pvals = _partido_filter(partido)

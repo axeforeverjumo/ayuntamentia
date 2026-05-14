@@ -1,13 +1,14 @@
 import asyncio
 import logging
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
 from typing import Any, Optional
 
 from psycopg2.extras import RealDictCursor
 
 from ..db import get_db
+from .premsa_retrieval import PremsaRetrievalFilters, premsa_retrieval_service
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +20,7 @@ class RetrievalContext:
     comarca: Optional[str] = None
     partido: Optional[str] = None
     limit_per_source: int = 5
+    premsa_filters: PremsaRetrievalFilters = field(default_factory=PremsaRetrievalFilters)
 
 
 class IntelligenceRetrievalService:
@@ -33,11 +35,14 @@ class IntelligenceRetrievalService:
         self.logger = logger
 
     async def retrieve(self, query: str, context: Optional[RetrievalContext] = None) -> dict[str, Any]:
+        return await self.dual_retrieve(query, context)
+
+    async def dual_retrieve(self, query: str, context: Optional[RetrievalContext] = None) -> dict[str, Any]:
         context = context or RetrievalContext()
         started = time.perf_counter()
 
-        plens_task = self._timed_call("plens", self._fetch_plens_candidates, query, context)
-        premsa_task = self._timed_call("premsa", self._fetch_premsa_candidates, query, context)
+        plens_task = self._timed_plens_call(query, context)
+        premsa_task = self._timed_premsa_call(query, context)
 
         plens_result, premsa_result = await asyncio.gather(
             plens_task,
@@ -53,6 +58,24 @@ class IntelligenceRetrievalService:
         )
 
         total_latency_ms = round((time.perf_counter() - started) * 1000, 2)
+        diagnostics = {
+            "latency_ms": total_latency_ms,
+            "sources": {
+                "plens": {
+                    "latency_ms": plens_payload["latency_ms"],
+                    "candidates": plens_payload["candidate_count"],
+                    "final": plens_payload["final_count"],
+                },
+                "premsa": {
+                    "latency_ms": premsa_payload["latency_ms"],
+                    "candidates": premsa_payload["candidate_count"],
+                    "final": premsa_payload["final_count"],
+                },
+            },
+            "reranking_formula": "score = relevance + recency_bonus + context_bonus",
+            "degradation_reasons": degradation_reasons,
+        }
+
         response = {
             "query": query,
             "context": {
@@ -65,22 +88,8 @@ class IntelligenceRetrievalService:
             "premsa_context": premsa_payload["items"],
             "degraded": degraded,
             "degradation_reasons": degradation_reasons,
-            "meta": {
-                "latency_ms": total_latency_ms,
-                "sources": {
-                    "plens": {
-                        "latency_ms": plens_payload["latency_ms"],
-                        "candidates": plens_payload["candidate_count"],
-                        "final": plens_payload["final_count"],
-                    },
-                    "premsa": {
-                        "latency_ms": premsa_payload["latency_ms"],
-                        "candidates": premsa_payload["candidate_count"],
-                        "final": premsa_payload["final_count"],
-                    },
-                },
-                "reranking_formula": "score = relevance + recency_bonus + context_bonus",
-            },
+            "diagnostics": diagnostics,
+            "meta": diagnostics,
         }
 
         self.logger.info(
@@ -151,16 +160,15 @@ class IntelligenceRetrievalService:
     def _empty_source_payload(self) -> dict[str, Any]:
         return {"items": [], "latency_ms": None, "candidate_count": 0, "final_count": 0}
 
-    async def _timed_call(self, source: str, func, query: str, context: RetrievalContext) -> dict[str, Any]:
+    async def _timed_plens_call(self, query: str, context: RetrievalContext) -> dict[str, Any]:
         started = time.perf_counter()
-        rows = await func(query, context)
-        ranked = self._rerank(rows, query=query, context=context, source=source)
+        rows = await self._fetch_plens_candidates(query, context)
+        ranked = self._rerank_plens(rows, query=query, context=context)
         latency_ms = round((time.perf_counter() - started) * 1000, 2)
         final_items = ranked[: context.limit_per_source]
 
         self.logger.info(
-            "intel_retrieval.source source=%s latency_ms=%s candidates=%s final=%s",
-            source,
+            "intel_retrieval.source source=plens latency_ms=%s candidates=%s final=%s",
             latency_ms,
             len(rows),
             len(final_items),
@@ -173,11 +181,45 @@ class IntelligenceRetrievalService:
             "final_count": len(final_items),
         }
 
+    async def _timed_premsa_call(self, query: str, context: RetrievalContext) -> dict[str, Any]:
+        started = time.perf_counter()
+        rows = await self._fetch_premsa_candidates(query, context)
+        ranked = premsa_retrieval_service.rerank(
+            rows,
+            query=query,
+            municipio=context.municipio,
+            comarca=context.comarca,
+            partido=context.partido,
+            tenant=context.tenant,
+            limit=context.limit_per_source,
+        )
+        latency_ms = round((time.perf_counter() - started) * 1000, 2)
+
+        self.logger.info(
+            "intel_retrieval.source source=premsa latency_ms=%s candidates=%s final=%s",
+            latency_ms,
+            len(rows),
+            len(ranked),
+        )
+
+        return {
+            "items": ranked,
+            "latency_ms": latency_ms,
+            "candidate_count": len(rows),
+            "final_count": len(ranked),
+        }
+
     async def _fetch_plens_candidates(self, query: str, context: RetrievalContext) -> list[dict[str, Any]]:
         return await asyncio.to_thread(self._fetch_plens_candidates_sync, query, context)
 
     async def _fetch_premsa_candidates(self, query: str, context: RetrievalContext) -> list[dict[str, Any]]:
-        return await asyncio.to_thread(self._fetch_premsa_candidates_sync, query, context)
+        return await premsa_retrieval_service.retrieve_candidates(
+            query,
+            municipio=context.municipio,
+            comarca=context.comarca,
+            tenant=context.tenant,
+            filters=context.premsa_filters,
+        )
 
     def _fetch_plens_candidates_sync(self, query: str, context: RetrievalContext) -> list[dict[str, Any]]:
         terms = self._query_terms(query)
@@ -195,9 +237,9 @@ class IntelligenceRetrievalService:
             where.append("(EXISTS (SELECT 1 FROM votaciones v WHERE v.punto_id = p.id AND v.partido ILIKE %s) OR EXISTS (SELECT 1 FROM argumentos arg WHERE arg.punto_id = p.id AND arg.partido ILIKE %s))")
             params.extend([f"%{context.partido}%", f"%{context.partido}%"])
 
-        rank_select = "0::float AS relevance"
+        rank_select = "0::float AS raw_relevance"
         if ts_query:
-            rank_select = "ts_rank_cd(a.tsv, to_tsquery('spanish', %s))::float AS relevance"
+            rank_select = "ts_rank_cd(a.tsv, to_tsquery('spanish', %s))::float AS raw_relevance"
             params.insert(0, ts_query)
             where.append("a.tsv @@ to_tsquery('spanish', %s)")
             params.append(ts_query)
@@ -219,7 +261,7 @@ class IntelligenceRetrievalService:
             JOIN actas a ON a.id = p.acta_id
             LEFT JOIN municipios m ON m.id = p.municipio_id
             WHERE {' AND '.join(where)}
-            ORDER BY relevance DESC, p.fecha DESC
+            ORDER BY raw_relevance DESC, p.fecha DESC
             LIMIT 25
         """
 
@@ -230,51 +272,13 @@ class IntelligenceRetrievalService:
 
         return [self._normalize_plens_row(dict(row)) for row in rows]
 
-    def _fetch_premsa_candidates_sync(self, query: str, context: RetrievalContext) -> list[dict[str, Any]]:
-        params: list[Any] = []
-        where = ["data_publicacio IS NOT NULL"]
-        terms = self._query_terms(query)
-
-        if terms:
-            like_clauses = []
-            for term in terms[:8]:
-                like_clauses.append("(titol ILIKE %s OR COALESCE(resum, '') ILIKE %s OR EXISTS (SELECT 1 FROM unnest(COALESCE(temes, ARRAY[]::text[])) tema WHERE tema ILIKE %s) OR EXISTS (SELECT 1 FROM unnest(COALESCE(partits, ARRAY[]::text[])) partit WHERE partit ILIKE %s))")
-                wildcard = f"%{term}%"
-                params.extend([wildcard, wildcard, wildcard, wildcard])
-            where.append("(" + " OR ".join(like_clauses) + ")")
-
-        sql = f"""
-            SELECT
-                id,
-                font,
-                titol,
-                resum,
-                url,
-                data_publicacio,
-                partits,
-                temes,
-                sentiment,
-                sentiment_score
-            FROM premsa_articles
-            WHERE {' AND '.join(where)}
-            ORDER BY data_publicacio DESC
-            LIMIT 25
-        """
-
-        with get_db() as conn:
-            cur = conn.cursor(cursor_factory=RealDictCursor)
-            cur.execute(sql, params)
-            rows = cur.fetchall()
-
-        return [self._normalize_premsa_row(dict(row)) for row in rows]
-
-    def _rerank(self, rows: list[dict[str, Any]], query: str, context: RetrievalContext, source: str) -> list[dict[str, Any]]:
+    def _rerank_plens(self, rows: list[dict[str, Any]], query: str, context: RetrievalContext) -> list[dict[str, Any]]:
         scored: list[dict[str, Any]] = []
         query_terms = self._query_terms(query)
 
         for row in rows:
             text = self._candidate_text(row)
-            relevance = self._text_relevance(query_terms, text)
+            relevance = self._text_relevance(query_terms, text) + float(row.get("raw_relevance") or 0.0)
             recency_bonus = self._recency_bonus(row.get("date"))
             context_bonus = self._context_bonus(row, context)
             final_score = round(relevance + recency_bonus + context_bonus, 4)
@@ -285,7 +289,7 @@ class IntelligenceRetrievalService:
                 "final_score": final_score,
                 "formula": "relevance + recency_bonus + context_bonus",
             }
-            row["source"] = source
+            row["source"] = "plens"
             scored.append(row)
 
         scored.sort(
@@ -309,21 +313,7 @@ class IntelligenceRetrievalService:
             "date": self._iso_date(row.get("fecha")),
             "acta_id": row.get("acta_id"),
             "url": row.get("url_pdf"),
-            "raw_relevance": float(row.get("relevance") or 0.0),
-        }
-
-    def _normalize_premsa_row(self, row: dict[str, Any]) -> dict[str, Any]:
-        return {
-            "id": row.get("id"),
-            "title": row.get("titol"),
-            "summary": row.get("resum"),
-            "font": row.get("font"),
-            "url": row.get("url"),
-            "date": self._iso_date(row.get("data_publicacio")),
-            "partits": list(row.get("partits") or []),
-            "temes": list(row.get("temes") or []),
-            "sentiment": row.get("sentiment"),
-            "sentiment_score": row.get("sentiment_score"),
+            "raw_relevance": float(row.get("raw_relevance") or 0.0),
         }
 
     def _query_terms(self, query: str) -> list[str]:
