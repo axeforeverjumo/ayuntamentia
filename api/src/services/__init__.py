@@ -8,3 +8,4 @@ from .premsa_retrieval import (
     PremsaRetrievalService,
     premsa_retrieval_service,
 )
+from .trending_score_service import TrendingScoreService, trending_score_service
